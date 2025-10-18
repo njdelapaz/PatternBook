@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx expo start --port 8082)",
+      "Bash(timeout /t 3)",
+      "Bash(npm install react-native-safe-area-context)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
