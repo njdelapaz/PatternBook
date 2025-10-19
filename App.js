@@ -1,11 +1,130 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Modal, Pressable } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Modal, Pressable, Keyboard, KeyboardAvoidingView, Platform } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { OPENAI_API_KEY } from '@env';
+
+// Import Carbon icons
+import SearchIcon from './assets/carbon-icons/carbon--search.svg';
+import ChatIcon from './assets/carbon-icons/carbon--chat.svg';
+import MicrophoneIcon from './assets/carbon-icons/carbon--microphone-filled.svg';
+import PenIcon from './assets/carbon-icons/carbon--pen.svg';
+import KeyboardIcon from './assets/carbon-icons/carbon--keyboard.svg';
 
 // Storage key for notes
 const NOTES_STORAGE_KEY = '@patternbook_notes';
+
+// OpenAI API Configuration
+const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
+
+// Simple Markdown Text Component
+function MarkdownText({ children, style }) {
+  const parseMarkdown = (text) => {
+    if (!text) return [];
+
+    const lines = text.split('\n');
+    const elements = [];
+
+    lines.forEach((line, index) => {
+      // Parse line for inline formatting
+      const parts = [];
+      let currentText = '';
+      let i = 0;
+
+      while (i < line.length) {
+        // Bold (**text**)
+        if (line[i] === '*' && line[i + 1] === '*') {
+          if (currentText) {
+            parts.push({ text: currentText, bold: false });
+            currentText = '';
+          }
+          i += 2;
+          let boldText = '';
+          while (i < line.length && !(line[i] === '*' && line[i + 1] === '*')) {
+            boldText += line[i];
+            i++;
+          }
+          parts.push({ text: boldText, bold: true });
+          i += 2;
+        }
+        // Italic (*text*)
+        else if (line[i] === '*' && line[i + 1] !== '*') {
+          if (currentText) {
+            parts.push({ text: currentText, bold: false });
+            currentText = '';
+          }
+          i += 1;
+          let italicText = '';
+          while (i < line.length && line[i] !== '*') {
+            italicText += line[i];
+            i++;
+          }
+          parts.push({ text: italicText, italic: true });
+          i += 1;
+        } else {
+          currentText += line[i];
+          i++;
+        }
+      }
+
+      if (currentText) {
+        parts.push({ text: currentText, bold: false });
+      }
+
+      // Check if line is a heading
+      const isHeading = line.match(/^(#{1,3})\s+(.+)$/);
+      const isBullet = line.match(/^[-*]\s+(.+)$/);
+      const isNumbered = line.match(/^\d+\.\s+(.+)$/);
+
+      if (isHeading) {
+        const level = isHeading[1].length;
+        elements.push(
+          <Text key={index} style={[style, styles.markdownHeading, level === 1 && styles.markdownH1, level === 2 && styles.markdownH2, level === 3 && styles.markdownH3]}>
+            {isHeading[2]}
+          </Text>
+        );
+      } else if (isBullet) {
+        elements.push(
+          <View key={index} style={styles.markdownListItem}>
+            <Text style={[style, styles.markdownBullet]}>• </Text>
+            <Text style={style}>{isBullet[1]}</Text>
+          </View>
+        );
+      } else if (isNumbered) {
+        elements.push(
+          <View key={index} style={styles.markdownListItem}>
+            <Text style={[style, styles.markdownBullet]}>{isNumbered[0].match(/^\d+\./)[0]} </Text>
+            <Text style={style}>{isNumbered[1]}</Text>
+          </View>
+        );
+      } else if (parts.length > 0) {
+        elements.push(
+          <Text key={index} style={style}>
+            {parts.map((part, partIndex) => (
+              <Text
+                key={partIndex}
+                style={[
+                  part.bold && styles.markdownBold,
+                  part.italic && styles.markdownItalic,
+                ]}
+              >
+                {part.text}
+              </Text>
+            ))}
+            {'\n'}
+          </Text>
+        );
+      } else {
+        elements.push(<Text key={index} style={style}>{'\n'}</Text>);
+      }
+    });
+
+    return elements;
+  };
+
+  return <View>{parseMarkdown(children)}</View>;
+}
 
 // Helper function to format timestamp
 function formatTimestamp(timestamp) {
@@ -72,7 +191,28 @@ function NoteEditor({ note, onBack, onSave }) {
   const insets = useSafeAreaInsets();
   const [title, setTitle] = useState(note?.title || 'New Note');
   const [content, setContent] = useState(note?.content || '');
+  const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
+  const [summary, setSummary] = useState('');
+  const [isLoadingSummary, setIsLoadingSummary] = useState(false);
+  const [showSummary, setShowSummary] = useState(false);
   const saveTimeoutRef = useRef(null);
+
+  // Track keyboard visibility
+  useEffect(() => {
+    const keyboardDidShowListener = Keyboard.addListener(
+      'keyboardDidShow',
+      () => setIsKeyboardVisible(true)
+    );
+    const keyboardDidHideListener = Keyboard.addListener(
+      'keyboardDidHide',
+      () => setIsKeyboardVisible(false)
+    );
+
+    return () => {
+      keyboardDidShowListener.remove();
+      keyboardDidHideListener.remove();
+    };
+  }, []);
 
   // Auto-save with debouncing
   useEffect(() => {
@@ -91,39 +231,154 @@ function NoteEditor({ note, onBack, onSave }) {
     };
   }, [title, content]);
 
+  // Handle keyboard toggle
+  const handleKeyboardToggle = () => {
+    if (isKeyboardVisible) {
+      Keyboard.dismiss();
+    } else {
+      // Focus on content input to show keyboard
+      contentInputRef.current?.focus();
+    }
+  };
+
+  // Handle chat button - summarize note with ChatGPT
+  const handleSummarizeNote = async () => {
+    if (!content.trim() && !title.trim()) {
+      alert('Note is empty. Please add some content first.');
+      return;
+    }
+
+    setIsLoadingSummary(true);
+    setShowSummary(true);
+    setSummary('');
+
+    try {
+      const response = await fetch(OPENAI_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: 'gpt-4o-mini',
+          messages: [
+            {
+              role: 'system',
+              content: 'You are a helpful assistant that summarizes notes concisely and clearly.',
+            },
+            {
+              role: 'user',
+              content: `Please summarize the following note:\n\nTitle: ${title}\n\nContent: ${content}`,
+            },
+          ],
+          temperature: 0.7,
+          max_tokens: 500,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error?.message || 'Failed to get summary');
+      }
+
+      const data = await response.json();
+      const summaryText = data.choices[0]?.message?.content || 'No summary available';
+      setSummary(summaryText);
+    } catch (error) {
+      console.error('Error summarizing note:', error);
+      setSummary(`Error: ${error.message}`);
+    } finally {
+      setIsLoadingSummary(false);
+    }
+  };
+
+  const contentInputRef = useRef(null);
+
   return (
     <View style={styles.container}>
       <StatusBar style="light" />
 
-      <View style={{ paddingTop: insets.top, flex: 1 }}>
-        {/* Header with back button */}
-        <View style={styles.editorHeader}>
-          <TouchableOpacity onPress={onBack} style={styles.backButton}>
-            <Text style={styles.backButtonText}>← Back</Text>
+      <KeyboardAvoidingView
+        style={{ flex: 1 }}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={0}
+      >
+        <View style={{ paddingTop: insets.top, flex: 1 }}>
+          {/* Header with back button */}
+          <View style={styles.editorHeader}>
+            <TouchableOpacity onPress={onBack} style={styles.backButton}>
+              <Text style={styles.backButtonText}>← Back</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Editor Content */}
+          <View style={styles.editorContent}>
+            <TextInput
+              style={styles.titleInput}
+              value={title}
+              onChangeText={setTitle}
+              placeholder="Note Title"
+              placeholderTextColor="#666666"
+            />
+
+            <TextInput
+              ref={contentInputRef}
+              style={styles.contentInput}
+              value={content}
+              onChangeText={setContent}
+              placeholder="Start typing your note..."
+              placeholderTextColor="#666666"
+              multiline
+              textAlignVertical="top"
+            />
+          </View>
+        </View>
+
+        {/* Footer with action buttons */}
+        <View style={[styles.editorFooter, { paddingBottom: insets.bottom }]}>
+          <TouchableOpacity style={styles.editorFooterButton} onPress={handleSummarizeNote}>
+            <ChatIcon width={20} height={20} color="#999999" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.editorFooterButton}>
+            <MicrophoneIcon width={20} height={20} color="#999999" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.editorFooterButton} onPress={handleKeyboardToggle}>
+            <KeyboardIcon width={20} height={20} color="#999999" />
           </TouchableOpacity>
         </View>
+      </KeyboardAvoidingView>
 
-        {/* Editor Content */}
-        <View style={styles.editorContent}>
-          <TextInput
-            style={styles.titleInput}
-            value={title}
-            onChangeText={setTitle}
-            placeholder="Note Title"
-            placeholderTextColor="#666666"
-          />
+      {/* Summary Modal */}
+      <Modal
+        visible={showSummary}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowSummary(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setShowSummary(false)}
+        >
+          <Pressable style={styles.summaryModal} onPress={(e) => e.stopPropagation()}>
+            <View style={styles.summaryHeader}>
+              <Text style={styles.summaryTitle}>AI Summary</Text>
+              <TouchableOpacity onPress={() => setShowSummary(false)} style={styles.closeButton}>
+                <Text style={styles.closeButtonText}>✕</Text>
+              </TouchableOpacity>
+            </View>
 
-          <TextInput
-            style={styles.contentInput}
-            value={content}
-            onChangeText={setContent}
-            placeholder="Start typing your note..."
-            placeholderTextColor="#666666"
-            multiline
-            textAlignVertical="top"
-          />
-        </View>
-      </View>
+            <ScrollView style={styles.summaryContent}>
+              {isLoadingSummary ? (
+                <View style={styles.loadingContainer}>
+                  <Text style={styles.loadingText}>Generating summary...</Text>
+                </View>
+              ) : (
+                <MarkdownText style={styles.summaryText}>{summary}</MarkdownText>
+              )}
+            </ScrollView>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -188,16 +443,16 @@ function MainScreen({ notes, onNotePress, onCreateNote, onDeleteNote }) {
       {/* Bottom Navigation */}
       <View style={[styles.bottomNav, { paddingBottom: insets.bottom }]}>
         <TouchableOpacity style={styles.navButton}>
-          <Text style={styles.navIcon}>🔍</Text>
+          <SearchIcon width={24} height={24} color="#999999" />
         </TouchableOpacity>
         <TouchableOpacity style={styles.navButton}>
-          <Text style={styles.navIcon}>💬</Text>
+          <ChatIcon width={24} height={24} color="#999999" />
         </TouchableOpacity>
         <TouchableOpacity style={styles.navButton}>
-          <Text style={styles.navIcon}>🎤</Text>
+          <MicrophoneIcon width={24} height={24} color="#999999" />
         </TouchableOpacity>
         <TouchableOpacity style={styles.navButton} onPress={onCreateNote}>
-          <Text style={styles.navIcon}>✏️</Text>
+          <PenIcon width={24} height={24} color="#999999" />
         </TouchableOpacity>
       </View>
 
@@ -280,6 +535,13 @@ export default function App() {
 
   // Handle going back to main screen
   const handleBack = () => {
+    // Check if current note is unedited and should be discarded
+    const currentNote = notes.find((note) => note.id === selectedNoteId);
+    if (currentNote && currentNote.title === 'New Note' && currentNote.content === '') {
+      // Remove the unedited note
+      setNotes((prevNotes) => prevNotes.filter((note) => note.id !== selectedNoteId));
+    }
+
     setCurrentScreen('main');
     setSelectedNoteId(null);
   };
@@ -409,6 +671,19 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 0,
   },
+  editorFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 8,
+  },
+  editorFooterButton: {
+    padding: 8,
+    backgroundColor: '#2a2a2a',
+    borderRadius: 8,
+  },
   // Delete Modal styles
   modalOverlay: {
     flex: 1,
@@ -438,5 +713,89 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#ff3b30',
     fontWeight: '600',
+  },
+  // Summary Modal styles
+  summaryModal: {
+    backgroundColor: '#2a2a2a',
+    borderRadius: 20,
+    marginHorizontal: 20,
+    marginVertical: 100,
+    maxHeight: '70%',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  summaryHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333333',
+  },
+  summaryTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    color: '#ffffff',
+  },
+  closeButton: {
+    padding: 8,
+  },
+  closeButtonText: {
+    fontSize: 24,
+    color: '#999999',
+    fontWeight: '300',
+  },
+  summaryContent: {
+    padding: 20,
+    maxHeight: '100%',
+  },
+  summaryText: {
+    fontSize: 16,
+    color: '#ffffff',
+    lineHeight: 24,
+  },
+  loadingContainer: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#999999',
+  },
+  // Markdown styles
+  markdownBold: {
+    fontWeight: 'bold',
+  },
+  markdownItalic: {
+    fontStyle: 'italic',
+  },
+  markdownHeading: {
+    fontWeight: '600',
+    marginTop: 8,
+    marginBottom: 8,
+  },
+  markdownH1: {
+    fontSize: 24,
+  },
+  markdownH2: {
+    fontSize: 20,
+  },
+  markdownH3: {
+    fontSize: 18,
+  },
+  markdownListItem: {
+    flexDirection: 'row',
+    marginVertical: 2,
+  },
+  markdownBullet: {
+    marginRight: 8,
   },
 });

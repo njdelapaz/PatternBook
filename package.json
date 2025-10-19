@@ -14,7 +14,14 @@
     "expo-status-bar": "~3.0.8",
     "react": "19.1.0",
     "react-native": "0.81.4",
-    "react-native-safe-area-context": "^5.6.1"
+    "react-native-dotenv": "^3.4.11",
+    "react-native-safe-area-context": "^5.6.1",
+    "react-native-svg": "15.12.1"
   },
-  "private": true
+  "private": true,
+  "devDependencies": {
+    "babel-preset-expo": "^54.0.4",
+    "metro-react-native-babel-transformer": "^0.77.0",
+    "react-native-svg-transformer": "^1.5.1"
+  }
 }
