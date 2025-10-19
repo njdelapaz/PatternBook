@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Modal, Pressable } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -129,8 +129,28 @@ function NoteEditor({ note, onBack, onSave }) {
 }
 
 // Main Screen Component
-function MainScreen({ notes, onNotePress, onCreateNote }) {
+function MainScreen({ notes, onNotePress, onCreateNote, onDeleteNote }) {
   const insets = useSafeAreaInsets();
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [noteToDelete, setNoteToDelete] = useState(null);
+
+  const handleLongPress = (note) => {
+    setNoteToDelete(note);
+    setDeleteModalVisible(true);
+  };
+
+  const handleDelete = () => {
+    if (noteToDelete) {
+      onDeleteNote(noteToDelete.id);
+      setDeleteModalVisible(false);
+      setNoteToDelete(null);
+    }
+  };
+
+  const handleCancelDelete = () => {
+    setDeleteModalVisible(false);
+    setNoteToDelete(null);
+  };
 
   return (
     <View style={styles.container}>
@@ -154,6 +174,8 @@ function MainScreen({ notes, onNotePress, onCreateNote }) {
                 key={note.id}
                 style={styles.noteCard}
                 onPress={() => onNotePress(note)}
+                onLongPress={() => handleLongPress(note)}
+                delayLongPress={500}
               >
                 <Text style={styles.noteTime}>{formatTimestamp(note.updatedAt)}</Text>
                 <Text style={styles.noteText}>{note.title}</Text>
@@ -178,6 +200,29 @@ function MainScreen({ notes, onNotePress, onCreateNote }) {
           <Text style={styles.navIcon}>✏️</Text>
         </TouchableOpacity>
       </View>
+
+      {/* Delete Modal */}
+      <Modal
+        visible={deleteModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleCancelDelete}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={handleCancelDelete}
+        >
+          <View style={styles.modalContent}>
+            <TouchableOpacity
+              style={styles.deleteButton}
+              onPress={handleDelete}
+            >
+              <Text style={styles.deleteIcon}>🗑️</Text>
+              <Text style={styles.deleteText}>Delete note</Text>
+            </TouchableOpacity>
+          </View>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -239,6 +284,11 @@ export default function App() {
     setSelectedNoteId(null);
   };
 
+  // Handle deleting a note
+  const handleDeleteNote = (noteId) => {
+    setNotes((prevNotes) => prevNotes.filter((note) => note.id !== noteId));
+  };
+
   const selectedNote = notes.find((note) => note.id === selectedNoteId);
 
   return (
@@ -248,6 +298,7 @@ export default function App() {
           notes={notes}
           onNotePress={handleNotePress}
           onCreateNote={handleCreateNote}
+          onDeleteNote={handleDeleteNote}
         />
       ) : (
         <NoteEditor
@@ -357,5 +408,35 @@ const styles = StyleSheet.create({
     lineHeight: 24,
     flex: 1,
     padding: 0,
+  },
+  // Delete Modal styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#2a2a2a',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingBottom: 40,
+    paddingTop: 20,
+  },
+  deleteButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    marginHorizontal: 20,
+    marginVertical: 8,
+  },
+  deleteIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  deleteText: {
+    fontSize: 18,
+    color: '#ff3b30',
+    fontWeight: '600',
   },
 });
