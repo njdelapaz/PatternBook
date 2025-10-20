@@ -1,9 +1,11 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Modal, Pressable, Keyboard, KeyboardAvoidingView, Platform, TouchableWithoutFeedback } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Modal, Pressable, Keyboard, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, ActivityIndicator } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { OPENAI_API_KEY } from '@env';
+import { OPENAI_API_KEY, DEEPGRAM_API_KEY, TRANSCRIBE_PROVIDER } from '@env';
+import * as FileSystem from 'expo-file-system';
+import { Audio as AVAudio } from 'expo-av';
 
 // Import Carbon icons
 import SearchIcon from './assets/carbon-icons/carbon--search.svg';
@@ -226,6 +228,36 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
   const [history, setHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const saveTimeoutRef = useRef(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const recordingRef = useRef(null);
+  const isStartingRef = useRef(false);
+
+  // Initialize audio mode on mount for iOS (expo-av)
+  useEffect(() => {
+    const setupAudioMode = async () => {
+      if (Platform.OS === 'ios') {
+        try {
+          await AVAudio.setAudioModeAsync({
+            allowsRecordingIOS: true,
+            playsInSilentModeIOS: true,
+            staysActiveInBackground: false,
+          });
+        } catch (e) {
+          console.error('Failed to set AV audio mode', e);
+        }
+      }
+    };
+    setupAudioMode();
+
+    return () => {
+      // Cleanup any ongoing recording on unmount
+      if (recordingRef.current) {
+        recordingRef.current.stopAndUnloadAsync().catch(() => {});
+        recordingRef.current = null;
+      }
+    };
+  }, []);
 
   // Track keyboard visibility
   useEffect(() => {
@@ -365,6 +397,189 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
     }
   };
 
+  // Voice Recording: Start
+  const startRecording = async () => {
+    try {
+      if (isStartingRef.current) return; // prevent re-entrancy
+      isStartingRef.current = true;
+      if (Platform.OS === 'web') {
+        alert('Voice recording is not supported on web in this MVP. Use the keyboard mic on mobile.');
+        return;
+      }
+
+      const perm = await AVAudio.requestPermissionsAsync();
+      if (perm.status !== 'granted') {
+        alert('Microphone permission is required to record.');
+        return;
+      }
+
+      // Ensure audio mode is set for recording
+      await AVAudio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+      });
+
+      // Stop and discard any previous recording
+      if (recordingRef.current) {
+        try {
+          await recordingRef.current.stopAndUnloadAsync();
+        } catch {}
+        recordingRef.current = null;
+      }
+
+      let recording = new AVAudio.Recording();
+      try {
+        await recording.prepareToRecordAsync(AVAudio.RecordingOptionsPresets.HIGH_QUALITY);
+        await recording.startAsync();
+      } catch (err) {
+        // Retry once if iOS reports recording disabled
+        const msg = String(err?.message || err);
+        if (msg.includes('RecordingDisabled') || msg.includes('Recording not allowed')) {
+          try {
+            await AVAudio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true, staysActiveInBackground: false });
+            recording = new AVAudio.Recording();
+            await recording.prepareToRecordAsync(AVAudio.RecordingOptionsPresets.HIGH_QUALITY);
+            await recording.startAsync();
+          } catch (retryErr) {
+            throw retryErr;
+          }
+        } else {
+          throw err;
+        }
+      }
+      recordingRef.current = recording;
+      setIsRecording(true);
+    } catch (e) {
+      console.error('Failed to start recording', e);
+      alert('Failed to start recording: ' + e.message);
+    }
+    finally {
+      isStartingRef.current = false;
+    }
+  };
+
+  // Voice Recording: Stop and transcribe
+  const stopAndTranscribe = async () => {
+    try {
+      if (!recordingRef.current) return;
+
+      setIsRecording(false);
+      await recordingRef.current.stopAndUnloadAsync();
+      const uri = recordingRef.current.getURI();
+      recordingRef.current = null;
+
+      if (!uri) return;
+
+      setIsTranscribing(true);
+  const transcription = await transcribeAudio(uri);
+      if (transcription) {
+        setContent(prev => (prev ? prev + (prev.endsWith('\n') ? '' : '\n') + transcription : transcription));
+      }
+    } catch (e) {
+      console.error('Failed to stop or transcribe', e);
+      alert('Failed to transcribe recording: ' + e.message);
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  // Provider-agnostic transcription
+  const transcribeAudio = async (fileUri) => {
+    const provider = (TRANSCRIBE_PROVIDER || 'openai').toLowerCase();
+    if (provider === 'deepgram') {
+      const dg = await transcribeWithDeepgram(fileUri);
+      if (dg) return dg;
+      // Fallback to OpenAI if Deepgram failed and OpenAI key exists
+      if (OPENAI_API_KEY) return await transcribeWithOpenAI(fileUri);
+      return '';
+    } else {
+      const oi = await transcribeWithOpenAI(fileUri);
+      if (oi) return oi;
+      // If OpenAI failed due to quota but Deepgram key exists, try Deepgram
+      if (DEEPGRAM_API_KEY) return await transcribeWithDeepgram(fileUri);
+      return '';
+    }
+  };
+
+  // OpenAI Whisper transcription
+  const transcribeWithOpenAI = async (fileUri) => {
+    try {
+      if (!OPENAI_API_KEY) {
+        // No key; skip
+        return '';
+      }
+      // Use FormData with file URI for React Native
+      const formData = new FormData();
+      formData.append('model', 'whisper-1');
+      formData.append('file', {
+        uri: fileUri,
+        name: 'recording.m4a',
+        type: 'audio/m4a',
+      });
+
+      const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errTxt = await response.text();
+        // Surface quota errors in UI and return empty to allow fallback
+        try {
+          const errJson = JSON.parse(errTxt);
+          if (errJson?.error?.code === 'insufficient_quota') {
+            alert('OpenAI quota exceeded for transcription. Configure an alternate provider or update billing.');
+            return '';
+          }
+        } catch {}
+        throw new Error(errTxt);
+      }
+      const data = await response.json();
+      return data.text || '';
+    } catch (err) {
+      console.error('Transcription error', err);
+      return '';
+    }
+  };
+
+  // Deepgram transcription (fallback or primary)
+  const transcribeWithDeepgram = async (fileUri) => {
+    try {
+      if (!DEEPGRAM_API_KEY) {
+        return '';
+      }
+      const formData = new FormData();
+      formData.append('file', {
+        uri: fileUri,
+        name: 'recording.m4a',
+        type: 'audio/m4a',
+      });
+      // model can be tuned; nova-2 is a good general English model
+      const response = await fetch('https://api.deepgram.com/v1/listen?model=nova-2', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Token ${DEEPGRAM_API_KEY}`,
+        },
+        body: formData,
+      });
+      if (!response.ok) {
+        const errTxt = await response.text();
+        throw new Error(errTxt);
+      }
+      const data = await response.json();
+      // Parse transcript
+      const transcript = data?.results?.channels?.[0]?.alternatives?.[0]?.transcript || '';
+      return transcript;
+    } catch (err) {
+      console.error('Deepgram transcription error', err);
+      return '';
+    }
+  };
+
   const contentInputRef = useRef(null);
   const theme = isDarkMode ? darkTheme : lightTheme;
 
@@ -444,8 +659,16 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
           <TouchableOpacity style={[styles.editorFooterButton, { backgroundColor: theme.cardBackground }]} onPress={handleSummarizeNote}>
             <ChatIcon width={20} height={20} color={theme.iconColor} />
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.editorFooterButton, { backgroundColor: theme.cardBackground }]}>
-            <MicrophoneIcon width={20} height={20} color={theme.iconColor} />
+          <TouchableOpacity
+            style={[styles.editorFooterButton, { backgroundColor: isRecording ? '#ff3b30' : theme.cardBackground }]}
+            onPressIn={startRecording}
+            onPressOut={stopAndTranscribe}
+          >
+            {isTranscribing ? (
+              <ActivityIndicator size="small" color={theme.iconColor} />
+            ) : (
+              <MicrophoneIcon width={20} height={20} color={theme.iconColor} />
+            )}
           </TouchableOpacity>
           <TouchableOpacity style={[styles.editorFooterButton, { backgroundColor: theme.cardBackground }]} onPress={handleKeyboardToggle}>
             <KeyboardIcon width={20} height={20} color={theme.iconColor} />
@@ -529,7 +752,8 @@ function MainScreen({ notes, onNotePress, onCreateNote, onDeleteNote, onTogglePi
   const filteredAndSortedNotes = notes
     .filter(note => 
       searchQuery === '' || 
-      note.title.toLowerCase().includes(searchQuery.toLowerCase())
+      note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (note.content && note.content.toLowerCase().includes(searchQuery.toLowerCase()))
     )
     .sort((a, b) => {
       switch (sortBy) {
@@ -831,6 +1055,8 @@ function MainScreen({ notes, onNotePress, onCreateNote, onDeleteNote, onTogglePi
 function SettingsScreen({ settings, onSettingsChange, isDarkMode, onBack }) {
   const insets = useSafeAreaInsets();
   const theme = isDarkMode ? darkTheme : lightTheme;
+  const [isMicChecking, setIsMicChecking] = useState(false);
+  const [micCheckResult, setMicCheckResult] = useState('');
 
   const handleNameChange = (name) => {
     onSettingsChange({
@@ -857,6 +1083,46 @@ function SettingsScreen({ settings, onSettingsChange, isDarkMode, onBack }) {
         reminderTime: time
       }
     });
+  };
+
+  const handleMicPreflight = async () => {
+    try {
+      setIsMicChecking(true);
+      setMicCheckResult('');
+      const perm = await AVAudio.requestPermissionsAsync();
+      if (perm.status !== 'granted') {
+        alert('Microphone permission is required. Please enable it in Settings.');
+        return;
+      }
+      // Ensure audio mode is set for iOS
+      await AVAudio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+      });
+
+      // Start a short recording
+      const recording = new AVAudio.Recording();
+      await recording.prepareToRecordAsync(AVAudio.RecordingOptionsPresets.HIGH_QUALITY);
+      await recording.startAsync();
+      await new Promise((res) => setTimeout(res, 1000));
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+
+      // Optionally delete the temp file
+      if (uri) {
+        try { await FileSystem.deleteAsync(uri, { idempotent: true }); } catch {}
+      }
+
+      setMicCheckResult('Mic preflight succeeded. Recording and permissions look good.');
+      alert('Mic preflight succeeded.');
+    } catch (e) {
+      console.error('Mic preflight failed', e);
+      setMicCheckResult(`Mic preflight failed: ${e.message || e}`);
+      alert(`Mic preflight failed: ${e.message || e}`);
+    } finally {
+      setIsMicChecking(false);
+    }
   };
 
   return (
@@ -927,6 +1193,26 @@ function SettingsScreen({ settings, onSettingsChange, isDarkMode, onBack }) {
                 />
               </View>
             )}
+          </View>
+
+          {/* Audio / Diagnostics Section */}
+          <View style={[styles.settingsCard, { backgroundColor: theme.cardBackground }]}>
+            <Text style={[styles.settingsSectionTitle, { color: theme.textColor }]}>Audio</Text>
+            <Text style={[styles.settingsLabel, { color: theme.secondaryTextColor, marginBottom: 8 }]}>Run a 1-second test recording to verify mic permissions and audio session.</Text>
+            <TouchableOpacity
+              style={[styles.testButton, { backgroundColor: theme.accentColor }]}
+              onPress={handleMicPreflight}
+              disabled={isMicChecking}
+            >
+              {isMicChecking ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.testButtonText}>Run mic preflight</Text>
+              )}
+            </TouchableOpacity>
+            {micCheckResult ? (
+              <Text style={[styles.noteTime, { color: theme.secondaryTextColor, marginTop: 8 }]}>{micCheckResult}</Text>
+            ) : null}
           </View>
         </ScrollView>
       </View>
@@ -1586,6 +1872,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',
+  },
+  // Test button styles (settings)
+  testButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'flex-start',
+  },
+  testButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   // Action button styles for modals
   actionButton: {
