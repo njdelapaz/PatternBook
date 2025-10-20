@@ -489,13 +489,15 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
 }
 
 // Main Screen Component
-function MainScreen({ notes, onNotePress, onCreateNote, onDeleteNote, isDarkMode, onToggleTheme, searchQuery, onSearchChange, showSearch, onToggleSearch, sortBy, onSortChange }) {
+function MainScreen({ notes, onNotePress, onCreateNote, onDeleteNote, onTogglePin, isDarkMode, onToggleTheme, searchQuery, onSearchChange, showSearch, onToggleSearch, sortBy, onSortChange, showThreeDotsMenu, onToggleThreeDotsMenu, onNavigateToSettings, onNavigateToRecentlyDeleted }) {
   const insets = useSafeAreaInsets();
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [noteToDelete, setNoteToDelete] = useState(null);
+  const [noteToPin, setNoteToPin] = useState(null);
 
   const handleLongPress = (note) => {
     setNoteToDelete(note);
+    setNoteToPin(note);
     setDeleteModalVisible(true);
   };
 
@@ -504,12 +506,23 @@ function MainScreen({ notes, onNotePress, onCreateNote, onDeleteNote, isDarkMode
       onDeleteNote(noteToDelete.id);
       setDeleteModalVisible(false);
       setNoteToDelete(null);
+      setNoteToPin(null);
+    }
+  };
+
+  const handleTogglePin = () => {
+    if (noteToPin) {
+      onTogglePin(noteToPin.id);
+      setDeleteModalVisible(false);
+      setNoteToDelete(null);
+      setNoteToPin(null);
     }
   };
 
   const handleCancelDelete = () => {
     setDeleteModalVisible(false);
     setNoteToDelete(null);
+    setNoteToPin(null);
   };
 
   // Filter and sort notes
@@ -538,21 +551,26 @@ function MainScreen({ notes, onNotePress, onCreateNote, onDeleteNote, isDarkMode
     const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
     
     const sections = {
+      pinned: [],
       today: [],
       yesterday: [],
       past: []
     };
     
     notes.forEach(note => {
-      const noteDate = new Date(note.updatedAt);
-      const noteDateOnly = new Date(noteDate.getFullYear(), noteDate.getMonth(), noteDate.getDate());
-      
-      if (noteDateOnly.getTime() === today.getTime()) {
-        sections.today.push(note);
-      } else if (noteDateOnly.getTime() === yesterday.getTime()) {
-        sections.yesterday.push(note);
+      if (note.pinned) {
+        sections.pinned.push(note);
       } else {
-        sections.past.push(note);
+        const noteDate = new Date(note.updatedAt);
+        const noteDateOnly = new Date(noteDate.getFullYear(), noteDate.getMonth(), noteDate.getDate());
+        
+        if (noteDateOnly.getTime() === today.getTime()) {
+          sections.today.push(note);
+        } else if (noteDateOnly.getTime() === yesterday.getTime()) {
+          sections.yesterday.push(note);
+        } else {
+          sections.past.push(note);
+        }
       }
     });
     
@@ -574,6 +592,9 @@ function MainScreen({ notes, onNotePress, onCreateNote, onDeleteNote, isDarkMode
           <View style={styles.header}>
             <View style={styles.headerLeft} />
             <View style={styles.headerRight}>
+              <TouchableOpacity onPress={onToggleThreeDotsMenu} style={styles.threeDotsButton}>
+                <Text style={[styles.threeDotsText, { color: theme.textColor }]}>⋯</Text>
+              </TouchableOpacity>
               <TouchableOpacity onPress={onToggleTheme} style={styles.themeToggle}>
                 <Text style={[styles.themeToggleText, { color: theme.textColor }]}>
                   {isDarkMode ? '☀️' : '🌙'}
@@ -626,6 +647,28 @@ function MainScreen({ notes, onNotePress, onCreateNote, onDeleteNote, isDarkMode
 
           {/* Notes List with Date Sections */}
           <View style={styles.notesList}>
+            {/* Pinned Section */}
+            {noteSections.pinned.length > 0 && (
+              <View style={styles.dateSection}>
+                <Text style={[styles.sectionHeader, { color: theme.textColor }]}>Pinned</Text>
+                {noteSections.pinned.map((note) => (
+                  <TouchableOpacity
+                    key={note.id}
+                    style={[styles.noteCard, { backgroundColor: theme.cardBackground }]}
+                    onPress={() => onNotePress(note)}
+                    onLongPress={() => handleLongPress(note)}
+                    delayLongPress={500}
+                  >
+                    <Text style={[styles.noteTime, { color: theme.secondaryTextColor }]}>{formatTimestamp(note.updatedAt)}</Text>
+                    <Text style={[styles.noteText, { color: theme.textColor }]}>{note.title}</Text>
+                    <Text style={[styles.notePreview, { color: theme.secondaryTextColor, fontFamily: 'Times New Roman' }]} numberOfLines={3}>
+                      {note.content.length > 150 ? note.content.substring(0, 150) + '...' : note.content}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
             {/* Today Section */}
             {noteSections.today.length > 0 && (
               <View style={styles.dateSection}>
@@ -711,6 +754,42 @@ function MainScreen({ notes, onNotePress, onCreateNote, onDeleteNote, isDarkMode
         </TouchableOpacity>
       </View>
 
+      {/* Three Dots Menu */}
+      {showThreeDotsMenu && (
+        <Modal
+          visible={showThreeDotsMenu}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={onToggleThreeDotsMenu}
+        >
+          <Pressable
+            style={styles.modalOverlay}
+            onPress={onToggleThreeDotsMenu}
+          >
+            <View style={[styles.threeDotsMenu, { backgroundColor: theme.cardBackground }]}>
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => {
+                  onToggleThreeDotsMenu();
+                  onNavigateToRecentlyDeleted();
+                }}
+              >
+                <Text style={[styles.menuItemText, { color: theme.textColor }]}>Recently deleted</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => {
+                  onToggleThreeDotsMenu();
+                  onNavigateToSettings();
+                }}
+              >
+                <Text style={[styles.menuItemText, { color: theme.textColor }]}>Settings</Text>
+              </TouchableOpacity>
+            </View>
+          </Pressable>
+        </Modal>
+      )}
+
       {/* Delete Modal */}
       <Modal
         visible={deleteModalVisible}
@@ -723,6 +802,17 @@ function MainScreen({ notes, onNotePress, onCreateNote, onDeleteNote, isDarkMode
           onPress={handleCancelDelete}
         >
           <View style={[styles.modalContent, { backgroundColor: theme.cardBackground }]}>
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={handleTogglePin}
+            >
+              <Text style={[styles.actionIcon, { color: theme.textColor }]}>
+                {noteToPin?.pinned ? '📌' : '📍'}
+              </Text>
+              <Text style={[styles.actionText, { color: theme.textColor }]}>
+                {noteToPin?.pinned ? 'Unpin note' : 'Pin note'}
+              </Text>
+            </TouchableOpacity>
             <TouchableOpacity
               style={styles.deleteButton}
               onPress={handleDelete}
@@ -737,15 +827,186 @@ function MainScreen({ notes, onNotePress, onCreateNote, onDeleteNote, isDarkMode
   );
 }
 
+// Settings Screen Component
+function SettingsScreen({ settings, onSettingsChange, isDarkMode, onBack }) {
+  const insets = useSafeAreaInsets();
+  const theme = isDarkMode ? darkTheme : lightTheme;
+
+  const handleNameChange = (name) => {
+    onSettingsChange({
+      ...settings,
+      profile: { ...settings.profile, name }
+    });
+  };
+
+  const handleNotificationToggle = (key) => {
+    onSettingsChange({
+      ...settings,
+      notifications: {
+        ...settings.notifications,
+        [key]: !settings.notifications[key]
+      }
+    });
+  };
+
+  const handleTimeChange = (time) => {
+    onSettingsChange({
+      ...settings,
+      notifications: {
+        ...settings.notifications,
+        reminderTime: time
+      }
+    });
+  };
+
+  return (
+    <View style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
+      <StatusBar style={isDarkMode ? "light" : "dark"} />
+      
+      <View style={{ paddingTop: insets.top, flex: 1 }}>
+        <View style={styles.settingsHeader}>
+          <TouchableOpacity onPress={onBack} style={styles.backButton}>
+            <Text style={[styles.backButtonText, { color: theme.accentColor }]}>← Back</Text>
+          </TouchableOpacity>
+          <Text style={[styles.settingsTitle, { color: theme.textColor }]}>Settings</Text>
+        </View>
+
+        <ScrollView style={styles.settingsContent}>
+          {/* Profile Section */}
+          <View style={[styles.settingsCard, { backgroundColor: theme.cardBackground }]}>
+            <Text style={[styles.settingsSectionTitle, { color: theme.textColor }]}>Profile</Text>
+            <View style={styles.settingsRow}>
+              <Text style={[styles.settingsLabel, { color: theme.textColor }]}>Name</Text>
+              <TextInput
+                style={[styles.settingsInput, { color: theme.textColor, borderColor: theme.borderColor }]}
+                value={settings.profile.name}
+                onChangeText={handleNameChange}
+                placeholder="Enter your name"
+                placeholderTextColor={theme.placeholderColor}
+              />
+            </View>
+          </View>
+
+          {/* Notifications Section */}
+          <View style={[styles.settingsCard, { backgroundColor: theme.cardBackground }]}>
+            <Text style={[styles.settingsSectionTitle, { color: theme.textColor }]}>Notifications</Text>
+            
+            <View style={styles.settingsRow}>
+              <Text style={[styles.settingsLabel, { color: theme.textColor }]}>Weekly Letter</Text>
+              <TouchableOpacity
+                style={[styles.toggle, { backgroundColor: settings.notifications.weeklyLetter ? '#4CAF50' : '#ccc' }]}
+                onPress={() => handleNotificationToggle('weeklyLetter')}
+              >
+                <View style={[styles.toggleThumb, { 
+                  transform: [{ translateX: settings.notifications.weeklyLetter ? 20 : 2 }] 
+                }]} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={styles.settingsRow}>
+              <Text style={[styles.settingsLabel, { color: theme.textColor }]}>Daily reminder</Text>
+              <TouchableOpacity
+                style={[styles.toggle, { backgroundColor: settings.notifications.dailyReminder ? '#4CAF50' : '#ccc' }]}
+                onPress={() => handleNotificationToggle('dailyReminder')}
+              >
+                <View style={[styles.toggleThumb, { 
+                  transform: [{ translateX: settings.notifications.dailyReminder ? 20 : 2 }] 
+                }]} />
+              </TouchableOpacity>
+            </View>
+
+            {settings.notifications.dailyReminder && (
+              <View style={styles.settingsRow}>
+                <Text style={[styles.settingsLabel, { color: theme.textColor }]}>Reminder time</Text>
+                <TextInput
+                  style={[styles.timeInput, { color: theme.textColor, borderColor: theme.borderColor }]}
+                  value={settings.notifications.reminderTime}
+                  onChangeText={handleTimeChange}
+                  placeholder="09:00"
+                  placeholderTextColor={theme.placeholderColor}
+                />
+              </View>
+            )}
+          </View>
+        </ScrollView>
+      </View>
+    </View>
+  );
+}
+
+// Recently Deleted Screen Component
+function RecentlyDeletedScreen({ deletedNotes, onRestoreNote, onPermanentlyDeleteNote, isDarkMode, onBack }) {
+  const insets = useSafeAreaInsets();
+  const theme = isDarkMode ? darkTheme : lightTheme;
+
+  return (
+    <View style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
+      <StatusBar style={isDarkMode ? "light" : "dark"} />
+      
+      <View style={{ paddingTop: insets.top, flex: 1 }}>
+        <View style={styles.settingsHeader}>
+          <TouchableOpacity onPress={onBack} style={styles.backButton}>
+            <Text style={[styles.backButtonText, { color: theme.accentColor }]}>← Back</Text>
+          </TouchableOpacity>
+          <Text style={[styles.settingsTitle, { color: theme.textColor }]}>Recently Deleted</Text>
+        </View>
+
+        <ScrollView style={styles.settingsContent}>
+          {deletedNotes.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={[styles.emptyStateText, { color: theme.secondaryTextColor }]}>
+                No deleted notes
+              </Text>
+            </View>
+          ) : (
+            deletedNotes.map((note) => (
+              <View key={note.id} style={[styles.settingsCard, { backgroundColor: theme.cardBackground }]}>
+                <Text style={[styles.noteText, { color: theme.textColor }]}>{note.title}</Text>
+                <Text style={[styles.noteTime, { color: theme.secondaryTextColor }]}>
+                  Deleted {formatTimestamp(note.deletedAt)}
+                </Text>
+                <View style={styles.noteActions}>
+                  <TouchableOpacity
+                    style={[styles.restoreButton, { backgroundColor: theme.accentColor }]}
+                    onPress={() => onRestoreNote(note.id)}
+                  >
+                    <Text style={styles.restoreButtonText}>Restore</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    style={[styles.deleteButton, { backgroundColor: '#ff3b30' }]}
+                    onPress={() => onPermanentlyDeleteNote(note.id)}
+                  >
+                    <Text style={styles.deleteButtonText}>Delete Forever</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ))
+          )}
+        </ScrollView>
+      </View>
+    </View>
+  );
+}
+
 // Main App Component
 export default function App() {
   const [notes, setNotes] = useState([]);
-  const [currentScreen, setCurrentScreen] = useState('main');
+  const [deletedNotes, setDeletedNotes] = useState([]);
+  const [currentScreen, setCurrentScreen] = useState('main'); // 'main', 'editor', 'settings', 'recently-deleted'
   const [selectedNoteId, setSelectedNoteId] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
   const [sortBy, setSortBy] = useState('updated'); // 'updated', 'old-to-new', 'alphabetical'
+  const [showThreeDotsMenu, setShowThreeDotsMenu] = useState(false);
+  const [settings, setSettings] = useState({
+    profile: { name: 'User' },
+    notifications: {
+      weeklyLetter: false,
+      dailyReminder: false,
+      reminderTime: '09:00'
+    }
+  });
 
   // Load notes on app start
   useEffect(() => {
@@ -769,6 +1030,7 @@ export default function App() {
       content: '',
       createdAt: Date.now(),
       updatedAt: Date.now(),
+      pinned: false,
     };
     setNotes([newNote, ...notes]);
     setSelectedNoteId(newNote.id);
@@ -807,7 +1069,22 @@ export default function App() {
 
   // Handle deleting a note
   const handleDeleteNote = (noteId) => {
-    setNotes((prevNotes) => prevNotes.filter((note) => note.id !== noteId));
+    const noteToDelete = notes.find(note => note.id === noteId);
+    if (noteToDelete) {
+      setDeletedNotes(prev => [...prev, { ...noteToDelete, deletedAt: Date.now() }]);
+      setNotes((prevNotes) => prevNotes.filter((note) => note.id !== noteId));
+    }
+  };
+
+  // Handle pinning/unpinning a note
+  const handleTogglePin = (noteId) => {
+    setNotes((prevNotes) =>
+      prevNotes.map((note) =>
+        note.id === noteId
+          ? { ...note, pinned: !note.pinned }
+          : note
+      )
+    );
   };
 
   const selectedNote = notes.find((note) => note.id === selectedNoteId);
@@ -817,6 +1094,21 @@ export default function App() {
   const handleSearchChange = (text) => setSearchQuery(text);
   const handleToggleSearch = () => setShowSearch(!showSearch);
   const handleSortChange = (sort) => setSortBy(sort);
+  const handleToggleThreeDotsMenu = () => setShowThreeDotsMenu(!showThreeDotsMenu);
+  const handleNavigateToSettings = () => setCurrentScreen('settings');
+  const handleNavigateToRecentlyDeleted = () => setCurrentScreen('recently-deleted');
+  const handleNavigateBack = () => setCurrentScreen('main');
+  const handleSettingsChange = (newSettings) => setSettings(newSettings);
+  const handleRestoreNote = (noteId) => {
+    const noteToRestore = deletedNotes.find(note => note.id === noteId);
+    if (noteToRestore) {
+      setNotes(prev => [noteToRestore, ...prev]);
+      setDeletedNotes(prev => prev.filter(note => note.id !== noteId));
+    }
+  };
+  const handlePermanentlyDeleteNote = (noteId) => {
+    setDeletedNotes(prev => prev.filter(note => note.id !== noteId));
+  };
 
   return (
     <SafeAreaProvider>
@@ -826,6 +1118,7 @@ export default function App() {
           onNotePress={handleNotePress}
           onCreateNote={handleCreateNote}
           onDeleteNote={handleDeleteNote}
+          onTogglePin={handleTogglePin}
           isDarkMode={isDarkMode}
           onToggleTheme={handleToggleTheme}
           searchQuery={searchQuery}
@@ -834,15 +1127,34 @@ export default function App() {
           onToggleSearch={handleToggleSearch}
           sortBy={sortBy}
           onSortChange={handleSortChange}
+          showThreeDotsMenu={showThreeDotsMenu}
+          onToggleThreeDotsMenu={handleToggleThreeDotsMenu}
+          onNavigateToSettings={handleNavigateToSettings}
+          onNavigateToRecentlyDeleted={handleNavigateToRecentlyDeleted}
         />
-      ) : (
+      ) : currentScreen === 'editor' ? (
         <NoteEditor
           note={selectedNote}
           onBack={handleBack}
           onSave={handleSaveNote}
           isDarkMode={isDarkMode}
         />
-      )}
+      ) : currentScreen === 'settings' ? (
+        <SettingsScreen
+          settings={settings}
+          onSettingsChange={handleSettingsChange}
+          isDarkMode={isDarkMode}
+          onBack={handleNavigateBack}
+        />
+      ) : currentScreen === 'recently-deleted' ? (
+        <RecentlyDeletedScreen
+          deletedNotes={deletedNotes}
+          onRestoreNote={handleRestoreNote}
+          onPermanentlyDeleteNote={handlePermanentlyDeleteNote}
+          isDarkMode={isDarkMode}
+          onBack={handleNavigateBack}
+        />
+      ) : null}
     </SafeAreaProvider>
   );
 }
@@ -1134,5 +1446,162 @@ const styles = StyleSheet.create({
   },
   markdownBullet: {
     marginRight: 8,
+  },
+  // Three dots menu styles
+  threeDotsButton: {
+    padding: 8,
+    marginRight: 8,
+  },
+  threeDotsText: {
+    fontSize: 20,
+    fontWeight: '600',
+  },
+  threeDotsMenu: {
+    position: 'absolute',
+    top: 100,
+    right: 20,
+    borderRadius: 12,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    minWidth: 150,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  menuItem: {
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+  },
+  menuItemText: {
+    fontSize: 16,
+    fontWeight: '500',
+  },
+  // Settings styles
+  settingsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#333333',
+  },
+  settingsTitle: {
+    fontSize: 24,
+    fontWeight: '600',
+    marginLeft: 16,
+  },
+  settingsContent: {
+    flex: 1,
+    paddingHorizontal: 16,
+    paddingTop: 20,
+  },
+  settingsCard: {
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 16,
+  },
+  settingsSectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 16,
+  },
+  settingsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  settingsLabel: {
+    fontSize: 16,
+    fontWeight: '500',
+    flex: 1,
+  },
+  settingsInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 16,
+    minWidth: 120,
+  },
+  timeInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    fontSize: 16,
+    minWidth: 80,
+    textAlign: 'center',
+  },
+  toggle: {
+    width: 50,
+    height: 28,
+    borderRadius: 14,
+    justifyContent: 'center',
+    paddingHorizontal: 2,
+  },
+  toggleThumb: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#fff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  // Recently deleted styles
+  emptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    fontStyle: 'italic',
+  },
+  noteActions: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 12,
+  },
+  restoreButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    flex: 1,
+  },
+  restoreButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  deleteButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  // Action button styles for modals
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    marginHorizontal: 20,
+    marginVertical: 8,
+  },
+  actionIcon: {
+    fontSize: 24,
+    marginRight: 12,
+  },
+  actionText: {
+    fontSize: 18,
+    fontWeight: '600',
   },
 });
