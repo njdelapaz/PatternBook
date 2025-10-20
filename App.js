@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Modal, Pressable, Keyboard, KeyboardAvoidingView, Platform } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Modal, Pressable, Keyboard, KeyboardAvoidingView, Platform, TouchableWithoutFeedback } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -11,12 +11,39 @@ import ChatIcon from './assets/carbon-icons/carbon--chat.svg';
 import MicrophoneIcon from './assets/carbon-icons/carbon--microphone-filled.svg';
 import PenIcon from './assets/carbon-icons/carbon--pen.svg';
 import KeyboardIcon from './assets/carbon-icons/carbon--keyboard.svg';
+import UndoIcon from './assets/carbon-icons/carbon--undo.svg';
+import RedoIcon from './assets/carbon-icons/carbon--redo.svg';
 
 // Storage key for notes
 const NOTES_STORAGE_KEY = '@patternbook_notes';
 
 // OpenAI API Configuration
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
+
+// Theme definitions
+const darkTheme = {
+  backgroundColor: '#1a1a1a',
+  cardBackground: '#2a2a2a',
+  textColor: '#ffffff',
+  secondaryTextColor: '#999999',
+  placeholderColor: '#666666',
+  accentColor: '#007AFF',
+  iconColor: '#999999',
+  navBackground: '#0a0a0a',
+  borderColor: '#333333',
+};
+
+const lightTheme = {
+  backgroundColor: '#ffffff',
+  cardBackground: '#f8f9fa',
+  textColor: '#000000',
+  secondaryTextColor: '#666666',
+  placeholderColor: '#999999',
+  accentColor: '#007AFF',
+  iconColor: '#666666',
+  navBackground: '#f8f9fa',
+  borderColor: '#e1e5e9',
+};
 
 // Simple Markdown Text Component
 function MarkdownText({ children, style }) {
@@ -187,7 +214,7 @@ async function saveNotes(notes) {
 }
 
 // Note Editor Screen Component
-function NoteEditor({ note, onBack, onSave }) {
+function NoteEditor({ note, onBack, onSave, isDarkMode }) {
   const insets = useSafeAreaInsets();
   const [title, setTitle] = useState(note?.title || 'New Note');
   const [content, setContent] = useState(note?.content || '');
@@ -195,6 +222,9 @@ function NoteEditor({ note, onBack, onSave }) {
   const [summary, setSummary] = useState('');
   const [isLoadingSummary, setIsLoadingSummary] = useState(false);
   const [showSummary, setShowSummary] = useState(false);
+  const [isEditingTitle, setIsEditingTitle] = useState(false);
+  const [history, setHistory] = useState([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
   const saveTimeoutRef = useRef(null);
 
   // Track keyboard visibility
@@ -231,6 +261,44 @@ function NoteEditor({ note, onBack, onSave }) {
     };
   }, [title, content]);
 
+  // Add to history when content changes (debounced)
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      const newState = { title, content };
+      const currentState = history[historyIndex];
+      
+      // Only add to history if content actually changed
+      if (!currentState || JSON.stringify(currentState) !== JSON.stringify(newState)) {
+        const newHistory = history.slice(0, historyIndex + 1);
+        newHistory.push(newState);
+        setHistory(newHistory);
+        setHistoryIndex(newHistory.length - 1);
+      }
+    }, 1000); // 1 second debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [title, content]);
+
+  // Undo function
+  const handleUndo = () => {
+    if (historyIndex > 0) {
+      const prevState = history[historyIndex - 1];
+      setTitle(prevState.title);
+      setContent(prevState.content);
+      setHistoryIndex(historyIndex - 1);
+    }
+  };
+
+  // Redo function
+  const handleRedo = () => {
+    if (historyIndex < history.length - 1) {
+      const nextState = history[historyIndex + 1];
+      setTitle(nextState.title);
+      setContent(nextState.content);
+      setHistoryIndex(historyIndex + 1);
+    }
+  };
+
   // Handle keyboard toggle
   const handleKeyboardToggle = () => {
     if (isKeyboardVisible) {
@@ -239,6 +307,11 @@ function NoteEditor({ note, onBack, onSave }) {
       // Focus on content input to show keyboard
       contentInputRef.current?.focus();
     }
+  };
+
+  // Handle tap outside to dismiss keyboard
+  const handleDismissKeyboard = () => {
+    Keyboard.dismiss();
   };
 
   // Handle chat button - summarize note with ChatGPT
@@ -293,10 +366,11 @@ function NoteEditor({ note, onBack, onSave }) {
   };
 
   const contentInputRef = useRef(null);
+  const theme = isDarkMode ? darkTheme : lightTheme;
 
   return (
-    <View style={styles.container}>
-      <StatusBar style="light" />
+    <View style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
+      <StatusBar style={isDarkMode ? "light" : "dark"} />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -304,46 +378,77 @@ function NoteEditor({ note, onBack, onSave }) {
         keyboardVerticalOffset={0}
       >
         <View style={{ paddingTop: insets.top, flex: 1 }}>
-          {/* Header with back button */}
-          <View style={styles.editorHeader}>
-            <TouchableOpacity onPress={onBack} style={styles.backButton}>
-              <Text style={styles.backButtonText}>← Back</Text>
+          {/* Header with Today button, centered title, and undo/redo */}
+          <View style={[styles.editorHeader, { borderBottomColor: theme.borderColor }]}>
+            <TouchableOpacity onPress={onBack} style={styles.todayButton}>
+              <Text style={[styles.todayButtonText, { color: theme.accentColor }]}>← Today</Text>
             </TouchableOpacity>
+            
+            <View style={styles.titleContainer}>
+              {isEditingTitle ? (
+                <TextInput
+                  style={[styles.titleInputInline, { color: theme.textColor }]}
+                  value={title}
+                  onChangeText={setTitle}
+                  onBlur={() => setIsEditingTitle(false)}
+                  autoFocus
+                />
+              ) : (
+                <TouchableOpacity 
+                  style={styles.titleDisplay}
+                  onPress={() => setIsEditingTitle(true)}
+                >
+                  <Text style={[styles.titleText, { color: theme.textColor }]}>{title}</Text>
+                  <Text style={[styles.renameArrow, { color: theme.secondaryTextColor }]}>⌄</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <View style={styles.editorActions}>
+              <TouchableOpacity 
+                onPress={handleUndo} 
+                style={[styles.actionButton, { backgroundColor: theme.cardBackground, opacity: historyIndex > 0 ? 1 : 0.3 }]}
+                disabled={historyIndex <= 0}
+              >
+                <UndoIcon width={20} height={20} color={theme.textColor} />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={handleRedo} 
+                style={[styles.actionButton, { backgroundColor: theme.cardBackground, opacity: historyIndex < history.length - 1 ? 1 : 0.3 }]}
+                disabled={historyIndex >= history.length - 1}
+              >
+                <RedoIcon width={20} height={20} color={theme.textColor} />
+              </TouchableOpacity>
+            </View>
           </View>
 
           {/* Editor Content */}
-          <View style={styles.editorContent}>
-            <TextInput
-              style={styles.titleInput}
-              value={title}
-              onChangeText={setTitle}
-              placeholder="Note Title"
-              placeholderTextColor="#666666"
-            />
-
-            <TextInput
-              ref={contentInputRef}
-              style={styles.contentInput}
-              value={content}
-              onChangeText={setContent}
-              placeholder="Start typing your note..."
-              placeholderTextColor="#666666"
-              multiline
-              textAlignVertical="top"
-            />
-          </View>
+          <TouchableWithoutFeedback onPress={handleDismissKeyboard}>
+            <View style={styles.editorContent}>
+              <TextInput
+                ref={contentInputRef}
+                style={[styles.contentInput, { color: theme.textColor, fontFamily: 'Times New Roman' }]}
+                value={content}
+                onChangeText={setContent}
+                placeholder="Start typing your note..."
+                placeholderTextColor={theme.placeholderColor}
+                multiline
+                textAlignVertical="top"
+              />
+            </View>
+          </TouchableWithoutFeedback>
         </View>
 
         {/* Footer with action buttons */}
-        <View style={[styles.editorFooter, { paddingBottom: insets.bottom }]}>
-          <TouchableOpacity style={styles.editorFooterButton} onPress={handleSummarizeNote}>
-            <ChatIcon width={20} height={20} color="#999999" />
+        <View style={[styles.editorFooter, { paddingBottom: insets.bottom, backgroundColor: theme.navBackground }]}>
+          <TouchableOpacity style={[styles.editorFooterButton, { backgroundColor: theme.cardBackground }]} onPress={handleSummarizeNote}>
+            <ChatIcon width={20} height={20} color={theme.iconColor} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.editorFooterButton}>
-            <MicrophoneIcon width={20} height={20} color="#999999" />
+          <TouchableOpacity style={[styles.editorFooterButton, { backgroundColor: theme.cardBackground }]}>
+            <MicrophoneIcon width={20} height={20} color={theme.iconColor} />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.editorFooterButton} onPress={handleKeyboardToggle}>
-            <KeyboardIcon width={20} height={20} color="#999999" />
+          <TouchableOpacity style={[styles.editorFooterButton, { backgroundColor: theme.cardBackground }]} onPress={handleKeyboardToggle}>
+            <KeyboardIcon width={20} height={20} color={theme.iconColor} />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
@@ -359,21 +464,21 @@ function NoteEditor({ note, onBack, onSave }) {
           style={styles.modalOverlay}
           onPress={() => setShowSummary(false)}
         >
-          <Pressable style={styles.summaryModal} onPress={(e) => e.stopPropagation()}>
-            <View style={styles.summaryHeader}>
-              <Text style={styles.summaryTitle}>AI Summary</Text>
+          <Pressable style={[styles.summaryModal, { backgroundColor: theme.cardBackground }]} onPress={(e) => e.stopPropagation()}>
+            <View style={[styles.summaryHeader, { borderBottomColor: theme.borderColor }]}>
+              <Text style={[styles.summaryTitle, { color: theme.textColor }]}>AI Summary</Text>
               <TouchableOpacity onPress={() => setShowSummary(false)} style={styles.closeButton}>
-                <Text style={styles.closeButtonText}>✕</Text>
+                <Text style={[styles.closeButtonText, { color: theme.secondaryTextColor }]}>✕</Text>
               </TouchableOpacity>
             </View>
 
             <ScrollView style={styles.summaryContent}>
               {isLoadingSummary ? (
                 <View style={styles.loadingContainer}>
-                  <Text style={styles.loadingText}>Generating summary...</Text>
+                  <Text style={[styles.loadingText, { color: theme.secondaryTextColor }]}>Generating summary...</Text>
                 </View>
               ) : (
-                <MarkdownText style={styles.summaryText}>{summary}</MarkdownText>
+                <MarkdownText style={[styles.summaryText, { color: theme.textColor }]}>{summary}</MarkdownText>
               )}
             </ScrollView>
           </Pressable>
@@ -384,7 +489,7 @@ function NoteEditor({ note, onBack, onSave }) {
 }
 
 // Main Screen Component
-function MainScreen({ notes, onNotePress, onCreateNote, onDeleteNote }) {
+function MainScreen({ notes, onNotePress, onCreateNote, onDeleteNote, isDarkMode, onToggleTheme, searchQuery, onSearchChange, showSearch, onToggleSearch, sortBy, onSortChange }) {
   const insets = useSafeAreaInsets();
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [noteToDelete, setNoteToDelete] = useState(null);
@@ -407,52 +512,202 @@ function MainScreen({ notes, onNotePress, onCreateNote, onDeleteNote }) {
     setNoteToDelete(null);
   };
 
+  // Filter and sort notes
+  const filteredAndSortedNotes = notes
+    .filter(note => 
+      searchQuery === '' || 
+      note.title.toLowerCase().includes(searchQuery.toLowerCase())
+    )
+    .sort((a, b) => {
+      switch (sortBy) {
+        case 'updated':
+          return b.updatedAt - a.updatedAt;
+        case 'old-to-new':
+          return a.updatedAt - b.updatedAt;
+        case 'alphabetical':
+          return a.title.localeCompare(b.title);
+        default:
+          return b.updatedAt - a.updatedAt;
+      }
+    });
+
+  // Group notes by date sections
+  const groupNotesByDate = (notes) => {
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
+    
+    const sections = {
+      today: [],
+      yesterday: [],
+      past: []
+    };
+    
+    notes.forEach(note => {
+      const noteDate = new Date(note.updatedAt);
+      const noteDateOnly = new Date(noteDate.getFullYear(), noteDate.getMonth(), noteDate.getDate());
+      
+      if (noteDateOnly.getTime() === today.getTime()) {
+        sections.today.push(note);
+      } else if (noteDateOnly.getTime() === yesterday.getTime()) {
+        sections.yesterday.push(note);
+      } else {
+        sections.past.push(note);
+      }
+    });
+    
+    return sections;
+  };
+
+  const noteSections = groupNotesByDate(filteredAndSortedNotes);
+
+  const theme = isDarkMode ? darkTheme : lightTheme;
+
   return (
-    <View style={styles.container}>
-      <StatusBar style="light" />
+    <View style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
+      <StatusBar style={isDarkMode ? "light" : "dark"} />
 
       {/* Main Content with proper top spacing */}
       <View style={{ paddingTop: insets.top, flex: 1 }}>
         <ScrollView style={styles.content} contentContainerStyle={{ paddingTop: 20 }}>
           {/* Header Section */}
           <View style={styles.header}>
-            <Text style={styles.headerTitle}>Today</Text>
-            <View style={styles.sortButton}>
-              <Text style={styles.sortText}>⇅ Updated</Text>
+            <View style={styles.headerLeft} />
+            <View style={styles.headerRight}>
+              <TouchableOpacity onPress={onToggleTheme} style={styles.themeToggle}>
+                <Text style={[styles.themeToggleText, { color: theme.textColor }]}>
+                  {isDarkMode ? '☀️' : '🌙'}
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
 
-          {/* Notes List */}
+          {/* Search Bar */}
+          {showSearch && (
+            <View style={[styles.searchContainer, { backgroundColor: theme.cardBackground }]}>
+              <TextInput
+                style={[styles.searchInput, { color: theme.textColor }]}
+                value={searchQuery}
+                onChangeText={onSearchChange}
+                placeholder="Search notes..."
+                placeholderTextColor={theme.placeholderColor}
+                autoFocus
+              />
+            </View>
+          )}
+
+          {/* Sort Options */}
+          <View style={styles.sortContainer}>
+            <TouchableOpacity 
+              style={[styles.sortButton, sortBy === 'updated' && styles.sortButtonActive]}
+              onPress={() => onSortChange('updated')}
+            >
+              <Text style={[styles.sortText, { color: sortBy === 'updated' ? theme.accentColor : theme.textColor }]}>
+                ⇅ Updated
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.sortButton, sortBy === 'old-to-new' && styles.sortButtonActive]}
+              onPress={() => onSortChange('old-to-new')}
+            >
+              <Text style={[styles.sortText, { color: sortBy === 'old-to-new' ? theme.accentColor : theme.textColor }]}>
+                ⇅ Old-to-New
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.sortButton, sortBy === 'alphabetical' && styles.sortButtonActive]}
+              onPress={() => onSortChange('alphabetical')}
+            >
+              <Text style={[styles.sortText, { color: sortBy === 'alphabetical' ? theme.accentColor : theme.textColor }]}>
+                A-Z
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Notes List with Date Sections */}
           <View style={styles.notesList}>
-            {notes.map((note) => (
-              <TouchableOpacity
-                key={note.id}
-                style={styles.noteCard}
-                onPress={() => onNotePress(note)}
-                onLongPress={() => handleLongPress(note)}
-                delayLongPress={500}
-              >
-                <Text style={styles.noteTime}>{formatTimestamp(note.updatedAt)}</Text>
-                <Text style={styles.noteText}>{note.title}</Text>
-              </TouchableOpacity>
-            ))}
+            {/* Today Section */}
+            {noteSections.today.length > 0 && (
+              <View style={styles.dateSection}>
+                <Text style={[styles.sectionHeader, { color: theme.textColor }]}>Today</Text>
+                {noteSections.today.map((note) => (
+                  <TouchableOpacity
+                    key={note.id}
+                    style={[styles.noteCard, { backgroundColor: theme.cardBackground }]}
+                    onPress={() => onNotePress(note)}
+                    onLongPress={() => handleLongPress(note)}
+                    delayLongPress={500}
+                  >
+                    <Text style={[styles.noteTime, { color: theme.secondaryTextColor }]}>{formatTimestamp(note.updatedAt)}</Text>
+                    <Text style={[styles.noteText, { color: theme.textColor }]}>{note.title}</Text>
+                    <Text style={[styles.notePreview, { color: theme.secondaryTextColor, fontFamily: 'Times New Roman' }]} numberOfLines={3}>
+                      {note.content.length > 150 ? note.content.substring(0, 150) + '...' : note.content}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            {/* Yesterday Section */}
+            {noteSections.yesterday.length > 0 && (
+              <View style={styles.dateSection}>
+                <Text style={[styles.sectionHeader, { color: theme.textColor }]}>Yesterday</Text>
+                {noteSections.yesterday.map((note) => (
+                  <TouchableOpacity
+                    key={note.id}
+                    style={[styles.noteCard, { backgroundColor: theme.cardBackground }]}
+                    onPress={() => onNotePress(note)}
+                    onLongPress={() => handleLongPress(note)}
+                    delayLongPress={500}
+                  >
+                    <Text style={[styles.noteTime, { color: theme.secondaryTextColor }]}>{formatTimestamp(note.updatedAt)}</Text>
+                    <Text style={[styles.noteText, { color: theme.textColor }]}>{note.title}</Text>
+                    <Text style={[styles.notePreview, { color: theme.secondaryTextColor, fontFamily: 'Times New Roman' }]} numberOfLines={3}>
+                      {note.content.length > 150 ? note.content.substring(0, 150) + '...' : note.content}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            {/* Past Section */}
+            {noteSections.past.length > 0 && (
+              <View style={styles.dateSection}>
+                <Text style={[styles.sectionHeader, { color: theme.textColor }]}>Past</Text>
+                {noteSections.past.map((note) => (
+                  <TouchableOpacity
+                    key={note.id}
+                    style={[styles.noteCard, { backgroundColor: theme.cardBackground }]}
+                    onPress={() => onNotePress(note)}
+                    onLongPress={() => handleLongPress(note)}
+                    delayLongPress={500}
+                  >
+                    <Text style={[styles.noteTime, { color: theme.secondaryTextColor }]}>{formatTimestamp(note.updatedAt)}</Text>
+                    <Text style={[styles.noteText, { color: theme.textColor }]}>{note.title}</Text>
+                    <Text style={[styles.notePreview, { color: theme.secondaryTextColor, fontFamily: 'Times New Roman' }]} numberOfLines={3}>
+                      {note.content.length > 150 ? note.content.substring(0, 150) + '...' : note.content}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
           </View>
         </ScrollView>
       </View>
 
       {/* Bottom Navigation */}
-      <View style={[styles.bottomNav, { paddingBottom: insets.bottom }]}>
-        <TouchableOpacity style={styles.navButton}>
-          <SearchIcon width={24} height={24} color="#999999" />
+      <View style={[styles.bottomNav, { backgroundColor: theme.navBackground, borderTopColor: theme.borderColor }]}>
+        <TouchableOpacity style={styles.navButton} onPress={onToggleSearch}>
+          <SearchIcon width={24} height={24} color={theme.iconColor} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.navButton}>
-          <ChatIcon width={24} height={24} color="#999999" />
+          <ChatIcon width={24} height={24} color={theme.iconColor} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.navButton}>
-          <MicrophoneIcon width={24} height={24} color="#999999" />
+          <MicrophoneIcon width={24} height={24} color={theme.iconColor} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.navButton} onPress={onCreateNote}>
-          <PenIcon width={24} height={24} color="#999999" />
+          <PenIcon width={24} height={24} color={theme.iconColor} />
         </TouchableOpacity>
       </View>
 
@@ -467,7 +722,7 @@ function MainScreen({ notes, onNotePress, onCreateNote, onDeleteNote }) {
           style={styles.modalOverlay}
           onPress={handleCancelDelete}
         >
-          <View style={styles.modalContent}>
+          <View style={[styles.modalContent, { backgroundColor: theme.cardBackground }]}>
             <TouchableOpacity
               style={styles.deleteButton}
               onPress={handleDelete}
@@ -487,6 +742,10 @@ export default function App() {
   const [notes, setNotes] = useState([]);
   const [currentScreen, setCurrentScreen] = useState('main');
   const [selectedNoteId, setSelectedNoteId] = useState(null);
+  const [isDarkMode, setIsDarkMode] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [showSearch, setShowSearch] = useState(false);
+  const [sortBy, setSortBy] = useState('updated'); // 'updated', 'old-to-new', 'alphabetical'
 
   // Load notes on app start
   useEffect(() => {
@@ -553,6 +812,12 @@ export default function App() {
 
   const selectedNote = notes.find((note) => note.id === selectedNoteId);
 
+  // Handler functions
+  const handleToggleTheme = () => setIsDarkMode(!isDarkMode);
+  const handleSearchChange = (text) => setSearchQuery(text);
+  const handleToggleSearch = () => setShowSearch(!showSearch);
+  const handleSortChange = (sort) => setSortBy(sort);
+
   return (
     <SafeAreaProvider>
       {currentScreen === 'main' ? (
@@ -561,12 +826,21 @@ export default function App() {
           onNotePress={handleNotePress}
           onCreateNote={handleCreateNote}
           onDeleteNote={handleDeleteNote}
+          isDarkMode={isDarkMode}
+          onToggleTheme={handleToggleTheme}
+          searchQuery={searchQuery}
+          onSearchChange={handleSearchChange}
+          showSearch={showSearch}
+          onToggleSearch={handleToggleSearch}
+          sortBy={sortBy}
+          onSortChange={handleSortChange}
         />
       ) : (
         <NoteEditor
           note={selectedNote}
           onBack={handleBack}
           onSave={handleSaveNote}
+          isDarkMode={isDarkMode}
         />
       )}
     </SafeAreaProvider>
@@ -576,7 +850,6 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#1a1a1a',
   },
   content: {
     flex: 1,
@@ -588,46 +861,89 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingBottom: 20,
   },
+  headerLeft: {
+    flex: 1,
+  },
   headerTitle: {
     fontSize: 32,
     fontWeight: '600',
-    color: '#ffffff',
+  },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  themeToggle: {
+    padding: 8,
+  },
+  themeToggleText: {
+    fontSize: 20,
+  },
+  searchContainer: {
+    marginBottom: 16,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  searchInput: {
+    fontSize: 16,
+    padding: 0,
+  },
+  sortContainer: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    gap: 8,
   },
   sortButton: {
     paddingVertical: 6,
     paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: 'transparent',
+  },
+  sortButtonActive: {
+    backgroundColor: '#007AFF20',
+    borderColor: '#007AFF',
   },
   sortText: {
-    fontSize: 16,
-    color: '#999999',
+    fontSize: 14,
+    fontWeight: '500',
   },
   notesList: {
     marginTop: 10,
   },
+  dateSection: {
+    marginBottom: 24,
+  },
+  sectionHeader: {
+    fontSize: 28,
+    fontWeight: '700',
+    marginBottom: 16,
+    marginTop: 12,
+  },
   noteCard: {
-    backgroundColor: '#2a2a2a',
     borderRadius: 12,
     padding: 20,
     marginBottom: 12,
   },
   noteTime: {
     fontSize: 14,
-    color: '#999999',
     marginBottom: 8,
   },
   noteText: {
     fontSize: 18,
-    color: '#ffffff',
     lineHeight: 24,
+    marginBottom: 8,
+  },
+  notePreview: {
+    fontSize: 14,
+    lineHeight: 20,
   },
   bottomNav: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    backgroundColor: '#0a0a0a',
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: '#333333',
   },
   navButton: {
     padding: 8,
@@ -642,46 +958,74 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#333333',
+    justifyContent: 'space-between',
   },
-  backButton: {
+  todayButton: {
     padding: 8,
   },
-  backButtonText: {
+  todayButtonText: {
     fontSize: 16,
-    color: '#007AFF',
     fontWeight: '600',
+  },
+  titleContainer: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: 16,
+  },
+  titleDisplay: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  titleText: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginRight: 8,
+  },
+  renameArrow: {
+    fontSize: 16,
+  },
+  titleInputInline: {
+    fontSize: 18,
+    fontWeight: '600',
+    textAlign: 'center',
+    padding: 8,
+    borderWidth: 1,
+    borderColor: '#007AFF',
+    borderRadius: 8,
+    minWidth: 200,
+  },
+  editorActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionButton: {
+    padding: 8,
+    borderRadius: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   editorContent: {
     flex: 1,
     paddingHorizontal: 16,
     paddingTop: 20,
   },
-  titleInput: {
-    fontSize: 24,
-    fontWeight: '600',
-    color: '#ffffff',
-    marginBottom: 16,
-    padding: 0,
-  },
   contentInput: {
-    fontSize: 16,
-    color: '#ffffff',
-    lineHeight: 24,
+    fontSize: 18,
+    lineHeight: 28,
     flex: 1,
     padding: 0,
   },
   editorFooter: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
     paddingHorizontal: 12,
     paddingVertical: 8,
-    gap: 8,
+    gap: 24,
   },
   editorFooterButton: {
     padding: 8,
-    backgroundColor: '#2a2a2a',
     borderRadius: 8,
   },
   // Delete Modal styles
@@ -691,7 +1035,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    backgroundColor: '#2a2a2a',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingBottom: 40,
@@ -716,7 +1059,6 @@ const styles = StyleSheet.create({
   },
   // Summary Modal styles
   summaryModal: {
-    backgroundColor: '#2a2a2a',
     borderRadius: 20,
     marginHorizontal: 20,
     marginVertical: 100,
@@ -738,19 +1080,16 @@ const styles = StyleSheet.create({
     paddingTop: 20,
     paddingBottom: 10,
     borderBottomWidth: 1,
-    borderBottomColor: '#333333',
   },
   summaryTitle: {
     fontSize: 20,
     fontWeight: '600',
-    color: '#ffffff',
   },
   closeButton: {
     padding: 8,
   },
   closeButtonText: {
     fontSize: 24,
-    color: '#999999',
     fontWeight: '300',
   },
   summaryContent: {
@@ -759,7 +1098,6 @@ const styles = StyleSheet.create({
   },
   summaryText: {
     fontSize: 16,
-    color: '#ffffff',
     lineHeight: 24,
   },
   loadingContainer: {
@@ -768,7 +1106,6 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#999999',
   },
   // Markdown styles
   markdownBold: {
