@@ -400,6 +400,7 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
   // Voice Recording: Start
   const startRecording = async () => {
     try {
+      console.log('=== START RECORDING CALLED ===', new Date().toISOString());
       if (isStartingRef.current) return; // prevent re-entrancy
       isStartingRef.current = true;
       if (Platform.OS === 'web') {
@@ -432,6 +433,7 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
       try {
         await recording.prepareToRecordAsync(AVAudio.RecordingOptionsPresets.HIGH_QUALITY);
         await recording.startAsync();
+        console.log('Recording started successfully');
       } catch (err) {
         // Retry once if iOS reports recording disabled
         const msg = String(err?.message || err);
@@ -450,6 +452,7 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
       }
       recordingRef.current = recording;
       setIsRecording(true);
+      console.log('Recording state set to true');
     } catch (e) {
       console.error('Failed to start recording', e);
       alert('Failed to start recording: ' + e.message);
@@ -462,13 +465,30 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
   // Voice Recording: Stop and transcribe
   const stopAndTranscribe = async () => {
     try {
-      if (!recordingRef.current) return;
+      console.log('=== STOP RECORDING CALLED ===', new Date().toISOString());
+      
+      // Wait for recording to actually start if it's still initializing
+      let attempts = 0;
+      while (isStartingRef.current && attempts < 50) {
+        console.log('Waiting for recording to start...', attempts);
+        await new Promise(resolve => setTimeout(resolve, 20));
+        attempts++;
+      }
+      
+      if (!recordingRef.current) {
+        console.log('No recording to stop');
+        return;
+      }
 
       setIsRecording(false);
+      const status = await recordingRef.current.getStatusAsync();
+      console.log('Recording status before stop:', status);
+      
       await recordingRef.current.stopAndUnloadAsync();
       const uri = recordingRef.current.getURI();
       recordingRef.current = null;
 
+      console.log('Recording stopped, URI:', uri);
       if (!uri) return;
 
       setIsTranscribing(true);
@@ -487,16 +507,31 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
   // Provider-agnostic transcription
   const transcribeAudio = async (fileUri) => {
     const provider = (TRANSCRIBE_PROVIDER || 'openai').toLowerCase();
+    
+    // Debug logging
+    console.log('=== TRANSCRIPTION DEBUG ===');
+    console.log('TRANSCRIBE_PROVIDER env var:', TRANSCRIBE_PROVIDER);
+    console.log('Provider (computed):', provider);
+    console.log('OPENAI_API_KEY exists:', !!OPENAI_API_KEY);
+    console.log('DEEPGRAM_API_KEY exists:', !!DEEPGRAM_API_KEY);
+    console.log('DEEPGRAM_API_KEY value:', DEEPGRAM_API_KEY ? DEEPGRAM_API_KEY.substring(0, 10) + '...' : 'NOT SET');
+    
     if (provider === 'deepgram') {
+      console.log('Using Deepgram as primary provider');
       const dg = await transcribeWithDeepgram(fileUri);
-      if (dg) return dg;
+      // Only fallback to OpenAI if Deepgram had an actual error (returns null), not empty transcript
+      if (dg !== null) return dg;
       // Fallback to OpenAI if Deepgram failed and OpenAI key exists
+      console.log('Deepgram failed, trying OpenAI fallback');
       if (OPENAI_API_KEY) return await transcribeWithOpenAI(fileUri);
       return '';
     } else {
+      console.log('Using OpenAI as primary provider');
       const oi = await transcribeWithOpenAI(fileUri);
-      if (oi) return oi;
+      // Only fallback to Deepgram if OpenAI had an actual error (returns null), not empty transcript
+      if (oi !== null) return oi;
       // If OpenAI failed due to quota but Deepgram key exists, try Deepgram
+      console.log('OpenAI failed, trying Deepgram fallback');
       if (DEEPGRAM_API_KEY) return await transcribeWithDeepgram(fileUri);
       return '';
     }
@@ -528,12 +563,12 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
 
       if (!response.ok) {
         const errTxt = await response.text();
-        // Surface quota errors in UI and return empty to allow fallback
+        // Surface quota errors in UI and return null to allow fallback
         try {
           const errJson = JSON.parse(errTxt);
           if (errJson?.error?.code === 'insufficient_quota') {
-            alert('OpenAI quota exceeded for transcription. Configure an alternate provider or update billing.');
-            return '';
+            alert('OpenAI quota exceeded for transcription. Trying alternate provider...');
+            return null; // Trigger fallback to Deepgram
           }
         } catch {}
         throw new Error(errTxt);
@@ -542,7 +577,7 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
       return data.text || '';
     } catch (err) {
       console.error('Transcription error', err);
-      return '';
+      return null; // Return null on actual errors to trigger fallback
     }
   };
 
@@ -550,14 +585,17 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
   const transcribeWithDeepgram = async (fileUri) => {
     try {
       if (!DEEPGRAM_API_KEY) {
+        console.log('Deepgram: No API key found');
         return '';
       }
+      console.log('Deepgram: Preparing request for', fileUri);
       const formData = new FormData();
       formData.append('file', {
         uri: fileUri,
         name: 'recording.m4a',
         type: 'audio/m4a',
       });
+      console.log('Deepgram: Sending request to API...');
       // model can be tuned; nova-2 is a good general English model
       const response = await fetch('https://api.deepgram.com/v1/listen?model=nova-2', {
         method: 'POST',
@@ -566,17 +604,31 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
         },
         body: formData,
       });
+      console.log('Deepgram: Response status:', response.status, response.ok);
       if (!response.ok) {
         const errTxt = await response.text();
+        console.error('Deepgram: API error response:', errTxt);
         throw new Error(errTxt);
       }
       const data = await response.json();
+      console.log('Deepgram: Response data:', JSON.stringify(data, null, 2));
       // Parse transcript
       const transcript = data?.results?.channels?.[0]?.alternatives?.[0]?.transcript || '';
+      const duration = data?.metadata?.duration || 0;
+      console.log('Deepgram: Extracted transcript:', transcript);
+      console.log('Deepgram: Audio duration:', duration, 'seconds');
+      
+      if (!transcript && duration < 0.5) {
+        console.log('Deepgram: Recording too short, returning empty');
+        alert('Recording too short. Please hold the mic button longer while speaking.');
+      }
+      
       return transcript;
     } catch (err) {
       console.error('Deepgram transcription error', err);
-      return '';
+      console.error('Deepgram error message:', err.message);
+      console.error('Deepgram error stack:', err.stack);
+      return null; // Return null on actual errors to trigger fallback
     }
   };
 
@@ -661,8 +713,13 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.editorFooterButton, { backgroundColor: isRecording ? '#ff3b30' : theme.cardBackground }]}
-            onPressIn={startRecording}
-            onPressOut={stopAndTranscribe}
+            onPress={() => {
+              if (isRecording) {
+                stopAndTranscribe();
+              } else {
+                startRecording();
+              }
+            }}
           >
             {isTranscribing ? (
               <ActivityIndicator size="small" color={theme.iconColor} />
