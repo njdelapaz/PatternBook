@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Modal,
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { OPENAI_API_KEY, DEEPGRAM_API_KEY, TRANSCRIBE_PROVIDER } from '@env';
+import { OPENAI_API_KEY, DEEPGRAM_API_KEY } from '@env';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Audio as AVAudio } from 'expo-av';
 
@@ -377,7 +377,7 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
             },
             {
               role: 'user',
-              content: `Please summarize the following note:\n\nTitle: ${title}\n\nContent: ${content}`,
+              content: `Please summarize the following note:\n\nTitle: ${title}\n\nContent: ${content.slice(0, 2000)}${content.length > 2000 ? '...' : ''}`,
             },
           ],
           temperature: 0.7,
@@ -387,7 +387,16 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'Failed to get summary');
+        
+        if (response.status === 429) {
+          throw new Error('OpenAI quota exceeded. Please add credits to your account at platform.openai.com/account/billing');
+        } else if (response.status === 401) {
+          throw new Error('OpenAI API key is invalid or expired.');
+        } else if (response.status === 403) {
+          throw new Error('OpenAI API access forbidden. Check your API key permissions.');
+        } else {
+          throw new Error(errorData.error?.message || `API Error (${response.status}): Failed to get summary`);
+        }
       }
 
       const data = await response.json();
@@ -435,14 +444,15 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
 
       let recording = new AVAudio.Recording();
       
-      // Try a more compatible recording configuration for Android emulator
+      // Use consistent recording configuration across platforms
       const recordingOptions = Platform.select({
         android: {
-          extension: '.wav',
-          outputFormat: AVAudio.AndroidOutputFormat.DEFAULT,
-          audioEncoder: AVAudio.AndroidAudioEncoder.DEFAULT,
+          extension: '.m4a',
+          outputFormat: AVAudio.AndroidOutputFormat.MPEG_4,
+          audioEncoder: AVAudio.AndroidAudioEncoder.AAC,
           sampleRate: 16000,
           numberOfChannels: 1,
+          bitRate: 64000,
         },
         ios: {
           extension: '.m4a',
@@ -539,138 +549,20 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
     }
   };
 
-  // Provider-agnostic transcription
+  // Transcription using Deepgram only
   const transcribeAudio = async (fileUri) => {
-    const provider = (TRANSCRIBE_PROVIDER || 'openai').toLowerCase();
+    console.log('Using Deepgram for transcription');
     
-    // Debug logging
-    console.log('=== TRANSCRIPTION DEBUG ===');
-    console.log('TRANSCRIBE_PROVIDER env var:', TRANSCRIBE_PROVIDER);
-    console.log('Provider (computed):', provider);
-    console.log('OPENAI_API_KEY exists:', !!OPENAI_API_KEY);
-    console.log('DEEPGRAM_API_KEY exists:', !!DEEPGRAM_API_KEY);
-    console.log('DEEPGRAM_API_KEY value:', DEEPGRAM_API_KEY ? DEEPGRAM_API_KEY.substring(0, 10) + '...' : 'NOT SET');
-    
-    if (provider === 'deepgram') {
-      console.log('Using Deepgram as primary provider');
-      const dg = await transcribeWithDeepgram(fileUri);
-      // Only fallback to OpenAI if Deepgram had an actual error (returns null), not empty transcript
-      if (dg !== null) return dg;
-      // Fallback to OpenAI if Deepgram failed and OpenAI key exists
-      console.log('Deepgram failed, trying OpenAI fallback');
-      if (OPENAI_API_KEY) return await transcribeWithOpenAI(fileUri);
-      return '';
-    } else {
-      console.log('Using OpenAI as primary provider');
-      const oi = await transcribeWithOpenAI(fileUri);
-      
-      // Check if OpenAI returned an error object
-      if (oi && typeof oi === 'object' && (oi.quotaExceeded || oi.error || oi.isCatchError)) {
-        if (oi.quotaExceeded) {
-          console.log('OpenAI quota exceeded, trying Deepgram fallback (no error logging)');
-        } else {
-          console.log('OpenAI error occurred, trying Deepgram fallback (no error logging)');
-        }
-        
-        if (DEEPGRAM_API_KEY) {
-          const dgFallback = await transcribeWithDeepgram(fileUri);
-          if (dgFallback !== null && typeof dgFallback === 'string') {
-            // Deepgram succeeded, don't show any error logs
-            console.log('Deepgram fallback succeeded - no errors logged');
-            return dgFallback;
-          } else {
-            // Both failed, now log the original OpenAI error
-            console.error('OpenAI API error (logging because Deepgram also failed):', {
-              status: oi.status,
-              error: oi.error,
-              isCatchError: oi.isCatchError
-            });
-            console.error('Deepgram fallback also failed');
-            
-            if (oi.quotaExceeded) {
-              alert('OpenAI quota exceeded and Deepgram fallback failed.');
-            } else {
-              alert('Both OpenAI and Deepgram transcription failed.');
-            }
-            return '';
-          }
-        } else {
-          // No Deepgram key available, log the OpenAI error and show alert
-          console.error('OpenAI API error (logging because no Deepgram fallback):', {
-            status: oi.status,
-            error: oi.error,
-            isCatchError: oi.isCatchError
-          });
-          
-          if (oi.quotaExceeded) {
-            alert('OpenAI quota exceeded for transcription. Please add DEEPGRAM_API_KEY for fallback.');
-          } else {
-            alert('OpenAI transcription failed. Please add DEEPGRAM_API_KEY for fallback.');
-          }
-          return '';
-        }
-      }
-      
-      // OpenAI succeeded normally
-      if (typeof oi === 'string') return oi;
-      
-      // If we get here, something unexpected happened
-      console.log('OpenAI returned unexpected result, trying Deepgram fallback');
-      if (DEEPGRAM_API_KEY) return await transcribeWithDeepgram(fileUri);
+    if (!DEEPGRAM_API_KEY) {
+      alert('Deepgram API key is required for voice transcription. Please add DEEPGRAM_API_KEY to your environment.');
       return '';
     }
+    
+    const transcript = await transcribeWithDeepgram(fileUri);
+    return transcript || '';
   };
 
-  // OpenAI Whisper transcription
-  const transcribeWithOpenAI = async (fileUri) => {
-    try {
-      if (!OPENAI_API_KEY) {
-        // No key; skip
-        return '';
-      }
-      // Use FormData with file URI for React Native
-      const formData = new FormData();
-      formData.append('model', 'whisper-1');
-      formData.append('file', {
-        uri: fileUri,
-        name: 'recording.m4a',
-        type: 'audio/m4a',
-      });
-
-      const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        },
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errTxt = await response.text();
-        // Check for quota errors but don't log immediately - let fallback logic handle it
-        try {
-          const errJson = JSON.parse(errTxt);
-          // Check for various quota error patterns
-          if (errJson?.error?.code === 'insufficient_quota' || 
-              errJson?.error?.type === 'insufficient_quota' ||
-              (errJson?.error?.message && errJson.error.message.toLowerCase().includes('quota')) ||
-              errTxt.toLowerCase().includes('quota')) {
-            // Return a special object to indicate quota error for fallback handling
-            return { quotaExceeded: true, error: errTxt };
-          }
-        } catch {}
-        // Return error info for potential logging later
-        return { error: errTxt, status: response.status };
-      }
-      const data = await response.json();
-      return data.text || '';
-    } catch (err) {
-      // Return error info for potential logging later, don't log immediately
-      return { error: err.message, isCatchError: true };
-    }
-  };
-
-  // Deepgram transcription (fallback or primary)
+  // Deepgram transcription
   const transcribeWithDeepgram = async (fileUri) => {
     try {
       if (!DEEPGRAM_API_KEY) {
@@ -1310,11 +1202,12 @@ function SettingsScreen({ settings, onSettingsChange, isDarkMode, onBack, onClea
       // Use the same recording configuration as the main recording function
       const recordingOptions = Platform.select({
         android: {
-          extension: '.3gp',
-          outputFormat: AVAudio.AndroidOutputFormat.THREE_GPP,
-          audioEncoder: AVAudio.AndroidAudioEncoder.AMR_NB,
-          sampleRate: 8000,
+          extension: '.m4a',
+          outputFormat: AVAudio.AndroidOutputFormat.MPEG_4,
+          audioEncoder: AVAudio.AndroidAudioEncoder.AAC,
+          sampleRate: 16000,
           numberOfChannels: 1,
+          bitRate: 64000,
         },
         ios: {
           extension: '.m4a',
