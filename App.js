@@ -1,10 +1,10 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Modal, Pressable, Keyboard, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, ActivityIndicator } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Modal, Pressable, Keyboard, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { OPENAI_API_KEY, DEEPGRAM_API_KEY, TRANSCRIBE_PROVIDER } from '@env';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Audio as AVAudio } from 'expo-av';
 
 // Import Carbon icons
@@ -196,7 +196,7 @@ function formatTimestamp(timestamp) {
   return `${months[date.getMonth()]} ${date.getDate()} ${date.getFullYear()} ${timeStr}`;
 }
 
-// AsyncStorage functions
+// AsyncStorage functions - TEMPORARILY DISABLED
 async function loadNotes() {
   try {
     const notesJson = await AsyncStorage.getItem(NOTES_STORAGE_KEY);
@@ -233,6 +233,10 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
   const recordingRef = useRef(null);
   const isStartingRef = useRef(false);
 
+  // On-device speech-to-text state (DISABLED - using API instead)
+  const [useDeviceSTT, setUseDeviceSTT] = useState(false); // Always use API
+  const [isListening, setIsListening] = useState(false);
+  // Setup audio recording (API-based transcription only)
   // Initialize audio mode on mount for iOS (expo-av)
   useEffect(() => {
     const setupAudioMode = async () => {
@@ -397,7 +401,7 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
     }
   };
 
-  // Voice Recording: Start
+  // Voice Recording: Start (API-based)
   const startRecording = async () => {
     try {
       console.log('=== START RECORDING CALLED ===', new Date().toISOString());
@@ -430,24 +434,55 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
       }
 
       let recording = new AVAudio.Recording();
+      
+      // Try a more compatible recording configuration for Android emulator
+      const recordingOptions = Platform.select({
+        android: {
+          extension: '.wav',
+          outputFormat: AVAudio.AndroidOutputFormat.DEFAULT,
+          audioEncoder: AVAudio.AndroidAudioEncoder.DEFAULT,
+          sampleRate: 16000,
+          numberOfChannels: 1,
+        },
+        ios: {
+          extension: '.m4a',
+          outputFormat: AVAudio.IOSOutputFormat.MPEG4AAC,
+          audioQuality: AVAudio.IOSAudioQuality.MEDIUM,
+          sampleRate: 16000,
+          numberOfChannels: 1,
+          bitRate: 64000,
+          linearPCMBitDepth: 16,
+          linearPCMIsBigEndian: false,
+          linearPCMIsFloat: false,
+        },
+        web: {
+          mimeType: 'audio/webm;codecs=opus',
+          bitsPerSecond: 128000,
+        },
+      });
+      
+      console.log('Using recording options for platform:', Platform.OS, recordingOptions);
+      
       try {
-        await recording.prepareToRecordAsync(AVAudio.RecordingOptionsPresets.HIGH_QUALITY);
+        await recording.prepareToRecordAsync(recordingOptions);
         await recording.startAsync();
-        console.log('Recording started successfully');
+        console.log('Recording started successfully with options:', recordingOptions);
       } catch (err) {
-        // Retry once if iOS reports recording disabled
-        const msg = String(err?.message || err);
-        if (msg.includes('RecordingDisabled') || msg.includes('Recording not allowed')) {
-          try {
-            await AVAudio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true, staysActiveInBackground: false });
-            recording = new AVAudio.Recording();
-            await recording.prepareToRecordAsync(AVAudio.RecordingOptionsPresets.HIGH_QUALITY);
-            await recording.startAsync();
-          } catch (retryErr) {
-            throw retryErr;
-          }
-        } else {
-          throw err;
+        console.log('First recording attempt failed, trying HIGH_QUALITY fallback...', err.message);
+        // Fallback to HIGH_QUALITY preset if custom options fail
+        try {
+          await AVAudio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true, staysActiveInBackground: false });
+          recording = new AVAudio.Recording();
+          await recording.prepareToRecordAsync(AVAudio.RecordingOptionsPresets.HIGH_QUALITY);
+          await recording.startAsync();
+          console.log('Recording started with HIGH_QUALITY fallback');
+        } catch (retryErr) {
+          console.log('HIGH_QUALITY also failed, trying LOW_QUALITY...', retryErr.message);
+          // Try LOW_QUALITY as last resort
+          recording = new AVAudio.Recording();
+          await recording.prepareToRecordAsync(AVAudio.RecordingOptionsPresets.LOW_QUALITY);
+          await recording.startAsync();
+          console.log('Recording started with LOW_QUALITY fallback');
         }
       }
       recordingRef.current = recording;
@@ -462,7 +497,7 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
     }
   };
 
-  // Voice Recording: Stop and transcribe
+  // Voice Recording: Stop and transcribe (API-based)
   const stopAndTranscribe = async () => {
     try {
       console.log('=== STOP RECORDING CALLED ===', new Date().toISOString());
@@ -492,7 +527,7 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
       if (!uri) return;
 
       setIsTranscribing(true);
-  const transcription = await transcribeAudio(uri);
+      const transcription = await transcribeAudio(uri);
       if (transcription) {
         setContent(prev => (prev ? prev + (prev.endsWith('\n') ? '' : '\n') + transcription : transcription));
       }
@@ -528,10 +563,59 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
     } else {
       console.log('Using OpenAI as primary provider');
       const oi = await transcribeWithOpenAI(fileUri);
-      // Only fallback to Deepgram if OpenAI had an actual error (returns null), not empty transcript
-      if (oi !== null) return oi;
-      // If OpenAI failed due to quota but Deepgram key exists, try Deepgram
-      console.log('OpenAI failed, trying Deepgram fallback');
+      
+      // Check if OpenAI returned an error object
+      if (oi && typeof oi === 'object' && (oi.quotaExceeded || oi.error || oi.isCatchError)) {
+        if (oi.quotaExceeded) {
+          console.log('OpenAI quota exceeded, trying Deepgram fallback (no error logging)');
+        } else {
+          console.log('OpenAI error occurred, trying Deepgram fallback (no error logging)');
+        }
+        
+        if (DEEPGRAM_API_KEY) {
+          const dgFallback = await transcribeWithDeepgram(fileUri);
+          if (dgFallback !== null && typeof dgFallback === 'string') {
+            // Deepgram succeeded, don't show any error logs
+            console.log('Deepgram fallback succeeded - no errors logged');
+            return dgFallback;
+          } else {
+            // Both failed, now log the original OpenAI error
+            console.error('OpenAI API error (logging because Deepgram also failed):', {
+              status: oi.status,
+              error: oi.error,
+              isCatchError: oi.isCatchError
+            });
+            console.error('Deepgram fallback also failed');
+            
+            if (oi.quotaExceeded) {
+              alert('OpenAI quota exceeded and Deepgram fallback failed.');
+            } else {
+              alert('Both OpenAI and Deepgram transcription failed.');
+            }
+            return '';
+          }
+        } else {
+          // No Deepgram key available, log the OpenAI error and show alert
+          console.error('OpenAI API error (logging because no Deepgram fallback):', {
+            status: oi.status,
+            error: oi.error,
+            isCatchError: oi.isCatchError
+          });
+          
+          if (oi.quotaExceeded) {
+            alert('OpenAI quota exceeded for transcription. Please add DEEPGRAM_API_KEY for fallback.');
+          } else {
+            alert('OpenAI transcription failed. Please add DEEPGRAM_API_KEY for fallback.');
+          }
+          return '';
+        }
+      }
+      
+      // OpenAI succeeded normally
+      if (typeof oi === 'string') return oi;
+      
+      // If we get here, something unexpected happened
+      console.log('OpenAI returned unexpected result, trying Deepgram fallback');
       if (DEEPGRAM_API_KEY) return await transcribeWithDeepgram(fileUri);
       return '';
     }
@@ -563,21 +647,26 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
 
       if (!response.ok) {
         const errTxt = await response.text();
-        // Surface quota errors in UI and return null to allow fallback
+        // Check for quota errors but don't log immediately - let fallback logic handle it
         try {
           const errJson = JSON.parse(errTxt);
-          if (errJson?.error?.code === 'insufficient_quota') {
-            alert('OpenAI quota exceeded for transcription. Trying alternate provider...');
-            return null; // Trigger fallback to Deepgram
+          // Check for various quota error patterns
+          if (errJson?.error?.code === 'insufficient_quota' || 
+              errJson?.error?.type === 'insufficient_quota' ||
+              (errJson?.error?.message && errJson.error.message.toLowerCase().includes('quota')) ||
+              errTxt.toLowerCase().includes('quota')) {
+            // Return a special object to indicate quota error for fallback handling
+            return { quotaExceeded: true, error: errTxt };
           }
         } catch {}
-        throw new Error(errTxt);
+        // Return error info for potential logging later
+        return { error: errTxt, status: response.status };
       }
       const data = await response.json();
       return data.text || '';
     } catch (err) {
-      console.error('Transcription error', err);
-      return null; // Return null on actual errors to trigger fallback
+      // Return error info for potential logging later, don't log immediately
+      return { error: err.message, isCatchError: true };
     }
   };
 
@@ -588,35 +677,86 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
         console.log('Deepgram: No API key found');
         return '';
       }
-      console.log('Deepgram: Preparing request for', fileUri);
+      // console.log('Deepgram: Preparing request for', fileUri);
+      // console.log('Deepgram: API key exists:', !!DEEPGRAM_API_KEY);
+      // console.log('Deepgram: API key prefix:', DEEPGRAM_API_KEY ? DEEPGRAM_API_KEY.substring(0, 8) + '...' : 'NONE');
+      
+      // Check if file exists
+      const fileInfo = await FileSystem.getInfoAsync(fileUri);
+      
+      if (!fileInfo.exists) {
+        throw new Error('Audio file does not exist');
+      }
+      
+      if (fileInfo.size === 0) {
+        throw new Error('Audio file is empty');
+      }
+      
       const formData = new FormData();
+      
       formData.append('file', {
         uri: fileUri,
         name: 'recording.m4a',
         type: 'audio/m4a',
       });
-      console.log('Deepgram: Sending request to API...');
+      
       // model can be tuned; nova-2 is a good general English model
       const response = await fetch('https://api.deepgram.com/v1/listen?model=nova-2', {
         method: 'POST',
         headers: {
           'Authorization': `Token ${DEEPGRAM_API_KEY}`,
+          'Content-Type': 'audio/m4a',
         },
-        body: formData,
+        body: {
+          uri: fileUri,
+          name: 'recording.m4a',
+          type: 'audio/m4a',
+        },
       });
-      console.log('Deepgram: Response status:', response.status, response.ok);
+      
       if (!response.ok) {
         const errTxt = await response.text();
         console.error('Deepgram: API error response:', errTxt);
-        throw new Error(errTxt);
+        
+        // If this approach fails, try the FormData approach as fallback
+        console.log('Deepgram: Direct upload failed, trying FormData approach...');
+        
+        const formData = new FormData();
+        formData.append('file', {
+          uri: fileUri,
+          name: 'recording.m4a',
+          type: 'audio/m4a',
+        });
+        
+        const fallbackResponse = await fetch('https://api.deepgram.com/v1/listen?model=nova-2', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Token ${DEEPGRAM_API_KEY}`,
+          },
+          body: formData,
+        });
+        
+        console.log('Deepgram: Fallback response status:', fallbackResponse.status, fallbackResponse.ok);
+        
+        if (!fallbackResponse.ok) {
+          const fallbackErrTxt = await fallbackResponse.text();
+          console.error('Deepgram: Fallback API error response:', fallbackErrTxt);
+          throw new Error(`HTTP ${fallbackResponse.status}: ${fallbackErrTxt}`);
+        }
+        
+        const fallbackData = await fallbackResponse.json();
+        console.log('Deepgram: Fallback response data:', JSON.stringify(fallbackData, null, 2));
+        
+        // Parse transcript from fallback
+        const transcript = fallbackData?.results?.channels?.[0]?.alternatives?.[0]?.transcript || '';
+        const duration = fallbackData?.metadata?.duration || 0;
+        return transcript;
       }
+      
       const data = await response.json();
-      console.log('Deepgram: Response data:', JSON.stringify(data, null, 2));
-      // Parse transcript
       const transcript = data?.results?.channels?.[0]?.alternatives?.[0]?.transcript || '';
       const duration = data?.metadata?.duration || 0;
       console.log('Deepgram: Extracted transcript:', transcript);
-      console.log('Deepgram: Audio duration:', duration, 'seconds');
       
       if (!transcript && duration < 0.5) {
         console.log('Deepgram: Recording too short, returning empty');
@@ -714,11 +854,16 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
           <TouchableOpacity
             style={[styles.editorFooterButton, { backgroundColor: isRecording ? '#ff3b30' : theme.cardBackground }]}
             onPress={() => {
+              console.log('DEBUG: Mic button clicked! Platform:', Platform.OS, 'useDeviceSTT:', useDeviceSTT, 'isListening:', isListening, 'isRecording:', isRecording);
+              // Always use API recording since useDeviceSTT is now always false
               if (isRecording) {
+                console.log('DEBUG: Stopping API recording...');
                 stopAndTranscribe();
               } else {
+                console.log('DEBUG: Starting API recording...');
                 startRecording();
               }
+              console.log('DEBUG: Mic button click handler finished');
             }}
           >
             {isTranscribing ? (
@@ -727,6 +872,7 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
               <MicrophoneIcon width={20} height={20} color={theme.iconColor} />
             )}
           </TouchableOpacity>
+          {/* Remove the device STT toggle button for now */}
           <TouchableOpacity style={[styles.editorFooterButton, { backgroundColor: theme.cardBackground }]} onPress={handleKeyboardToggle}>
             <KeyboardIcon width={20} height={20} color={theme.iconColor} />
           </TouchableOpacity>
@@ -1109,7 +1255,7 @@ function MainScreen({ notes, onNotePress, onCreateNote, onDeleteNote, onTogglePi
 }
 
 // Settings Screen Component
-function SettingsScreen({ settings, onSettingsChange, isDarkMode, onBack }) {
+function SettingsScreen({ settings, onSettingsChange, isDarkMode, onBack, onClearAllData }) {
   const insets = useSafeAreaInsets();
   const theme = isDarkMode ? darkTheme : lightTheme;
   const [isMicChecking, setIsMicChecking] = useState(false);
@@ -1160,7 +1306,40 @@ function SettingsScreen({ settings, onSettingsChange, isDarkMode, onBack }) {
 
       // Start a short recording
       const recording = new AVAudio.Recording();
-      await recording.prepareToRecordAsync(AVAudio.RecordingOptionsPresets.HIGH_QUALITY);
+      
+      // Use the same recording configuration as the main recording function
+      const recordingOptions = Platform.select({
+        android: {
+          extension: '.3gp',
+          outputFormat: AVAudio.AndroidOutputFormat.THREE_GPP,
+          audioEncoder: AVAudio.AndroidAudioEncoder.AMR_NB,
+          sampleRate: 8000,
+          numberOfChannels: 1,
+        },
+        ios: {
+          extension: '.m4a',
+          outputFormat: AVAudio.IOSOutputFormat.MPEG4AAC,
+          audioQuality: AVAudio.IOSAudioQuality.MEDIUM,
+          sampleRate: 16000,
+          numberOfChannels: 1,
+          bitRate: 64000,
+          linearPCMBitDepth: 16,
+          linearPCMIsBigEndian: false,
+          linearPCMIsFloat: false,
+        },
+        web: {
+          mimeType: 'audio/webm;codecs=opus',
+          bitsPerSecond: 128000,
+        },
+      });
+      
+      try {
+        await recording.prepareToRecordAsync(recordingOptions);
+      } catch (err) {
+        // Fallback to HIGH_QUALITY preset if custom options fail
+        await recording.prepareToRecordAsync(AVAudio.RecordingOptionsPresets.HIGH_QUALITY);
+      }
+      
       await recording.startAsync();
       await new Promise((res) => setTimeout(res, 1000));
       await recording.stopAndUnloadAsync();
@@ -1180,6 +1359,30 @@ function SettingsScreen({ settings, onSettingsChange, isDarkMode, onBack }) {
     } finally {
       setIsMicChecking(false);
     }
+  };
+
+  const handleClearAllData = async () => {
+    try {
+      await AsyncStorage.clear();
+      alert('All data has been cleared successfully.');
+      if (onClearAllData) {
+        onClearAllData(); // Notify parent to refresh the app state
+      }
+    } catch (error) {
+      console.error('Error clearing data:', error);
+      alert('Failed to clear data: ' + error.message);
+    }
+  };
+
+  const confirmClearAllData = () => {
+    Alert.alert(
+      'Clear All Data',
+      'This will permanently delete all your notes, settings, and app data. This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Clear All Data', style: 'destructive', onPress: handleClearAllData }
+      ]
+    );
   };
 
   return (
@@ -1270,6 +1473,20 @@ function SettingsScreen({ settings, onSettingsChange, isDarkMode, onBack }) {
             {micCheckResult ? (
               <Text style={[styles.noteTime, { color: theme.secondaryTextColor, marginTop: 8 }]}>{micCheckResult}</Text>
             ) : null}
+          </View>
+
+          {/* Data Management Section */}
+          <View style={[styles.settingsCard, { backgroundColor: theme.cardBackground }]}>
+            <Text style={[styles.settingsSectionTitle, { color: theme.textColor }]}>Data Management</Text>
+            <Text style={[styles.settingsLabel, { color: theme.secondaryTextColor, marginBottom: 8 }]}>
+              Clear all app data including notes, settings, and cached files. This action cannot be undone.
+            </Text>
+            <TouchableOpacity
+              style={[styles.testButton, { backgroundColor: '#ff3b30' }]}
+              onPress={confirmClearAllData}
+            >
+              <Text style={styles.testButtonText}>Clear All Data</Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </View>
@@ -1441,6 +1658,22 @@ export default function App() {
   const handleNavigateToSettings = () => setCurrentScreen('settings');
   const handleNavigateToRecentlyDeleted = () => setCurrentScreen('recently-deleted');
   const handleNavigateBack = () => setCurrentScreen('main');
+  
+  const handleClearAllData = async () => {
+    // Reset all state to initial values
+    setNotes([]);
+    setDeletedNotes([]);
+    setSettings({
+      profile: { name: '' },
+      notifications: { weeklyLetter: true, dailyReminder: false, reminderTime: '09:00' }
+    });
+    setSelectedNoteId(null);
+    setCurrentScreen('main');
+    setSearchQuery('');
+    setShowSearch(false);
+    setSortBy('newest');
+    setShowThreeDotsMenu(false);
+  };
   const handleSettingsChange = (newSettings) => setSettings(newSettings);
   const handleRestoreNote = (noteId) => {
     const noteToRestore = deletedNotes.find(note => note.id === noteId);
@@ -1488,6 +1721,7 @@ export default function App() {
           onSettingsChange={handleSettingsChange}
           isDarkMode={isDarkMode}
           onBack={handleNavigateBack}
+          onClearAllData={handleClearAllData}
         />
       ) : currentScreen === 'recently-deleted' ? (
         <RecentlyDeletedScreen
