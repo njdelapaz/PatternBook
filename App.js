@@ -1,9 +1,11 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Modal, Pressable, Keyboard, KeyboardAvoidingView, Platform, TouchableWithoutFeedback } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Modal, Pressable, Keyboard, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, ActivityIndicator, Alert } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { OPENAI_API_KEY } from '@env';
+import { OPENAI_API_KEY, DEEPGRAM_API_KEY } from '@env';
+import * as FileSystem from 'expo-file-system/legacy';
+import { Audio as AVAudio } from 'expo-av';
 
 // Import Carbon icons
 import SearchIcon from './assets/carbon-icons/carbon--search.svg';
@@ -194,7 +196,7 @@ function formatTimestamp(timestamp) {
   return `${months[date.getMonth()]} ${date.getDate()} ${date.getFullYear()} ${timeStr}`;
 }
 
-// AsyncStorage functions
+// AsyncStorage functions - TEMPORARILY DISABLED
 async function loadNotes() {
   try {
     const notesJson = await AsyncStorage.getItem(NOTES_STORAGE_KEY);
@@ -226,6 +228,40 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
   const [history, setHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
   const saveTimeoutRef = useRef(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
+  const recordingRef = useRef(null);
+  const isStartingRef = useRef(false);
+
+  // On-device speech-to-text state (DISABLED - using API instead)
+  const [useDeviceSTT, setUseDeviceSTT] = useState(false); // Always use API
+  const [isListening, setIsListening] = useState(false);
+  // Setup audio recording (API-based transcription only)
+  // Initialize audio mode on mount for iOS (expo-av)
+  useEffect(() => {
+    const setupAudioMode = async () => {
+      if (Platform.OS === 'ios') {
+        try {
+          await AVAudio.setAudioModeAsync({
+            allowsRecordingIOS: true,
+            playsInSilentModeIOS: true,
+            staysActiveInBackground: false,
+          });
+        } catch (e) {
+          console.error('Failed to set AV audio mode', e);
+        }
+      }
+    };
+    setupAudioMode();
+
+    return () => {
+      // Cleanup any ongoing recording on unmount
+      if (recordingRef.current) {
+        recordingRef.current.stopAndUnloadAsync().catch(() => {});
+        recordingRef.current = null;
+      }
+    };
+  }, []);
 
   // Track keyboard visibility
   useEffect(() => {
@@ -341,7 +377,7 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
             },
             {
               role: 'user',
-              content: `Please summarize the following note:\n\nTitle: ${title}\n\nContent: ${content}`,
+              content: `Please summarize the following note:\n\nTitle: ${title}\n\nContent: ${content.slice(0, 2000)}${content.length > 2000 ? '...' : ''}`,
             },
           ],
           temperature: 0.7,
@@ -351,7 +387,16 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error?.message || 'Failed to get summary');
+        
+        if (response.status === 429) {
+          throw new Error('OpenAI quota exceeded. Please add credits to your account at platform.openai.com/account/billing');
+        } else if (response.status === 401) {
+          throw new Error('OpenAI API key is invalid or expired.');
+        } else if (response.status === 403) {
+          throw new Error('OpenAI API access forbidden. Check your API key permissions.');
+        } else {
+          throw new Error(errorData.error?.message || `API Error (${response.status}): Failed to get summary`);
+        }
       }
 
       const data = await response.json();
@@ -362,6 +407,260 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
       setSummary(`Error: ${error.message}`);
     } finally {
       setIsLoadingSummary(false);
+    }
+  };
+
+  // Voice Recording: Start (API-based)
+  const startRecording = async () => {
+    try {
+      console.log('=== START RECORDING CALLED ===', new Date().toISOString());
+      if (isStartingRef.current) return; // prevent re-entrancy
+      isStartingRef.current = true;
+      if (Platform.OS === 'web') {
+        alert('Voice recording is not supported on web in this MVP. Use the keyboard mic on mobile.');
+        return;
+      }
+
+      const perm = await AVAudio.requestPermissionsAsync();
+      if (perm.status !== 'granted') {
+        alert('Microphone permission is required to record.');
+        return;
+      }
+
+      // Ensure audio mode is set for recording
+      await AVAudio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+      });
+
+      // Stop and discard any previous recording
+      if (recordingRef.current) {
+        try {
+          await recordingRef.current.stopAndUnloadAsync();
+        } catch {}
+        recordingRef.current = null;
+      }
+
+      let recording = new AVAudio.Recording();
+      
+      // Use consistent recording configuration across platforms
+      const recordingOptions = Platform.select({
+        android: {
+          extension: '.m4a',
+          outputFormat: AVAudio.AndroidOutputFormat.MPEG_4,
+          audioEncoder: AVAudio.AndroidAudioEncoder.AAC,
+          sampleRate: 16000,
+          numberOfChannels: 1,
+          bitRate: 64000,
+        },
+        ios: {
+          extension: '.m4a',
+          outputFormat: AVAudio.IOSOutputFormat.MPEG4AAC,
+          audioQuality: AVAudio.IOSAudioQuality.MEDIUM,
+          sampleRate: 16000,
+          numberOfChannels: 1,
+          bitRate: 64000,
+          linearPCMBitDepth: 16,
+          linearPCMIsBigEndian: false,
+          linearPCMIsFloat: false,
+        },
+        web: {
+          mimeType: 'audio/webm;codecs=opus',
+          bitsPerSecond: 128000,
+        },
+      });
+      
+      console.log('Using recording options for platform:', Platform.OS, recordingOptions);
+      
+      try {
+        await recording.prepareToRecordAsync(recordingOptions);
+        await recording.startAsync();
+        console.log('Recording started successfully with options:', recordingOptions);
+      } catch (err) {
+        console.log('First recording attempt failed, trying HIGH_QUALITY fallback...', err.message);
+        // Fallback to HIGH_QUALITY preset if custom options fail
+        try {
+          await AVAudio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true, staysActiveInBackground: false });
+          recording = new AVAudio.Recording();
+          await recording.prepareToRecordAsync(AVAudio.RecordingOptionsPresets.HIGH_QUALITY);
+          await recording.startAsync();
+          console.log('Recording started with HIGH_QUALITY fallback');
+        } catch (retryErr) {
+          console.log('HIGH_QUALITY also failed, trying LOW_QUALITY...', retryErr.message);
+          // Try LOW_QUALITY as last resort
+          recording = new AVAudio.Recording();
+          await recording.prepareToRecordAsync(AVAudio.RecordingOptionsPresets.LOW_QUALITY);
+          await recording.startAsync();
+          console.log('Recording started with LOW_QUALITY fallback');
+        }
+      }
+      recordingRef.current = recording;
+      setIsRecording(true);
+      console.log('Recording state set to true');
+    } catch (e) {
+      console.error('Failed to start recording', e);
+      alert('Failed to start recording: ' + e.message);
+    }
+    finally {
+      isStartingRef.current = false;
+    }
+  };
+
+  // Voice Recording: Stop and transcribe (API-based)
+  const stopAndTranscribe = async () => {
+    try {
+      console.log('=== STOP RECORDING CALLED ===', new Date().toISOString());
+      
+      // Wait for recording to actually start if it's still initializing
+      let attempts = 0;
+      while (isStartingRef.current && attempts < 50) {
+        console.log('Waiting for recording to start...', attempts);
+        await new Promise(resolve => setTimeout(resolve, 20));
+        attempts++;
+      }
+      
+      if (!recordingRef.current) {
+        console.log('No recording to stop');
+        return;
+      }
+
+      setIsRecording(false);
+      const status = await recordingRef.current.getStatusAsync();
+      console.log('Recording status before stop:', status);
+      
+      await recordingRef.current.stopAndUnloadAsync();
+      const uri = recordingRef.current.getURI();
+      recordingRef.current = null;
+
+      console.log('Recording stopped, URI:', uri);
+      if (!uri) return;
+
+      setIsTranscribing(true);
+      const transcription = await transcribeAudio(uri);
+      if (transcription) {
+        setContent(prev => (prev ? prev + (prev.endsWith('\n') ? '' : '\n') + transcription : transcription));
+      }
+    } catch (e) {
+      console.error('Failed to stop or transcribe', e);
+      alert('Failed to transcribe recording: ' + e.message);
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  // Transcription using Deepgram only
+  const transcribeAudio = async (fileUri) => {
+    console.log('Using Deepgram for transcription');
+    
+    if (!DEEPGRAM_API_KEY) {
+      alert('Deepgram API key is required for voice transcription. Please add DEEPGRAM_API_KEY to your environment.');
+      return '';
+    }
+    
+    const transcript = await transcribeWithDeepgram(fileUri);
+    return transcript || '';
+  };
+
+  // Deepgram transcription
+  const transcribeWithDeepgram = async (fileUri) => {
+    try {
+      if (!DEEPGRAM_API_KEY) {
+        console.log('Deepgram: No API key found');
+        return '';
+      }
+      // console.log('Deepgram: Preparing request for', fileUri);
+      // console.log('Deepgram: API key exists:', !!DEEPGRAM_API_KEY);
+      // console.log('Deepgram: API key prefix:', DEEPGRAM_API_KEY ? DEEPGRAM_API_KEY.substring(0, 8) + '...' : 'NONE');
+      
+      // Check if file exists
+      const fileInfo = await FileSystem.getInfoAsync(fileUri);
+      
+      if (!fileInfo.exists) {
+        throw new Error('Audio file does not exist');
+      }
+      
+      if (fileInfo.size === 0) {
+        throw new Error('Audio file is empty');
+      }
+      
+      const formData = new FormData();
+      
+      formData.append('file', {
+        uri: fileUri,
+        name: 'recording.m4a',
+        type: 'audio/m4a',
+      });
+      
+      // model can be tuned; nova-2 is a good general English model
+      const response = await fetch('https://api.deepgram.com/v1/listen?model=nova-2', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Token ${DEEPGRAM_API_KEY}`,
+          'Content-Type': 'audio/m4a',
+        },
+        body: {
+          uri: fileUri,
+          name: 'recording.m4a',
+          type: 'audio/m4a',
+        },
+      });
+      
+      if (!response.ok) {
+        const errTxt = await response.text();
+        console.error('Deepgram: API error response:', errTxt);
+        
+        // If this approach fails, try the FormData approach as fallback
+        console.log('Deepgram: Direct upload failed, trying FormData approach...');
+        
+        const formData = new FormData();
+        formData.append('file', {
+          uri: fileUri,
+          name: 'recording.m4a',
+          type: 'audio/m4a',
+        });
+        
+        const fallbackResponse = await fetch('https://api.deepgram.com/v1/listen?model=nova-2', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Token ${DEEPGRAM_API_KEY}`,
+          },
+          body: formData,
+        });
+        
+        console.log('Deepgram: Fallback response status:', fallbackResponse.status, fallbackResponse.ok);
+        
+        if (!fallbackResponse.ok) {
+          const fallbackErrTxt = await fallbackResponse.text();
+          console.error('Deepgram: Fallback API error response:', fallbackErrTxt);
+          throw new Error(`HTTP ${fallbackResponse.status}: ${fallbackErrTxt}`);
+        }
+        
+        const fallbackData = await fallbackResponse.json();
+        console.log('Deepgram: Fallback response data:', JSON.stringify(fallbackData, null, 2));
+        
+        // Parse transcript from fallback
+        const transcript = fallbackData?.results?.channels?.[0]?.alternatives?.[0]?.transcript || '';
+        const duration = fallbackData?.metadata?.duration || 0;
+        return transcript;
+      }
+      
+      const data = await response.json();
+      const transcript = data?.results?.channels?.[0]?.alternatives?.[0]?.transcript || '';
+      const duration = data?.metadata?.duration || 0;
+      console.log('Deepgram: Extracted transcript:', transcript);
+      
+      if (!transcript && duration < 0.5) {
+        console.log('Deepgram: Recording too short, returning empty');
+        alert('Recording too short. Please hold the mic button longer while speaking.');
+      }
+      
+      return transcript;
+    } catch (err) {
+      console.error('Deepgram transcription error', err);
+      console.error('Deepgram error message:', err.message);
+      console.error('Deepgram error stack:', err.stack);
+      return null; // Return null on actual errors to trigger fallback
     }
   };
 
@@ -444,9 +743,28 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
           <TouchableOpacity style={[styles.editorFooterButton, { backgroundColor: theme.cardBackground }]} onPress={handleSummarizeNote}>
             <ChatIcon width={20} height={20} color={theme.iconColor} />
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.editorFooterButton, { backgroundColor: theme.cardBackground }]}>
-            <MicrophoneIcon width={20} height={20} color={theme.iconColor} />
+          <TouchableOpacity
+            style={[styles.editorFooterButton, { backgroundColor: isRecording ? '#ff3b30' : theme.cardBackground }]}
+            onPress={() => {
+              console.log('DEBUG: Mic button clicked! Platform:', Platform.OS, 'useDeviceSTT:', useDeviceSTT, 'isListening:', isListening, 'isRecording:', isRecording);
+              // Always use API recording since useDeviceSTT is now always false
+              if (isRecording) {
+                console.log('DEBUG: Stopping API recording...');
+                stopAndTranscribe();
+              } else {
+                console.log('DEBUG: Starting API recording...');
+                startRecording();
+              }
+              console.log('DEBUG: Mic button click handler finished');
+            }}
+          >
+            {isTranscribing ? (
+              <ActivityIndicator size="small" color={theme.iconColor} />
+            ) : (
+              <MicrophoneIcon width={20} height={20} color={theme.iconColor} />
+            )}
           </TouchableOpacity>
+          {/* Remove the device STT toggle button for now */}
           <TouchableOpacity style={[styles.editorFooterButton, { backgroundColor: theme.cardBackground }]} onPress={handleKeyboardToggle}>
             <KeyboardIcon width={20} height={20} color={theme.iconColor} />
           </TouchableOpacity>
@@ -529,7 +847,8 @@ function MainScreen({ notes, onNotePress, onCreateNote, onDeleteNote, onTogglePi
   const filteredAndSortedNotes = notes
     .filter(note => 
       searchQuery === '' || 
-      note.title.toLowerCase().includes(searchQuery.toLowerCase())
+      note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (note.content && note.content.toLowerCase().includes(searchQuery.toLowerCase()))
     )
     .sort((a, b) => {
       switch (sortBy) {
@@ -828,9 +1147,11 @@ function MainScreen({ notes, onNotePress, onCreateNote, onDeleteNote, onTogglePi
 }
 
 // Settings Screen Component
-function SettingsScreen({ settings, onSettingsChange, isDarkMode, onBack }) {
+function SettingsScreen({ settings, onSettingsChange, isDarkMode, onBack, onClearAllData }) {
   const insets = useSafeAreaInsets();
   const theme = isDarkMode ? darkTheme : lightTheme;
+  const [isMicChecking, setIsMicChecking] = useState(false);
+  const [micCheckResult, setMicCheckResult] = useState('');
 
   const handleNameChange = (name) => {
     onSettingsChange({
@@ -857,6 +1178,104 @@ function SettingsScreen({ settings, onSettingsChange, isDarkMode, onBack }) {
         reminderTime: time
       }
     });
+  };
+
+  const handleMicPreflight = async () => {
+    try {
+      setIsMicChecking(true);
+      setMicCheckResult('');
+      const perm = await AVAudio.requestPermissionsAsync();
+      if (perm.status !== 'granted') {
+        alert('Microphone permission is required. Please enable it in Settings.');
+        return;
+      }
+      // Ensure audio mode is set for iOS
+      await AVAudio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        playsInSilentModeIOS: true,
+        staysActiveInBackground: false,
+      });
+
+      // Start a short recording
+      const recording = new AVAudio.Recording();
+      
+      // Use the same recording configuration as the main recording function
+      const recordingOptions = Platform.select({
+        android: {
+          extension: '.m4a',
+          outputFormat: AVAudio.AndroidOutputFormat.MPEG_4,
+          audioEncoder: AVAudio.AndroidAudioEncoder.AAC,
+          sampleRate: 16000,
+          numberOfChannels: 1,
+          bitRate: 64000,
+        },
+        ios: {
+          extension: '.m4a',
+          outputFormat: AVAudio.IOSOutputFormat.MPEG4AAC,
+          audioQuality: AVAudio.IOSAudioQuality.MEDIUM,
+          sampleRate: 16000,
+          numberOfChannels: 1,
+          bitRate: 64000,
+          linearPCMBitDepth: 16,
+          linearPCMIsBigEndian: false,
+          linearPCMIsFloat: false,
+        },
+        web: {
+          mimeType: 'audio/webm;codecs=opus',
+          bitsPerSecond: 128000,
+        },
+      });
+      
+      try {
+        await recording.prepareToRecordAsync(recordingOptions);
+      } catch (err) {
+        // Fallback to HIGH_QUALITY preset if custom options fail
+        await recording.prepareToRecordAsync(AVAudio.RecordingOptionsPresets.HIGH_QUALITY);
+      }
+      
+      await recording.startAsync();
+      await new Promise((res) => setTimeout(res, 1000));
+      await recording.stopAndUnloadAsync();
+      const uri = recording.getURI();
+
+      // Optionally delete the temp file
+      if (uri) {
+        try { await FileSystem.deleteAsync(uri, { idempotent: true }); } catch {}
+      }
+
+      setMicCheckResult('Mic preflight succeeded. Recording and permissions look good.');
+      alert('Mic preflight succeeded.');
+    } catch (e) {
+      console.error('Mic preflight failed', e);
+      setMicCheckResult(`Mic preflight failed: ${e.message || e}`);
+      alert(`Mic preflight failed: ${e.message || e}`);
+    } finally {
+      setIsMicChecking(false);
+    }
+  };
+
+  const handleClearAllData = async () => {
+    try {
+      await AsyncStorage.clear();
+      alert('All data has been cleared successfully.');
+      if (onClearAllData) {
+        onClearAllData(); // Notify parent to refresh the app state
+      }
+    } catch (error) {
+      console.error('Error clearing data:', error);
+      alert('Failed to clear data: ' + error.message);
+    }
+  };
+
+  const confirmClearAllData = () => {
+    Alert.alert(
+      'Clear All Data',
+      'This will permanently delete all your notes, settings, and app data. This action cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Clear All Data', style: 'destructive', onPress: handleClearAllData }
+      ]
+    );
   };
 
   return (
@@ -927,6 +1346,40 @@ function SettingsScreen({ settings, onSettingsChange, isDarkMode, onBack }) {
                 />
               </View>
             )}
+          </View>
+
+          {/* Audio / Diagnostics Section */}
+          <View style={[styles.settingsCard, { backgroundColor: theme.cardBackground }]}>
+            <Text style={[styles.settingsSectionTitle, { color: theme.textColor }]}>Audio</Text>
+            <Text style={[styles.settingsLabel, { color: theme.secondaryTextColor, marginBottom: 8 }]}>Run a 1-second test recording to verify mic permissions and audio session.</Text>
+            <TouchableOpacity
+              style={[styles.testButton, { backgroundColor: theme.accentColor }]}
+              onPress={handleMicPreflight}
+              disabled={isMicChecking}
+            >
+              {isMicChecking ? (
+                <ActivityIndicator color="#fff" />
+              ) : (
+                <Text style={styles.testButtonText}>Run mic preflight</Text>
+              )}
+            </TouchableOpacity>
+            {micCheckResult ? (
+              <Text style={[styles.noteTime, { color: theme.secondaryTextColor, marginTop: 8 }]}>{micCheckResult}</Text>
+            ) : null}
+          </View>
+
+          {/* Data Management Section */}
+          <View style={[styles.settingsCard, { backgroundColor: theme.cardBackground }]}>
+            <Text style={[styles.settingsSectionTitle, { color: theme.textColor }]}>Data Management</Text>
+            <Text style={[styles.settingsLabel, { color: theme.secondaryTextColor, marginBottom: 8 }]}>
+              Clear all app data including notes, settings, and cached files. This action cannot be undone.
+            </Text>
+            <TouchableOpacity
+              style={[styles.testButton, { backgroundColor: '#ff3b30' }]}
+              onPress={confirmClearAllData}
+            >
+              <Text style={styles.testButtonText}>Clear All Data</Text>
+            </TouchableOpacity>
           </View>
         </ScrollView>
       </View>
@@ -1098,6 +1551,22 @@ export default function App() {
   const handleNavigateToSettings = () => setCurrentScreen('settings');
   const handleNavigateToRecentlyDeleted = () => setCurrentScreen('recently-deleted');
   const handleNavigateBack = () => setCurrentScreen('main');
+  
+  const handleClearAllData = async () => {
+    // Reset all state to initial values
+    setNotes([]);
+    setDeletedNotes([]);
+    setSettings({
+      profile: { name: '' },
+      notifications: { weeklyLetter: true, dailyReminder: false, reminderTime: '09:00' }
+    });
+    setSelectedNoteId(null);
+    setCurrentScreen('main');
+    setSearchQuery('');
+    setShowSearch(false);
+    setSortBy('newest');
+    setShowThreeDotsMenu(false);
+  };
   const handleSettingsChange = (newSettings) => setSettings(newSettings);
   const handleRestoreNote = (noteId) => {
     const noteToRestore = deletedNotes.find(note => note.id === noteId);
@@ -1145,6 +1614,7 @@ export default function App() {
           onSettingsChange={handleSettingsChange}
           isDarkMode={isDarkMode}
           onBack={handleNavigateBack}
+          onClearAllData={handleClearAllData}
         />
       ) : currentScreen === 'recently-deleted' ? (
         <RecentlyDeletedScreen
@@ -1586,6 +2056,20 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     textAlign: 'center',
+  },
+  // Test button styles (settings)
+  testButton: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'flex-start',
+  },
+  testButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   // Action button styles for modals
   actionButton: {
