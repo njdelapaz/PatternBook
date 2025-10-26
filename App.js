@@ -7,212 +7,97 @@ import { OPENAI_API_KEY, DEEPGRAM_API_KEY } from '@env';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Audio as AVAudio } from 'expo-av';
 
-// Import Carbon icons
-import SearchIcon from './assets/carbon-icons/carbon--search.svg';
-import ChatIcon from './assets/carbon-icons/carbon--chat.svg';
-import MicrophoneIcon from './assets/carbon-icons/carbon--microphone-filled.svg';
-import PenIcon from './assets/carbon-icons/carbon--pen.svg';
+// Import Screen Components
+import MainScreen from './screens/MainScreen';
+import SettingsScreen from './screens/SettingsScreen';
+import RecentlyDeletedScreen from './screens/RecentlyDeletedScreen';
+import TextEditorScreen from './screens/TextEditorScreen';
+import VoiceRecordingScreen from './screens/VoiceRecordingScreen';
+
+// Import Utilities
+import { loadNotes, saveNotes } from './utils/storage';
+import { darkTheme, lightTheme } from './utils/constants';
+import { MarkdownText, formatTimestamp } from './utils/components';
+
+// Import Carbon icons (for remaining components)
 import KeyboardIcon from './assets/carbon-icons/carbon--keyboard.svg';
 import UndoIcon from './assets/carbon-icons/carbon--undo.svg';
 import RedoIcon from './assets/carbon-icons/carbon--redo.svg';
-
-// Storage key for notes
-const NOTES_STORAGE_KEY = '@patternbook_notes';
+import MicrophoneIcon from './assets/carbon-icons/carbon--microphone-filled.svg';
+import ChatIcon from './assets/carbon-icons/carbon--chat.svg';
 
 // OpenAI API Configuration
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
-// Theme definitions
-const darkTheme = {
-  backgroundColor: '#1a1a1a',
-  cardBackground: '#2a2a2a',
-  textColor: '#ffffff',
-  secondaryTextColor: '#999999',
-  placeholderColor: '#666666',
-  accentColor: '#007AFF',
-  iconColor: '#999999',
-  navBackground: '#0a0a0a',
-  borderColor: '#333333',
-};
 
-const lightTheme = {
-  backgroundColor: '#ffffff',
-  cardBackground: '#f8f9fa',
-  textColor: '#000000',
-  secondaryTextColor: '#666666',
-  placeholderColor: '#999999',
-  accentColor: '#007AFF',
-  iconColor: '#666666',
-  navBackground: '#f8f9fa',
-  borderColor: '#e1e5e9',
-};
 
-// Simple Markdown Text Component
-function MarkdownText({ children, style }) {
-  const parseMarkdown = (text) => {
-    if (!text) return [];
-
-    const lines = text.split('\n');
-    const elements = [];
-
-    lines.forEach((line, index) => {
-      // Parse line for inline formatting
-      const parts = [];
-      let currentText = '';
-      let i = 0;
-
-      while (i < line.length) {
-        // Bold (**text**)
-        if (line[i] === '*' && line[i + 1] === '*') {
-          if (currentText) {
-            parts.push({ text: currentText, bold: false });
-            currentText = '';
-          }
-          i += 2;
-          let boldText = '';
-          while (i < line.length && !(line[i] === '*' && line[i + 1] === '*')) {
-            boldText += line[i];
-            i++;
-          }
-          parts.push({ text: boldText, bold: true });
-          i += 2;
-        }
-        // Italic (*text*)
-        else if (line[i] === '*' && line[i + 1] !== '*') {
-          if (currentText) {
-            parts.push({ text: currentText, bold: false });
-            currentText = '';
-          }
-          i += 1;
-          let italicText = '';
-          while (i < line.length && line[i] !== '*') {
-            italicText += line[i];
-            i++;
-          }
-          parts.push({ text: italicText, italic: true });
-          i += 1;
-        } else {
-          currentText += line[i];
-          i++;
-        }
-      }
-
-      if (currentText) {
-        parts.push({ text: currentText, bold: false });
-      }
-
-      // Check if line is a heading
-      const isHeading = line.match(/^(#{1,3})\s+(.+)$/);
-      const isBullet = line.match(/^[-*]\s+(.+)$/);
-      const isNumbered = line.match(/^\d+\.\s+(.+)$/);
-
-      if (isHeading) {
-        const level = isHeading[1].length;
-        elements.push(
-          <Text key={index} style={[style, styles.markdownHeading, level === 1 && styles.markdownH1, level === 2 && styles.markdownH2, level === 3 && styles.markdownH3]}>
-            {isHeading[2]}
-          </Text>
-        );
-      } else if (isBullet) {
-        elements.push(
-          <View key={index} style={styles.markdownListItem}>
-            <Text style={[style, styles.markdownBullet]}>• </Text>
-            <Text style={style}>{isBullet[1]}</Text>
-          </View>
-        );
-      } else if (isNumbered) {
-        elements.push(
-          <View key={index} style={styles.markdownListItem}>
-            <Text style={[style, styles.markdownBullet]}>{isNumbered[0].match(/^\d+\./)[0]} </Text>
-            <Text style={style}>{isNumbered[1]}</Text>
-          </View>
-        );
-      } else if (parts.length > 0) {
-        elements.push(
-          <Text key={index} style={style}>
-            {parts.map((part, partIndex) => (
-              <Text
-                key={partIndex}
-                style={[
-                  part.bold && styles.markdownBold,
-                  part.italic && styles.markdownItalic,
-                ]}
-              >
-                {part.text}
-              </Text>
-            ))}
-            {'\n'}
-          </Text>
-        );
-      } else {
-        elements.push(<Text key={index} style={style}>{'\n'}</Text>);
-      }
+// Generate AI summary for note content (internal function)
+async function generateSummary(content) {
+  try {
+    const response = await fetch(OPENAI_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${OPENAI_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: 'You are a helpful assistant that creates concise, clear summaries. Keep summaries under 50 words and capture the main point.',
+          },
+          {
+            role: 'user',
+            content: `Please summarize this note in 1-2 sentences:\n\n${content.slice(0, 2000)}${content.length > 2000 ? '...' : ''}`,
+          },
+        ],
+        temperature: 0.7,
+        max_tokens: 100,
+      }),
     });
 
-    return elements;
-  };
+    if (!response.ok) {
+      const errorData = await response.json();
+      if (response.status === 429) {
+        throw new Error('OpenAI quota exceeded. Please add credits to your account.');
+      } else if (response.status === 401) {
+        throw new Error('OpenAI API key is invalid or expired.');
+      } else {
+        throw new Error(errorData.error?.message || `API Error (${response.status}): Failed to generate summary`);
+      }
+    }
 
-  return <View>{parseMarkdown(children)}</View>;
-}
-
-// Helper function to format timestamp
-function formatTimestamp(timestamp) {
-  const now = new Date();
-  const date = new Date(timestamp);
-  const diffMs = now - date;
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-
-  const hours = date.getHours();
-  const minutes = date.getMinutes();
-  const ampm = hours >= 12 ? 'PM' : 'AM';
-  const displayHours = hours % 12 || 12;
-  const displayMinutes = minutes < 10 ? '0' + minutes : minutes;
-  const timeStr = `${displayHours}:${displayMinutes} ${ampm}`;
-
-  // Today
-  if (diffDays === 0 && date.getDate() === now.getDate()) {
-    return `Today ${timeStr}`;
-  }
-
-  // Yesterday
-  if (diffDays === 1 || (diffDays === 0 && date.getDate() === now.getDate() - 1)) {
-    return `Yesterday ${timeStr}`;
-  }
-
-  // Last 7 days - show day of week
-  if (diffDays < 7) {
-    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    return `${days[date.getDay()]} ${timeStr}`;
-  }
-
-  // This year - show month and day
-  if (date.getFullYear() === now.getFullYear()) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return `${months[date.getMonth()]} ${date.getDate()} ${timeStr}`;
-  }
-
-  // Over a year - show full date with year
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  return `${months[date.getMonth()]} ${date.getDate()} ${date.getFullYear()} ${timeStr}`;
-}
-
-// AsyncStorage functions - TEMPORARILY DISABLED
-async function loadNotes() {
-  try {
-    const notesJson = await AsyncStorage.getItem(NOTES_STORAGE_KEY);
-    return notesJson ? JSON.parse(notesJson) : [];
+    const data = await response.json();
+    const summary = data.choices[0]?.message?.content || '';
+    return summary.trim() || content.slice(0, 100) + '...';
   } catch (error) {
-    console.error('Error loading notes:', error);
-    return [];
+    console.error('Error generating summary:', error);
+    // Fallback to truncated content
+    return content.slice(0, 100) + (content.length > 100 ? '...' : '');
   }
 }
 
-async function saveNotes(notes) {
-  try {
-    await AsyncStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(notes));
-  } catch (error) {
-    console.error('Error saving notes:', error);
+// Get or generate AI summary with caching
+async function getCachedSummary(note, notes, setNotes) {
+  // Check if we already have a cached summary
+  if (note.aiSummary) {
+    return note.aiSummary;
   }
+
+  // Generate new summary
+  const summary = await generateSummary(note.content);
+  
+  // Cache the summary in the note object
+  const updatedNotes = notes.map(n => 
+    n.id === note.id ? { ...n, aiSummary: summary } : n
+  );
+  
+  // Update state and persist to storage
+  setNotes(updatedNotes);
+  await saveNotes(updatedNotes);
+  
+  return summary;
 }
 
 // Note Editor Screen Component
@@ -739,7 +624,7 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
         </View>
 
         {/* Footer with action buttons */}
-        <View style={[styles.editorFooter, { paddingBottom: insets.bottom, backgroundColor: theme.navBackground }]}>
+        <View style={[styles.editorFooter, { paddingBottom: insets.bottom, backgroundColor: theme.navBackground, borderTopColor: theme.borderColor }]}>
           <TouchableOpacity style={[styles.editorFooterButton, { backgroundColor: theme.cardBackground }]} onPress={handleSummarizeNote}>
             <ChatIcon width={20} height={20} color={theme.iconColor} />
           </TouchableOpacity>
@@ -806,651 +691,16 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
   );
 }
 
-// Main Screen Component
-function MainScreen({ notes, onNotePress, onCreateNote, onDeleteNote, onTogglePin, isDarkMode, onToggleTheme, searchQuery, onSearchChange, showSearch, onToggleSearch, sortBy, onSortChange, showThreeDotsMenu, onToggleThreeDotsMenu, onNavigateToSettings, onNavigateToRecentlyDeleted }) {
-  const insets = useSafeAreaInsets();
-  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
-  const [noteToDelete, setNoteToDelete] = useState(null);
-  const [noteToPin, setNoteToPin] = useState(null);
-
-  const handleLongPress = (note) => {
-    setNoteToDelete(note);
-    setNoteToPin(note);
-    setDeleteModalVisible(true);
-  };
-
-  const handleDelete = () => {
-    if (noteToDelete) {
-      onDeleteNote(noteToDelete.id);
-      setDeleteModalVisible(false);
-      setNoteToDelete(null);
-      setNoteToPin(null);
-    }
-  };
-
-  const handleTogglePin = () => {
-    if (noteToPin) {
-      onTogglePin(noteToPin.id);
-      setDeleteModalVisible(false);
-      setNoteToDelete(null);
-      setNoteToPin(null);
-    }
-  };
-
-  const handleCancelDelete = () => {
-    setDeleteModalVisible(false);
-    setNoteToDelete(null);
-    setNoteToPin(null);
-  };
-
-  // Filter and sort notes
-  const filteredAndSortedNotes = notes
-    .filter(note => 
-      searchQuery === '' || 
-      note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (note.content && note.content.toLowerCase().includes(searchQuery.toLowerCase()))
-    )
-    .sort((a, b) => {
-      switch (sortBy) {
-        case 'updated':
-          return b.updatedAt - a.updatedAt;
-        case 'old-to-new':
-          return a.updatedAt - b.updatedAt;
-        case 'alphabetical':
-          return a.title.localeCompare(b.title);
-        default:
-          return b.updatedAt - a.updatedAt;
-      }
-    });
-
-  // Group notes by date sections
-  const groupNotesByDate = (notes) => {
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-    
-    const sections = {
-      pinned: [],
-      today: [],
-      yesterday: [],
-      past: []
-    };
-    
-    notes.forEach(note => {
-      if (note.pinned) {
-        sections.pinned.push(note);
-      } else {
-        const noteDate = new Date(note.updatedAt);
-        const noteDateOnly = new Date(noteDate.getFullYear(), noteDate.getMonth(), noteDate.getDate());
-        
-        if (noteDateOnly.getTime() === today.getTime()) {
-          sections.today.push(note);
-        } else if (noteDateOnly.getTime() === yesterday.getTime()) {
-          sections.yesterday.push(note);
-        } else {
-          sections.past.push(note);
-        }
-      }
-    });
-    
-    return sections;
-  };
-
-  const noteSections = groupNotesByDate(filteredAndSortedNotes);
-
-  const theme = isDarkMode ? darkTheme : lightTheme;
-
-  return (
-    <View style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
-      <StatusBar style={isDarkMode ? "light" : "dark"} />
-
-      {/* Main Content with proper top spacing */}
-      <View style={{ paddingTop: insets.top, flex: 1 }}>
-        <ScrollView style={styles.content} contentContainerStyle={{ paddingTop: 20 }}>
-          {/* Header Section */}
-          <View style={styles.header}>
-            <View style={styles.headerLeft} />
-            <View style={styles.headerRight}>
-              <TouchableOpacity onPress={onToggleThreeDotsMenu} style={styles.threeDotsButton}>
-                <Text style={[styles.threeDotsText, { color: theme.textColor }]}>⋯</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={onToggleTheme} style={styles.themeToggle}>
-                <Text style={[styles.themeToggleText, { color: theme.textColor }]}>
-                  {isDarkMode ? '☀️' : '🌙'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          {/* Search Bar */}
-          {showSearch && (
-            <View style={[styles.searchContainer, { backgroundColor: theme.cardBackground }]}>
-              <TextInput
-                style={[styles.searchInput, { color: theme.textColor }]}
-                value={searchQuery}
-                onChangeText={onSearchChange}
-                placeholder="Search notes..."
-                placeholderTextColor={theme.placeholderColor}
-                autoFocus
-              />
-            </View>
-          )}
-
-          {/* Sort Options */}
-          <View style={styles.sortContainer}>
-            <TouchableOpacity 
-              style={[styles.sortButton, sortBy === 'updated' && styles.sortButtonActive]}
-              onPress={() => onSortChange('updated')}
-            >
-              <Text style={[styles.sortText, { color: sortBy === 'updated' ? theme.accentColor : theme.textColor }]}>
-                ⇅ Updated
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.sortButton, sortBy === 'old-to-new' && styles.sortButtonActive]}
-              onPress={() => onSortChange('old-to-new')}
-            >
-              <Text style={[styles.sortText, { color: sortBy === 'old-to-new' ? theme.accentColor : theme.textColor }]}>
-                ⇅ Old-to-New
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.sortButton, sortBy === 'alphabetical' && styles.sortButtonActive]}
-              onPress={() => onSortChange('alphabetical')}
-            >
-              <Text style={[styles.sortText, { color: sortBy === 'alphabetical' ? theme.accentColor : theme.textColor }]}>
-                A-Z
-              </Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Notes List with Date Sections */}
-          <View style={styles.notesList}>
-            {/* Pinned Section */}
-            {noteSections.pinned.length > 0 && (
-              <View style={styles.dateSection}>
-                <Text style={[styles.sectionHeader, { color: theme.textColor }]}>Pinned</Text>
-                {noteSections.pinned.map((note) => (
-                  <TouchableOpacity
-                    key={note.id}
-                    style={[styles.noteCard, { backgroundColor: theme.cardBackground }]}
-                    onPress={() => onNotePress(note)}
-                    onLongPress={() => handleLongPress(note)}
-                    delayLongPress={500}
-                  >
-                    <Text style={[styles.noteTime, { color: theme.secondaryTextColor }]}>{formatTimestamp(note.updatedAt)}</Text>
-                    <Text style={[styles.noteText, { color: theme.textColor }]}>{note.title}</Text>
-                    <Text style={[styles.notePreview, { color: theme.secondaryTextColor, fontFamily: 'Times New Roman' }]} numberOfLines={3}>
-                      {note.content.length > 150 ? note.content.substring(0, 150) + '...' : note.content}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-
-            {/* Today Section */}
-            {noteSections.today.length > 0 && (
-              <View style={styles.dateSection}>
-                <Text style={[styles.sectionHeader, { color: theme.textColor }]}>Today</Text>
-                {noteSections.today.map((note) => (
-                  <TouchableOpacity
-                    key={note.id}
-                    style={[styles.noteCard, { backgroundColor: theme.cardBackground }]}
-                    onPress={() => onNotePress(note)}
-                    onLongPress={() => handleLongPress(note)}
-                    delayLongPress={500}
-                  >
-                    <Text style={[styles.noteTime, { color: theme.secondaryTextColor }]}>{formatTimestamp(note.updatedAt)}</Text>
-                    <Text style={[styles.noteText, { color: theme.textColor }]}>{note.title}</Text>
-                    <Text style={[styles.notePreview, { color: theme.secondaryTextColor, fontFamily: 'Times New Roman' }]} numberOfLines={3}>
-                      {note.content.length > 150 ? note.content.substring(0, 150) + '...' : note.content}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-
-            {/* Yesterday Section */}
-            {noteSections.yesterday.length > 0 && (
-              <View style={styles.dateSection}>
-                <Text style={[styles.sectionHeader, { color: theme.textColor }]}>Yesterday</Text>
-                {noteSections.yesterday.map((note) => (
-                  <TouchableOpacity
-                    key={note.id}
-                    style={[styles.noteCard, { backgroundColor: theme.cardBackground }]}
-                    onPress={() => onNotePress(note)}
-                    onLongPress={() => handleLongPress(note)}
-                    delayLongPress={500}
-                  >
-                    <Text style={[styles.noteTime, { color: theme.secondaryTextColor }]}>{formatTimestamp(note.updatedAt)}</Text>
-                    <Text style={[styles.noteText, { color: theme.textColor }]}>{note.title}</Text>
-                    <Text style={[styles.notePreview, { color: theme.secondaryTextColor, fontFamily: 'Times New Roman' }]} numberOfLines={3}>
-                      {note.content.length > 150 ? note.content.substring(0, 150) + '...' : note.content}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-
-            {/* Past Section */}
-            {noteSections.past.length > 0 && (
-              <View style={styles.dateSection}>
-                <Text style={[styles.sectionHeader, { color: theme.textColor }]}>Past</Text>
-                {noteSections.past.map((note) => (
-                  <TouchableOpacity
-                    key={note.id}
-                    style={[styles.noteCard, { backgroundColor: theme.cardBackground }]}
-                    onPress={() => onNotePress(note)}
-                    onLongPress={() => handleLongPress(note)}
-                    delayLongPress={500}
-                  >
-                    <Text style={[styles.noteTime, { color: theme.secondaryTextColor }]}>{formatTimestamp(note.updatedAt)}</Text>
-                    <Text style={[styles.noteText, { color: theme.textColor }]}>{note.title}</Text>
-                    <Text style={[styles.notePreview, { color: theme.secondaryTextColor, fontFamily: 'Times New Roman' }]} numberOfLines={3}>
-                      {note.content.length > 150 ? note.content.substring(0, 150) + '...' : note.content}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
-          </View>
-        </ScrollView>
-      </View>
-
-      {/* Bottom Navigation */}
-      <View style={[styles.bottomNav, { backgroundColor: theme.navBackground, borderTopColor: theme.borderColor }]}>
-        <TouchableOpacity style={styles.navButton} onPress={onToggleSearch}>
-          <SearchIcon width={24} height={24} color={theme.iconColor} />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton}>
-          <ChatIcon width={24} height={24} color={theme.iconColor} />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton}>
-          <MicrophoneIcon width={24} height={24} color={theme.iconColor} />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton} onPress={onCreateNote}>
-          <PenIcon width={24} height={24} color={theme.iconColor} />
-        </TouchableOpacity>
-      </View>
-
-      {/* Three Dots Menu */}
-      {showThreeDotsMenu && (
-        <Modal
-          visible={showThreeDotsMenu}
-          transparent={true}
-          animationType="fade"
-          onRequestClose={onToggleThreeDotsMenu}
-        >
-          <Pressable
-            style={styles.modalOverlay}
-            onPress={onToggleThreeDotsMenu}
-          >
-            <View style={[styles.threeDotsMenu, { backgroundColor: theme.cardBackground }]}>
-              <TouchableOpacity
-                style={styles.menuItem}
-                onPress={() => {
-                  onToggleThreeDotsMenu();
-                  onNavigateToRecentlyDeleted();
-                }}
-              >
-                <Text style={[styles.menuItemText, { color: theme.textColor }]}>Recently deleted</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.menuItem}
-                onPress={() => {
-                  onToggleThreeDotsMenu();
-                  onNavigateToSettings();
-                }}
-              >
-                <Text style={[styles.menuItemText, { color: theme.textColor }]}>Settings</Text>
-              </TouchableOpacity>
-            </View>
-          </Pressable>
-        </Modal>
-      )}
-
-      {/* Delete Modal */}
-      <Modal
-        visible={deleteModalVisible}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={handleCancelDelete}
-      >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={handleCancelDelete}
-        >
-          <View style={[styles.modalContent, { backgroundColor: theme.cardBackground }]}>
-            <TouchableOpacity
-              style={styles.actionButton}
-              onPress={handleTogglePin}
-            >
-              <Text style={[styles.actionIcon, { color: theme.textColor }]}>
-                {noteToPin?.pinned ? '📌' : '📍'}
-              </Text>
-              <Text style={[styles.actionText, { color: theme.textColor }]}>
-                {noteToPin?.pinned ? 'Unpin note' : 'Pin note'}
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.deleteButton}
-              onPress={handleDelete}
-            >
-              <Text style={styles.deleteIcon}>🗑️</Text>
-              <Text style={styles.deleteText}>Delete note</Text>
-            </TouchableOpacity>
-          </View>
-        </Pressable>
-      </Modal>
-    </View>
-  );
-}
-
-// Settings Screen Component
-function SettingsScreen({ settings, onSettingsChange, isDarkMode, onBack, onClearAllData }) {
-  const insets = useSafeAreaInsets();
-  const theme = isDarkMode ? darkTheme : lightTheme;
-  const [isMicChecking, setIsMicChecking] = useState(false);
-  const [micCheckResult, setMicCheckResult] = useState('');
-
-  const handleNameChange = (name) => {
-    onSettingsChange({
-      ...settings,
-      profile: { ...settings.profile, name }
-    });
-  };
-
-  const handleNotificationToggle = (key) => {
-    onSettingsChange({
-      ...settings,
-      notifications: {
-        ...settings.notifications,
-        [key]: !settings.notifications[key]
-      }
-    });
-  };
-
-  const handleTimeChange = (time) => {
-    onSettingsChange({
-      ...settings,
-      notifications: {
-        ...settings.notifications,
-        reminderTime: time
-      }
-    });
-  };
-
-  const handleMicPreflight = async () => {
-    try {
-      setIsMicChecking(true);
-      setMicCheckResult('');
-      const perm = await AVAudio.requestPermissionsAsync();
-      if (perm.status !== 'granted') {
-        alert('Microphone permission is required. Please enable it in Settings.');
-        return;
-      }
-      // Ensure audio mode is set for iOS
-      await AVAudio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: false,
-      });
-
-      // Start a short recording
-      const recording = new AVAudio.Recording();
-      
-      // Use the same recording configuration as the main recording function
-      const recordingOptions = Platform.select({
-        android: {
-          extension: '.m4a',
-          outputFormat: AVAudio.AndroidOutputFormat.MPEG_4,
-          audioEncoder: AVAudio.AndroidAudioEncoder.AAC,
-          sampleRate: 16000,
-          numberOfChannels: 1,
-          bitRate: 64000,
-        },
-        ios: {
-          extension: '.m4a',
-          outputFormat: AVAudio.IOSOutputFormat.MPEG4AAC,
-          audioQuality: AVAudio.IOSAudioQuality.MEDIUM,
-          sampleRate: 16000,
-          numberOfChannels: 1,
-          bitRate: 64000,
-          linearPCMBitDepth: 16,
-          linearPCMIsBigEndian: false,
-          linearPCMIsFloat: false,
-        },
-        web: {
-          mimeType: 'audio/webm;codecs=opus',
-          bitsPerSecond: 128000,
-        },
-      });
-      
-      try {
-        await recording.prepareToRecordAsync(recordingOptions);
-      } catch (err) {
-        // Fallback to HIGH_QUALITY preset if custom options fail
-        await recording.prepareToRecordAsync(AVAudio.RecordingOptionsPresets.HIGH_QUALITY);
-      }
-      
-      await recording.startAsync();
-      await new Promise((res) => setTimeout(res, 1000));
-      await recording.stopAndUnloadAsync();
-      const uri = recording.getURI();
-
-      // Optionally delete the temp file
-      if (uri) {
-        try { await FileSystem.deleteAsync(uri, { idempotent: true }); } catch {}
-      }
-
-      setMicCheckResult('Mic preflight succeeded. Recording and permissions look good.');
-      alert('Mic preflight succeeded.');
-    } catch (e) {
-      console.error('Mic preflight failed', e);
-      setMicCheckResult(`Mic preflight failed: ${e.message || e}`);
-      alert(`Mic preflight failed: ${e.message || e}`);
-    } finally {
-      setIsMicChecking(false);
-    }
-  };
-
-  const handleClearAllData = async () => {
-    try {
-      await AsyncStorage.clear();
-      alert('All data has been cleared successfully.');
-      if (onClearAllData) {
-        onClearAllData(); // Notify parent to refresh the app state
-      }
-    } catch (error) {
-      console.error('Error clearing data:', error);
-      alert('Failed to clear data: ' + error.message);
-    }
-  };
-
-  const confirmClearAllData = () => {
-    Alert.alert(
-      'Clear All Data',
-      'This will permanently delete all your notes, settings, and app data. This action cannot be undone.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Clear All Data', style: 'destructive', onPress: handleClearAllData }
-      ]
-    );
-  };
-
-  return (
-    <View style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
-      <StatusBar style={isDarkMode ? "light" : "dark"} />
-      
-      <View style={{ paddingTop: insets.top, flex: 1 }}>
-        <View style={styles.settingsHeader}>
-          <TouchableOpacity onPress={onBack} style={styles.backButton}>
-            <Text style={[styles.backButtonText, { color: theme.accentColor }]}>← Back</Text>
-          </TouchableOpacity>
-          <Text style={[styles.settingsTitle, { color: theme.textColor }]}>Settings</Text>
-        </View>
-
-        <ScrollView style={styles.settingsContent}>
-          {/* Profile Section */}
-          <View style={[styles.settingsCard, { backgroundColor: theme.cardBackground }]}>
-            <Text style={[styles.settingsSectionTitle, { color: theme.textColor }]}>Profile</Text>
-            <View style={styles.settingsRow}>
-              <Text style={[styles.settingsLabel, { color: theme.textColor }]}>Name</Text>
-              <TextInput
-                style={[styles.settingsInput, { color: theme.textColor, borderColor: theme.borderColor }]}
-                value={settings.profile.name}
-                onChangeText={handleNameChange}
-                placeholder="Enter your name"
-                placeholderTextColor={theme.placeholderColor}
-              />
-            </View>
-          </View>
-
-          {/* Notifications Section */}
-          <View style={[styles.settingsCard, { backgroundColor: theme.cardBackground }]}>
-            <Text style={[styles.settingsSectionTitle, { color: theme.textColor }]}>Notifications</Text>
-            
-            <View style={styles.settingsRow}>
-              <Text style={[styles.settingsLabel, { color: theme.textColor }]}>Weekly Letter</Text>
-              <TouchableOpacity
-                style={[styles.toggle, { backgroundColor: settings.notifications.weeklyLetter ? '#4CAF50' : '#ccc' }]}
-                onPress={() => handleNotificationToggle('weeklyLetter')}
-              >
-                <View style={[styles.toggleThumb, { 
-                  transform: [{ translateX: settings.notifications.weeklyLetter ? 20 : 2 }] 
-                }]} />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.settingsRow}>
-              <Text style={[styles.settingsLabel, { color: theme.textColor }]}>Daily reminder</Text>
-              <TouchableOpacity
-                style={[styles.toggle, { backgroundColor: settings.notifications.dailyReminder ? '#4CAF50' : '#ccc' }]}
-                onPress={() => handleNotificationToggle('dailyReminder')}
-              >
-                <View style={[styles.toggleThumb, { 
-                  transform: [{ translateX: settings.notifications.dailyReminder ? 20 : 2 }] 
-                }]} />
-              </TouchableOpacity>
-            </View>
-
-            {settings.notifications.dailyReminder && (
-              <View style={styles.settingsRow}>
-                <Text style={[styles.settingsLabel, { color: theme.textColor }]}>Reminder time</Text>
-                <TextInput
-                  style={[styles.timeInput, { color: theme.textColor, borderColor: theme.borderColor }]}
-                  value={settings.notifications.reminderTime}
-                  onChangeText={handleTimeChange}
-                  placeholder="09:00"
-                  placeholderTextColor={theme.placeholderColor}
-                />
-              </View>
-            )}
-          </View>
-
-          {/* Audio / Diagnostics Section */}
-          <View style={[styles.settingsCard, { backgroundColor: theme.cardBackground }]}>
-            <Text style={[styles.settingsSectionTitle, { color: theme.textColor }]}>Audio</Text>
-            <Text style={[styles.settingsLabel, { color: theme.secondaryTextColor, marginBottom: 8 }]}>Run a 1-second test recording to verify mic permissions and audio session.</Text>
-            <TouchableOpacity
-              style={[styles.testButton, { backgroundColor: theme.accentColor }]}
-              onPress={handleMicPreflight}
-              disabled={isMicChecking}
-            >
-              {isMicChecking ? (
-                <ActivityIndicator color="#fff" />
-              ) : (
-                <Text style={styles.testButtonText}>Run mic preflight</Text>
-              )}
-            </TouchableOpacity>
-            {micCheckResult ? (
-              <Text style={[styles.noteTime, { color: theme.secondaryTextColor, marginTop: 8 }]}>{micCheckResult}</Text>
-            ) : null}
-          </View>
-
-          {/* Data Management Section */}
-          <View style={[styles.settingsCard, { backgroundColor: theme.cardBackground }]}>
-            <Text style={[styles.settingsSectionTitle, { color: theme.textColor }]}>Data Management</Text>
-            <Text style={[styles.settingsLabel, { color: theme.secondaryTextColor, marginBottom: 8 }]}>
-              Clear all app data including notes, settings, and cached files. This action cannot be undone.
-            </Text>
-            <TouchableOpacity
-              style={[styles.testButton, { backgroundColor: '#ff3b30' }]}
-              onPress={confirmClearAllData}
-            >
-              <Text style={styles.testButtonText}>Clear All Data</Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </View>
-    </View>
-  );
-}
-
-// Recently Deleted Screen Component
-function RecentlyDeletedScreen({ deletedNotes, onRestoreNote, onPermanentlyDeleteNote, isDarkMode, onBack }) {
-  const insets = useSafeAreaInsets();
-  const theme = isDarkMode ? darkTheme : lightTheme;
-
-  return (
-    <View style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
-      <StatusBar style={isDarkMode ? "light" : "dark"} />
-      
-      <View style={{ paddingTop: insets.top, flex: 1 }}>
-        <View style={styles.settingsHeader}>
-          <TouchableOpacity onPress={onBack} style={styles.backButton}>
-            <Text style={[styles.backButtonText, { color: theme.accentColor }]}>← Back</Text>
-          </TouchableOpacity>
-          <Text style={[styles.settingsTitle, { color: theme.textColor }]}>Recently Deleted</Text>
-        </View>
-
-        <ScrollView style={styles.settingsContent}>
-          {deletedNotes.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Text style={[styles.emptyStateText, { color: theme.secondaryTextColor }]}>
-                No deleted notes
-              </Text>
-            </View>
-          ) : (
-            deletedNotes.map((note) => (
-              <View key={note.id} style={[styles.settingsCard, { backgroundColor: theme.cardBackground }]}>
-                <Text style={[styles.noteText, { color: theme.textColor }]}>{note.title}</Text>
-                <Text style={[styles.noteTime, { color: theme.secondaryTextColor }]}>
-                  Deleted {formatTimestamp(note.deletedAt)}
-                </Text>
-                <View style={styles.noteActions}>
-                  <TouchableOpacity
-                    style={[styles.restoreButton, { backgroundColor: theme.accentColor }]}
-                    onPress={() => onRestoreNote(note.id)}
-                  >
-                    <Text style={styles.restoreButtonText}>Restore</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.deleteButton, { backgroundColor: '#ff3b30' }]}
-                    onPress={() => onPermanentlyDeleteNote(note.id)}
-                  >
-                    <Text style={styles.deleteButtonText}>Delete Forever</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-            ))
-          )}
-        </ScrollView>
-      </View>
-    </View>
-  );
-}
-
 // Main App Component
 export default function App() {
   const [notes, setNotes] = useState([]);
   const [deletedNotes, setDeletedNotes] = useState([]);
-  const [currentScreen, setCurrentScreen] = useState('main'); // 'main', 'editor', 'settings', 'recently-deleted'
+  const [currentScreen, setCurrentScreen] = useState('main'); // 'main', 'editor', 'voice-record', 'text-editor', 'settings', 'recently-deleted'
   const [selectedNoteId, setSelectedNoteId] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
-  const [sortBy, setSortBy] = useState('updated'); // 'updated', 'old-to-new', 'alphabetical'
+  const [sortBy, setSortBy] = useState('updated'); // 'updated', 'old-to-new'
   const [showThreeDotsMenu, setShowThreeDotsMenu] = useState(false);
   const [settings, setSettings] = useState({
     profile: { name: 'User' },
@@ -1490,6 +740,92 @@ export default function App() {
     setCurrentScreen('editor');
   };
 
+  // Handle creating note from voice transcription
+  const handleCreateNoteFromTranscription = async (transcription) => {
+    const newNote = {
+      id: Date.now().toString(),
+      title: transcription.split(' ').slice(0, 5).join(' ') || 'Voice Note',
+      content: transcription,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      pinned: false,
+      summary: 'Generating summary...',
+    };
+    
+    // Add note immediately
+    const updatedNotes = [newNote, ...notes];
+    setNotes(updatedNotes);
+    saveNotes(updatedNotes);
+    
+    // Generate summary asynchronously and cache it
+    try {
+      const summary = await generateSummary(transcription);
+      const noteWithSummary = { ...newNote, summary, aiSummary: summary };
+      const notesWithSummary = updatedNotes.map(note => 
+        note.id === newNote.id ? noteWithSummary : note
+      );
+      setNotes(notesWithSummary);
+      saveNotes(notesWithSummary);
+    } catch (error) {
+      console.error('Error generating summary:', error);
+      const fallbackSummary = transcription.slice(0, 100) + '...';
+      const noteWithError = { ...newNote, summary: fallbackSummary, aiSummary: fallbackSummary };
+      const notesWithError = updatedNotes.map(note => 
+        note.id === newNote.id ? noteWithError : note
+      );
+      setNotes(notesWithError);
+      saveNotes(notesWithError);
+    }
+  };
+
+  // Handle creating note from text editor
+  const handleCreateNoteFromText = async (title, content) => {
+    const newNote = {
+      id: Date.now().toString(),
+      title: title,
+      content: content,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      pinned: false,
+      summary: 'Generating summary...',
+    };
+    
+    // Add note immediately
+    const updatedNotes = [newNote, ...notes];
+    setNotes(updatedNotes);
+    saveNotes(updatedNotes);
+    
+    // Generate summary asynchronously and cache it
+    try {
+      const summary = await generateSummary(content);
+      const noteWithSummary = { ...newNote, summary, aiSummary: summary };
+      const notesWithSummary = updatedNotes.map(note => 
+        note.id === newNote.id ? noteWithSummary : note
+      );
+      setNotes(notesWithSummary);
+      saveNotes(notesWithSummary);
+    } catch (error) {
+      console.error('Error generating summary:', error);
+      const fallbackSummary = content.slice(0, 100) + '...';
+      const noteWithError = { ...newNote, summary: fallbackSummary, aiSummary: fallbackSummary };
+      const notesWithError = updatedNotes.map(note => 
+        note.id === newNote.id ? noteWithError : note
+      );
+      setNotes(notesWithError);
+      saveNotes(notesWithError);
+    }
+  };
+
+  // Navigate to voice recording screen
+  const handleNavigateToVoiceRecord = () => {
+    setCurrentScreen('voice-record');
+  };
+
+  // Navigate to text editor screen
+  const handleNavigateToTextEditor = () => {
+    setCurrentScreen('text-editor');
+  };
+
   // Handle opening an existing note
   const handleNotePress = (note) => {
     setSelectedNoteId(note.id);
@@ -1497,14 +833,60 @@ export default function App() {
   };
 
   // Handle saving note changes
-  const handleSaveNote = (title, content) => {
+  const handleSaveNote = async (title, content) => {
+    const currentNote = notes.find(note => note.id === selectedNoteId);
+    const contentChanged = currentNote && currentNote.content !== content;
+    
+    const updatedNote = { 
+      title, 
+      content, 
+      updatedAt: Date.now(),
+      // Only show "Updating summary..." if content actually changed
+      summary: contentChanged ? 'Updating summary...' : (currentNote?.summary || currentNote?.aiSummary)
+    };
+    
+    // Update note immediately
     setNotes((prevNotes) =>
       prevNotes.map((note) =>
         note.id === selectedNoteId
-          ? { ...note, title, content, updatedAt: Date.now() }
+          ? { ...note, ...updatedNote }
           : note
       )
     );
+
+    // Generate new summary only if content changed
+    if (contentChanged) {
+      try {
+        const newSummary = await generateSummary(content);
+        const updatedNotes = notes.map((note) =>
+          note.id === selectedNoteId
+            ? { ...note, summary: newSummary, aiSummary: newSummary }
+            : note
+        );
+        setNotes(updatedNotes);
+        await saveNotes(updatedNotes);
+      } catch (error) {
+        console.error('Error updating summary:', error);
+        // Fallback to truncated content
+        const fallbackSummary = content.slice(0, 100) + (content.length > 100 ? '...' : '');
+        const updatedNotes = notes.map((note) =>
+          note.id === selectedNoteId
+            ? { ...note, summary: fallbackSummary, aiSummary: fallbackSummary }
+            : note
+        );
+        setNotes(updatedNotes);
+        await saveNotes(updatedNotes);
+      }
+    } else if (title !== currentNote?.title) {
+      // Just save the title change without regenerating summary
+      const updatedNotes = notes.map((note) =>
+        note.id === selectedNoteId
+          ? { ...note, title, updatedAt: Date.now() }
+          : note
+      );
+      setNotes(updatedNotes);
+      await saveNotes(updatedNotes);
+    }
   };
 
   // Handle going back to main screen
@@ -1600,6 +982,8 @@ export default function App() {
           onToggleThreeDotsMenu={handleToggleThreeDotsMenu}
           onNavigateToSettings={handleNavigateToSettings}
           onNavigateToRecentlyDeleted={handleNavigateToRecentlyDeleted}
+          onNavigateToVoiceRecord={handleNavigateToVoiceRecord}
+          onNavigateToTextEditor={handleNavigateToTextEditor}
         />
       ) : currentScreen === 'editor' ? (
         <NoteEditor
@@ -1607,6 +991,18 @@ export default function App() {
           onBack={handleBack}
           onSave={handleSaveNote}
           isDarkMode={isDarkMode}
+        />
+      ) : currentScreen === 'voice-record' ? (
+        <VoiceRecordingScreen
+          isDarkMode={isDarkMode}
+          onBack={handleBack}
+          onSave={handleCreateNoteFromTranscription}
+        />
+      ) : currentScreen === 'text-editor' ? (
+        <TextEditorScreen
+          isDarkMode={isDarkMode}
+          onBack={handleBack}
+          onSave={handleCreateNoteFromText}
         />
       ) : currentScreen === 'settings' ? (
         <SettingsScreen
@@ -1635,20 +1031,22 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 16,
+    paddingHorizontal: 20,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingBottom: 20,
+    paddingBottom: 24,
+    paddingTop: 8,
   },
   headerLeft: {
     flex: 1,
   },
   headerTitle: {
-    fontSize: 32,
-    fontWeight: '600',
+    fontSize: 28,
+    fontWeight: '700',
+    letterSpacing: -0.5,
   },
   headerRight: {
     flexDirection: 'row',
@@ -1661,14 +1059,15 @@ const styles = StyleSheet.create({
     fontSize: 20,
   },
   searchContainer: {
-    marginBottom: 16,
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
+    marginBottom: 20,
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
   },
   searchInput: {
     fontSize: 16,
     padding: 0,
+    fontWeight: '400',
   },
   sortContainer: {
     flexDirection: 'row',
@@ -1697,38 +1096,52 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionHeader: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '700',
-    marginBottom: 16,
-    marginTop: 12,
+    marginBottom: 20,
+    marginTop: 16,
+    letterSpacing: -0.5,
   },
   noteCard: {
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 20,
-    marginBottom: 12,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
   },
   noteTime: {
-    fontSize: 14,
-    marginBottom: 8,
+    fontSize: 13,
+    marginBottom: 10,
+    fontWeight: '500',
   },
   noteText: {
-    fontSize: 18,
-    lineHeight: 24,
+    fontSize: 17,
+    lineHeight: 26,
     marginBottom: 8,
+    fontWeight: '600',
   },
   notePreview: {
-    fontSize: 14,
-    lineHeight: 20,
+    fontSize: 15,
+    lineHeight: 22,
+    opacity: 0.7,
   },
   bottomNav: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
-    paddingVertical: 12,
-    borderTopWidth: 1,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    borderTopWidth: 0.5,
   },
   navButton: {
-    padding: 8,
+    padding: 12,
+    borderRadius: 12,
   },
   navIcon: {
     fontSize: 24,
@@ -1737,17 +1150,18 @@ const styles = StyleSheet.create({
   editorHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 0.5,
     justifyContent: 'space-between',
+    minHeight: 56,
   },
   todayButton: {
-    padding: 8,
+    padding: 12,
   },
   todayButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+    fontSize: 15,
+    fontWeight: '500',
   },
   titleContainer: {
     flex: 1,
@@ -1760,21 +1174,23 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   titleText: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '600',
     marginRight: 8,
+    letterSpacing: -0.2,
   },
   renameArrow: {
-    fontSize: 16,
+    fontSize: 14,
+    opacity: 0.6,
   },
   titleInputInline: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '600',
     textAlign: 'center',
-    padding: 8,
+    padding: 12,
     borderWidth: 1,
     borderColor: '#007AFF',
-    borderRadius: 8,
+    borderRadius: 12,
     minWidth: 200,
   },
   editorActions: {
@@ -1789,26 +1205,28 @@ const styles = StyleSheet.create({
   },
   editorContent: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingTop: 20,
+    paddingHorizontal: 24,
+    paddingTop: 24,
   },
   contentInput: {
-    fontSize: 18,
-    lineHeight: 28,
+    fontSize: 17,
+    lineHeight: 26,
     flex: 1,
     padding: 0,
+    fontWeight: '400',
   },
   editorFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    gap: 24,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    gap: 32,
+    borderTopWidth: 0.5,
   },
   editorFooterButton: {
-    padding: 8,
-    borderRadius: 8,
+    padding: 12,
+    borderRadius: 12,
   },
   // Delete Modal styles
   modalOverlay: {
@@ -2087,5 +1505,99 @@ const styles = StyleSheet.create({
   actionText: {
     fontSize: 18,
     fontWeight: '600',
+  },
+  // Voice Recording Screen styles
+  voiceRecordingContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  recordingStatus: {
+    alignItems: 'center',
+    marginBottom: 60,
+  },
+  recordingDuration: {
+    fontSize: 48,
+    fontWeight: '300',
+    marginBottom: 8,
+  },
+  recordingLabel: {
+    fontSize: 18,
+    fontWeight: '500',
+  },
+  recordingButtonContainer: {
+    marginBottom: 60,
+  },
+  recordingButton: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  transcriptionContainer: {
+    flex: 1,
+    width: '100%',
+    maxHeight: 300,
+  },
+  transcriptionLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 12,
+  },
+  transcriptionScroll: {
+    flex: 1,
+    borderRadius: 16,
+    padding: 20,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+  },
+  transcriptionText: {
+    fontSize: 16,
+    lineHeight: 24,
+  },
+  actionButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // Modern save button styles (Lightpage-inspired)
+  modernSaveButton: {
+    paddingHorizontal: 24,
+    paddingVertical: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+    minWidth: 120,
+  },
+  modernSaveButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    letterSpacing: 0.2,
+  },
+  // Text Editor Screen styles
+  textEditorFooter: {
+    alignItems: 'center',
+    paddingVertical: 16,
+    borderTopWidth: 0.5,
+  },
+  textEditorHint: {
+    fontSize: 14,
+    fontStyle: 'italic',
   },
 });
