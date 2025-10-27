@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   StyleSheet, 
   Text, 
@@ -7,18 +7,46 @@ import {
   TouchableOpacity, 
   TextInput, 
   Modal, 
-  Pressable 
+  Pressable,
+  Animated
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { darkTheme, lightTheme } from '../utils/constants';
+import { darkTheme, lightTheme, Typography, Shadows } from '../utils/constants';
 import { formatTimestamp, formatDateOnly } from '../utils/components';
+import { createFadeInAnimation, createPressAnimation, createStaggeredAnimation } from '../utils/animations';
 
 // Import Carbon icons
 import SearchIcon from '../assets/carbon-icons/carbon--search.svg';
 import ChatIcon from '../assets/carbon-icons/carbon--chat.svg';
 import MicrophoneIcon from '../assets/carbon-icons/carbon--microphone-filled.svg';
 import PenIcon from '../assets/carbon-icons/carbon--pen.svg';
+
+// Animated Button Component with micro-interactions
+const AnimatedButton = ({ children, onPress, style, ...props }) => {
+  const pressAnimation = createPressAnimation();
+  
+  return (
+    <Animated.View
+      style={[
+        style,
+        {
+          transform: [{ scale: pressAnimation.animatedValue }]
+        }
+      ]}
+    >
+      <TouchableOpacity
+        onPress={onPress}
+        onPressIn={pressAnimation.pressIn}
+        onPressOut={pressAnimation.pressOut}
+        activeOpacity={0.7}
+        {...props}
+      >
+        {children}
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
 
 // Main Screen Component
 export default function MainScreen({ 
@@ -46,6 +74,29 @@ export default function MainScreen({
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [noteToDelete, setNoteToDelete] = useState(null);
   const [noteToPin, setNoteToPin] = useState(null);
+
+  // Animation setup
+  const headerAnimation = createFadeInAnimation(0);
+  const searchAnimation = createFadeInAnimation(100);
+  const sortAnimation = createFadeInAnimation(150);
+  
+  // Start animations on mount
+  useEffect(() => {
+    headerAnimation.startAnimation();
+    if (showSearch) {
+      searchAnimation.startAnimation();
+    }
+    sortAnimation.startAnimation();
+  }, [showSearch]);
+
+  // Simplified animation approach - use a single fade-in for all notes
+  const notesAnimation = createFadeInAnimation(200);
+  
+  useEffect(() => {
+    if (notesAnimation && notesAnimation.startAnimation) {
+      notesAnimation.startAnimation();
+    }
+  }, [filteredAndSortedNotes?.length || 0]);
 
   const handleLongPress = (note) => {
     setNoteToDelete(note);
@@ -78,7 +129,7 @@ export default function MainScreen({
   };
 
   // Filter and sort notes
-  const filteredAndSortedNotes = notes
+  const filteredAndSortedNotes = (notes || [])
     .filter(note => 
       searchQuery === '' || 
       note.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -108,7 +159,7 @@ export default function MainScreen({
       past: []
     };
     
-    notes.forEach(note => {
+    (notes || []).forEach(note => {
       if (note.pinned) {
         sections.pinned.push(note);
       } else {
@@ -143,28 +194,55 @@ export default function MainScreen({
       <View style={{ paddingTop: insets.top, flex: 1 }}>
         <ScrollView style={styles.content} contentContainerStyle={{ paddingTop: 20 }}>
           {/* Header Section */}
-          <View style={styles.header}>
+          <Animated.View 
+            style={[
+              styles.header,
+              {
+                opacity: headerAnimation.animatedValue,
+                transform: [{
+                  translateY: headerAnimation.animatedValue.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-20, 0],
+                  })
+                }]
+              }
+            ]}
+          >
             <View style={styles.headerLeft}>
               <Text style={[styles.headerTitle, { color: theme.textColor }]}>Notes</Text>
             </View>
             <View style={styles.headerRight}>
-              <TouchableOpacity onPress={onToggleSearch} style={styles.searchToggle}>
+              <AnimatedButton onPress={onToggleSearch} style={styles.searchToggle}>
                 <SearchIcon width={20} height={20} color={theme.textColor} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={onToggleThreeDotsMenu} style={styles.threeDotsButton}>
+              </AnimatedButton>
+              <AnimatedButton onPress={onToggleThreeDotsMenu} style={styles.threeDotsButton}>
                 <Text style={[styles.threeDotsText, { color: theme.textColor }]}>⋯</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={onToggleTheme} style={styles.themeToggle}>
+              </AnimatedButton>
+              <AnimatedButton onPress={onToggleTheme} style={styles.themeToggle}>
                 <Text style={[styles.themeToggleText, { color: theme.textColor }]}>
                   {isDarkMode ? '☀️' : '🌙'}
                 </Text>
-              </TouchableOpacity>
+              </AnimatedButton>
             </View>
-          </View>
+          </Animated.View>
 
           {/* Search Bar */}
           {showSearch && (
-            <View style={[styles.searchContainer, { backgroundColor: theme.cardBackground }]}>
+            <Animated.View 
+              style={[
+                styles.searchContainer, 
+                { backgroundColor: theme.cardBackground },
+                {
+                  opacity: searchAnimation.animatedValue,
+                  transform: [{
+                    translateY: searchAnimation.animatedValue.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [-10, 0],
+                    })
+                  }]
+                }
+              ]}
+            >
               <TextInput
                 style={[styles.searchInput, { color: theme.textColor }]}
                 value={searchQuery}
@@ -173,28 +251,41 @@ export default function MainScreen({
                 placeholderTextColor={theme.placeholderColor}
                 autoFocus
               />
-            </View>
+            </Animated.View>
           )}
 
           {/* Sort Options */}
-          <View style={styles.sortContainer}>
-            <TouchableOpacity 
+          <Animated.View 
+            style={[
+              styles.sortContainer,
+              {
+                opacity: sortAnimation.animatedValue,
+                transform: [{
+                  translateY: sortAnimation.animatedValue.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [-10, 0],
+                  })
+                }]
+              }
+            ]}
+          >
+            <AnimatedButton 
               style={[styles.sortButton, sortBy === 'updated' && styles.sortButtonActive]}
               onPress={() => onSortChange('updated')}
             >
               <Text style={[styles.sortText, { color: sortBy === 'updated' ? theme.accentColor : theme.secondaryTextColor }]}>
                 Recently Updated
               </Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
+            </AnimatedButton>
+            <AnimatedButton 
               style={[styles.sortButton, sortBy === 'old-to-new' && styles.sortButtonActive]}
               onPress={() => onSortChange('old-to-new')}
             >
               <Text style={[styles.sortText, { color: sortBy === 'old-to-new' ? theme.accentColor : theme.secondaryTextColor }]}>
                 Oldest First
               </Text>
-            </TouchableOpacity>
-          </View>
+            </AnimatedButton>
+          </Animated.View>
 
           {/* Notes List with Date Sections */}
           <View style={styles.notesList}>
@@ -203,7 +294,7 @@ export default function MainScreen({
               <View style={styles.dateSection}>
                 <Text style={[styles.sectionHeader, { color: theme.textColor }]}>Pinned</Text>
                 {noteSections.pinned.map((note) => (
-                  <TouchableOpacity
+                  <AnimatedButton
                     key={note.id}
                     style={[styles.noteCard, { backgroundColor: theme.cardBackground }]}
                     onPress={() => onNotePress(note)}
@@ -217,7 +308,7 @@ export default function MainScreen({
                     <Text style={[styles.notePreview, { color: theme.secondaryTextColor, fontFamily: 'Times New Roman' }]} numberOfLines={3}>
                       {note.aiSummary || note.summary || (note.content.length > 150 ? note.content.substring(0, 150) + '...' : note.content)}
                     </Text>
-                  </TouchableOpacity>
+                  </AnimatedButton>
                 ))}
               </View>
             )}
@@ -227,7 +318,7 @@ export default function MainScreen({
               <View style={styles.dateSection}>
                 <Text style={[styles.sectionHeader, { color: theme.textColor }]}>Today</Text>
                 {noteSections.today.map((note) => (
-                  <TouchableOpacity
+                  <AnimatedButton
                     key={note.id}
                     style={[styles.noteCard, { backgroundColor: theme.cardBackground }]}
                     onPress={() => onNotePress(note)}
@@ -241,7 +332,7 @@ export default function MainScreen({
                     <Text style={[styles.notePreview, { color: theme.secondaryTextColor, fontFamily: 'Times New Roman' }]} numberOfLines={3}>
                       {note.aiSummary || note.summary || (note.content.length > 150 ? note.content.substring(0, 150) + '...' : note.content)}
                     </Text>
-                  </TouchableOpacity>
+                  </AnimatedButton>
                 ))}
               </View>
             )}
@@ -251,7 +342,7 @@ export default function MainScreen({
               <View style={styles.dateSection}>
                 <Text style={[styles.sectionHeader, { color: theme.textColor }]}>Yesterday</Text>
                 {noteSections.yesterday.map((note) => (
-                  <TouchableOpacity
+                  <AnimatedButton
                     key={note.id}
                     style={[styles.noteCard, { backgroundColor: theme.cardBackground }]}
                     onPress={() => onNotePress(note)}
@@ -265,7 +356,7 @@ export default function MainScreen({
                     <Text style={[styles.notePreview, { color: theme.secondaryTextColor, fontFamily: 'Times New Roman' }]} numberOfLines={3}>
                       {note.aiSummary || note.summary || (note.content.length > 150 ? note.content.substring(0, 150) + '...' : note.content)}
                     </Text>
-                  </TouchableOpacity>
+                  </AnimatedButton>
                 ))}
               </View>
             )}
@@ -275,7 +366,7 @@ export default function MainScreen({
               <View style={styles.dateSection}>
                 <Text style={[styles.sectionHeader, { color: theme.textColor }]}>Past</Text>
                 {noteSections.past.map((note) => (
-                  <TouchableOpacity
+                  <AnimatedButton
                     key={note.id}
                     style={[styles.noteCard, { backgroundColor: theme.cardBackground }]}
                     onPress={() => onNotePress(note)}
@@ -289,7 +380,7 @@ export default function MainScreen({
                     <Text style={[styles.notePreview, { color: theme.secondaryTextColor, fontFamily: 'Times New Roman' }]} numberOfLines={3}>
                       {note.aiSummary || note.summary || (note.content.length > 150 ? note.content.substring(0, 150) + '...' : note.content)}
                     </Text>
-                  </TouchableOpacity>
+                  </AnimatedButton>
                 ))}
               </View>
             )}
@@ -299,18 +390,18 @@ export default function MainScreen({
 
       {/* Bottom Navigation */}
       <View style={[styles.bottomNav, { backgroundColor: theme.navBackground, borderTopColor: theme.borderColor }]}>
-        <TouchableOpacity style={styles.navButton} onPress={onToggleSearch}>
+        <AnimatedButton style={styles.navButton} onPress={onToggleSearch}>
           <SearchIcon width={24} height={24} color={theme.iconColor} />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton}>
+        </AnimatedButton>
+        <AnimatedButton style={styles.navButton}>
           <ChatIcon width={24} height={24} color={theme.iconColor} />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton} onPress={onNavigateToVoiceRecord}>
+        </AnimatedButton>
+        <AnimatedButton style={styles.navButton} onPress={onNavigateToVoiceRecord}>
           <MicrophoneIcon width={24} height={24} color={theme.iconColor} />
-        </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton} onPress={onNavigateToTextEditor}>
+        </AnimatedButton>
+        <AnimatedButton style={styles.navButton} onPress={onNavigateToTextEditor}>
           <PenIcon width={24} height={24} color={theme.iconColor} />
-        </TouchableOpacity>
+        </AnimatedButton>
       </View>
 
       {/* Three Dots Menu */}
@@ -405,9 +496,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerTitle: {
-    fontSize: 32,
-    fontWeight: '700',
-    letterSpacing: -0.8,
+    ...Typography.h1,
   },
   headerRight: {
     flexDirection: 'row',
@@ -465,42 +554,29 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionHeader: {
-    fontSize: 20,
-    fontWeight: '700',
+    ...Typography.h3,
     marginBottom: 16,
     marginTop: 24,
-    letterSpacing: -0.4,
   },
   noteCard: {
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 20,
     marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.03,
-    shadowRadius: 1,
-    elevation: 1,
+    ...Shadows.card,
   },
   noteTime: {
-    fontSize: 12,
-    marginBottom: 6,
-    fontWeight: '500',
-    opacity: 0.6,
+    ...Typography.captionSmall,
+    marginBottom: 8,
+    opacity: 0.7,
   },
   noteText: {
-    fontSize: 16,
-    lineHeight: 22,
-    marginBottom: 6,
+    ...Typography.bodySmall,
+    marginBottom: 8,
     fontWeight: '600',
-    letterSpacing: -0.2,
   },
   notePreview: {
-    fontSize: 14,
-    lineHeight: 20,
-    opacity: 0.65,
+    ...Typography.caption,
+    opacity: 0.7,
     fontWeight: '400',
   },
   bottomNav: {

@@ -7,11 +7,39 @@ import {
   TextInput, 
   KeyboardAvoidingView,
   Platform,
-  TouchableWithoutFeedback
+  TouchableWithoutFeedback,
+  Animated
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { darkTheme, lightTheme } from '../utils/constants';
+import { darkTheme, lightTheme, Typography, Shadows } from '../utils/constants';
+import { createFadeInAnimation, createPressAnimation, createFocusGlowAnimation } from '../utils/animations';
+
+// Animated Button Component
+const AnimatedButton = ({ children, onPress, style, ...props }) => {
+  const pressAnimation = createPressAnimation();
+  
+  return (
+    <Animated.View
+      style={[
+        style,
+        {
+          transform: [{ scale: pressAnimation.animatedValue }]
+        }
+      ]}
+    >
+      <TouchableOpacity
+        onPress={onPress}
+        onPressIn={pressAnimation.pressIn}
+        onPressOut={pressAnimation.pressOut}
+        activeOpacity={0.7}
+        {...props}
+      >
+        {children}
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
 
 // Text Editor Screen Component
 export default function TextEditorScreen({ isDarkMode, onBack, onSave }) {
@@ -23,6 +51,18 @@ export default function TextEditorScreen({ isDarkMode, onBack, onSave }) {
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   
   const contentInputRef = useRef(null);
+  
+  // Animation setup
+  const headerAnimation = createFadeInAnimation(0);
+  const contentAnimation = createFadeInAnimation(100);
+  const footerAnimation = createFadeInAnimation(150);
+  
+  // Start animations on mount
+  useEffect(() => {
+    headerAnimation.startAnimation();
+    contentAnimation.startAnimation();
+    footerAnimation.startAnimation();
+  }, []);
 
   // Auto-focus on content when screen loads
   useEffect(() => {
@@ -54,17 +94,12 @@ export default function TextEditorScreen({ isDarkMode, onBack, onSave }) {
     <View style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
       <StatusBar style={isDarkMode ? "light" : "dark"} />
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={0}
-      >
-        <View style={{ paddingTop: insets.top, flex: 1 }}>
-          {/* Header */}
-          <View style={[styles.editorHeader, { borderBottomColor: theme.borderColor }]}>
-            <TouchableOpacity onPress={onBack} style={styles.todayButton}>
-              <Text style={[styles.todayButtonText, { color: theme.accentColor }]}>← Back</Text>
-            </TouchableOpacity>
+      <View style={{ paddingTop: insets.top, flex: 1 }}>
+        {/* Header */}
+        <View style={[styles.editorHeader, { borderBottomColor: theme.borderColor }]}>
+          <AnimatedButton onPress={onBack} style={styles.todayButton}>
+            <Text style={[styles.todayButtonText, { color: theme.accentColor }]}>← Back</Text>
+          </AnimatedButton>
             
             <View style={styles.titleContainer}>
               {isEditingTitle ? (
@@ -78,65 +113,74 @@ export default function TextEditorScreen({ isDarkMode, onBack, onSave }) {
                   placeholderTextColor={theme.placeholderColor}
                 />
               ) : (
-                <TouchableOpacity 
+                <AnimatedButton 
                   style={styles.titleDisplay}
                   onPress={() => setIsEditingTitle(true)}
                 >
                   <Text style={[styles.titleText, { color: theme.textColor }]}>
                     {title || 'New Note'}
                   </Text>
-                </TouchableOpacity>
+                </AnimatedButton>
               )}
             </View>
             
             <View style={styles.editorActions}>
               {(content.trim() || title.trim()) && (
-                <TouchableOpacity 
+                <AnimatedButton 
                   onPress={handleSave}
                   style={[styles.modernSaveButton, { backgroundColor: theme.accentColor }]}
                 >
                   <Text style={[styles.modernSaveButtonText, { color: '#fff' }]}>Save</Text>
-                </TouchableOpacity>
+                </AnimatedButton>
               )}
             </View>
           </View>
 
           {/* Main Content Area */}
-          <TouchableWithoutFeedback onPress={() => contentInputRef.current?.focus()}>
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+          >
             <View style={styles.editorContent}>
-              <TextInput
-                ref={contentInputRef}
-                style={[
-                  styles.contentInput,
-                  {
-                    color: theme.textColor,
-                    backgroundColor: 'transparent',
-                  },
-                ]}
-                value={content}
-                onChangeText={setContent}
-                placeholder="Start typing your note..."
-                placeholderTextColor={theme.placeholderColor}
-                multiline
-                textAlignVertical="top"
-                autoCorrect
-                autoCapitalize="sentences"
-              />
+              <TouchableWithoutFeedback onPress={() => contentInputRef.current?.focus()}>
+                <View style={{ flex: 1 }}>
+                  <TextInput
+                    ref={contentInputRef}
+                    style={[
+                      styles.contentInput,
+                      {
+                        color: theme.textColor,
+                        backgroundColor: 'transparent',
+                      },
+                    ]}
+                    value={content}
+                    onChangeText={setContent}
+                    placeholder="Start typing your note..."
+                    placeholderTextColor={theme.placeholderColor}
+                    multiline
+                    textAlignVertical="top"
+                    autoCorrect
+                    autoCapitalize="sentences"
+                  />
+                </View>
+              </TouchableWithoutFeedback>
             </View>
-          </TouchableWithoutFeedback>
+          </KeyboardAvoidingView>
 
           {/* Footer */}
-          <View style={[styles.textEditorFooter, { 
-            paddingBottom: insets.bottom, 
-            backgroundColor: theme.navBackground, 
-            borderTopColor: theme.borderColor 
-          }]}>
+          <View 
+            style={[styles.textEditorFooter, { 
+              paddingBottom: insets.bottom, 
+              backgroundColor: theme.navBackground, 
+              borderTopColor: theme.borderColor 
+            }]}
+          >
             <Text style={[styles.textEditorHint, { color: theme.secondaryTextColor }]}>
               Tap to start typing
             </Text>
           </View>
         </View>
-      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -172,10 +216,9 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   titleText: {
-    fontSize: 17,
+    ...Typography.bodySmall,
     fontWeight: '600',
     marginRight: 8,
-    letterSpacing: -0.2,
   },
   renameArrow: {
     fontSize: 14,
@@ -203,33 +246,23 @@ const styles = StyleSheet.create({
     paddingTop: 24,
   },
   contentInput: {
-    fontSize: 17,
-    lineHeight: 26,
+    ...Typography.body,
     flex: 1,
     padding: 0,
-    fontWeight: '400',
   },
-  // Modern save button styles (from MainScreen)
+  // Modern save button styles with enhanced shadows
   modernSaveButton: {
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
+    ...Shadows.button,
     minWidth: 120,
   },
   modernSaveButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    letterSpacing: 0.2,
+    ...Typography.button,
+    color: '#fff',
   },
   textEditorFooter: {
     alignItems: 'center',

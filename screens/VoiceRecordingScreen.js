@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   StyleSheet, 
   Text, 
@@ -7,17 +7,45 @@ import {
   ScrollView,
   Platform,
   ActivityIndicator,
-  Alert
+  Alert,
+  Animated
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Audio as AVAudio } from 'expo-av';
 import { DEEPGRAM_API_KEY } from '@env';
-import { darkTheme, lightTheme } from '../utils/constants';
+import { darkTheme, lightTheme, Typography, Shadows } from '../utils/constants';
+import { createFadeInAnimation, createPressAnimation } from '../utils/animations';
 
 // Import Carbon icons
 import MicrophoneIcon from '../assets/carbon-icons/carbon--microphone-filled.svg';
+
+// Animated Button Component
+const AnimatedButton = ({ children, onPress, style, ...props }) => {
+  const pressAnimation = createPressAnimation();
+  
+  return (
+    <Animated.View
+      style={[
+        style,
+        {
+          transform: [{ scale: pressAnimation.animatedValue }]
+        }
+      ]}
+    >
+      <TouchableOpacity
+        onPress={onPress}
+        onPressIn={pressAnimation.pressIn}
+        onPressOut={pressAnimation.pressOut}
+        activeOpacity={0.7}
+        {...props}
+      >
+        {children}
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
 
 // Voice Recording Screen Component
 export default function VoiceRecordingScreen({ isDarkMode, onBack, onSave }) {
@@ -32,6 +60,18 @@ export default function VoiceRecordingScreen({ isDarkMode, onBack, onSave }) {
   const recordingRef = useRef(null);
   const isStartingRef = useRef(false);
   const durationTimerRef = useRef(null);
+
+  // Animation setup
+  const headerAnimation = createFadeInAnimation(0);
+  const contentAnimation = createFadeInAnimation(100);
+  const buttonAnimation = createFadeInAnimation(200);
+  
+  // Start animations on mount
+  useEffect(() => {
+    headerAnimation.startAnimation();
+    contentAnimation.startAnimation();
+    buttonAnimation.startAnimation();
+  }, []);
 
   // Voice Recording: Start recording
   const startRecording = async () => {
@@ -243,10 +283,24 @@ export default function VoiceRecordingScreen({ isDarkMode, onBack, onSave }) {
       
       <View style={{ paddingTop: insets.top, flex: 1 }}>
         {/* Header */}
-        <View style={[styles.editorHeader, { borderBottomColor: theme.borderColor }]}>
-          <TouchableOpacity onPress={onBack} style={styles.todayButton}>
+        <Animated.View 
+          style={[
+            styles.editorHeader, 
+            { borderBottomColor: theme.borderColor },
+            {
+              opacity: headerAnimation.animatedValue,
+              transform: [{
+                translateY: headerAnimation.animatedValue.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [-20, 0],
+                })
+              }]
+            }
+          ]}
+        >
+          <AnimatedButton onPress={onBack} style={styles.todayButton}>
             <Text style={[styles.todayButtonText, { color: theme.accentColor }]}>← Back</Text>
-          </TouchableOpacity>
+          </AnimatedButton>
           
           <View style={styles.titleContainer}>
             <Text style={[styles.titleText, { color: theme.textColor }]}>Voice Recording</Text>
@@ -254,18 +308,31 @@ export default function VoiceRecordingScreen({ isDarkMode, onBack, onSave }) {
           
           <View style={styles.editorActions}>
             {transcription.trim() && (
-              <TouchableOpacity 
+              <AnimatedButton 
                 onPress={handleSave}
                 style={[styles.modernSaveButton, { backgroundColor: theme.accentColor }]}
               >
                 <Text style={[styles.modernSaveButtonText, { color: '#fff' }]}>Save</Text>
-              </TouchableOpacity>
+              </AnimatedButton>
             )}
           </View>
-        </View>
+        </Animated.View>
 
         {/* Main Content */}
-        <View style={styles.voiceRecordingContent}>
+        <Animated.View 
+          style={[
+            styles.voiceRecordingContent,
+            {
+              opacity: contentAnimation.animatedValue,
+              transform: [{
+                translateY: contentAnimation.animatedValue.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [20, 0],
+                })
+              }]
+            }
+          ]}
+        >
           {/* Recording Status */}
           <View style={styles.recordingStatus}>
             {isRecording && (
@@ -280,13 +347,25 @@ export default function VoiceRecordingScreen({ isDarkMode, onBack, onSave }) {
           </View>
 
           {/* Large Recording Button */}
-          <View style={styles.recordingButtonContainer}>
-            <TouchableOpacity
+          <Animated.View 
+            style={[
+              styles.recordingButtonContainer,
+              {
+                opacity: buttonAnimation.animatedValue,
+                transform: [{
+                  scale: buttonAnimation.animatedValue.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.8, 1],
+                  })
+                }]
+              }
+            ]}
+          >
+            <AnimatedButton
               style={[
                 styles.recordingButton,
                 { 
                   backgroundColor: isRecording ? '#ff3b30' : theme.accentColor,
-                  transform: [{ scale: isRecording ? 1.1 : 1.0 }]
                 }
               ]}
               onPress={isRecording ? stopAndTranscribe : startRecording}
@@ -297,12 +376,25 @@ export default function VoiceRecordingScreen({ isDarkMode, onBack, onSave }) {
               ) : (
                 <MicrophoneIcon width={48} height={48} color="#fff" />
               )}
-            </TouchableOpacity>
-          </View>
+            </AnimatedButton>
+          </Animated.View>
 
           {/* Transcription Display */}
           {transcription && (
-            <View style={styles.transcriptionContainer}>
+            <Animated.View 
+              style={[
+                styles.transcriptionContainer,
+                {
+                  opacity: contentAnimation.animatedValue,
+                  transform: [{
+                    translateY: contentAnimation.animatedValue.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [20, 0],
+                    })
+                  }]
+                }
+              ]}
+            >
               <Text style={[styles.transcriptionLabel, { color: theme.secondaryTextColor }]}>
                 Transcription:
               </Text>
@@ -311,9 +403,9 @@ export default function VoiceRecordingScreen({ isDarkMode, onBack, onSave }) {
                   {transcription}
                 </Text>
               </ScrollView>
-            </View>
+            </Animated.View>
           )}
-        </View>
+        </Animated.View>
       </View>
     </View>
   );
@@ -345,9 +437,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   titleText: {
-    fontSize: 17,
+    ...Typography.bodySmall,
     fontWeight: '600',
-    letterSpacing: -0.2,
   },
   editorActions: {
     flexDirection: 'row',
@@ -369,9 +460,10 @@ const styles = StyleSheet.create({
     fontSize: 48,
     fontWeight: '300',
     marginBottom: 8,
+    letterSpacing: -1,
   },
   recordingLabel: {
-    fontSize: 18,
+    ...Typography.bodySmall,
     fontWeight: '500',
   },
   recordingButtonContainer: {
@@ -383,14 +475,7 @@ const styles = StyleSheet.create({
     borderRadius: 60,
     justifyContent: 'center',
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    ...Shadows.cardElevated,
   },
   transcriptionContainer: {
     flex: 1,
@@ -398,7 +483,7 @@ const styles = StyleSheet.create({
     maxHeight: 300,
   },
   transcriptionLabel: {
-    fontSize: 16,
+    ...Typography.bodySmall,
     fontWeight: '600',
     marginBottom: 12,
   },
@@ -407,31 +492,23 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     padding: 20,
     backgroundColor: 'rgba(255,255,255,0.05)',
+    ...Shadows.card,
   },
   transcriptionText: {
-    fontSize: 16,
-    lineHeight: 24,
+    ...Typography.bodySmall,
   },
-  // Modern save button styles (Lightpage-inspired)
+  // Modern save button styles with enhanced shadows
   modernSaveButton: {
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
+    ...Shadows.button,
     minWidth: 120,
   },
   modernSaveButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    letterSpacing: 0.2,
+    ...Typography.button,
+    color: '#fff',
   },
 });

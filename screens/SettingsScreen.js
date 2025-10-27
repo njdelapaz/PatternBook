@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   StyleSheet, 
   Text, 
@@ -8,14 +8,42 @@ import {
   TextInput, 
   Platform,
   ActivityIndicator,
-  Alert
+  Alert,
+  Animated
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Audio as AVAudio } from 'expo-av';
-import { darkTheme, lightTheme } from '../utils/constants';
+import { darkTheme, lightTheme, Typography, Shadows } from '../utils/constants';
+import { createFadeInAnimation, createPressAnimation } from '../utils/animations';
+
+// Animated Button Component
+const AnimatedButton = ({ children, onPress, style, ...props }) => {
+  const pressAnimation = createPressAnimation();
+  
+  return (
+    <Animated.View
+      style={[
+        style,
+        {
+          transform: [{ scale: pressAnimation.animatedValue }]
+        }
+      ]}
+    >
+      <TouchableOpacity
+        onPress={onPress}
+        onPressIn={pressAnimation.pressIn}
+        onPressOut={pressAnimation.pressOut}
+        activeOpacity={0.7}
+        {...props}
+      >
+        {children}
+      </TouchableOpacity>
+    </Animated.View>
+  );
+};
 
 // Settings Screen Component
 export default function SettingsScreen({ settings, onSettingsChange, isDarkMode, onBack, onClearAllData }) {
@@ -23,6 +51,16 @@ export default function SettingsScreen({ settings, onSettingsChange, isDarkMode,
   const theme = isDarkMode ? darkTheme : lightTheme;
   const [isMicChecking, setIsMicChecking] = useState(false);
   const [micCheckResult, setMicCheckResult] = useState('');
+
+  // Animation setup
+  const headerAnimation = createFadeInAnimation(0);
+  const contentAnimation = createFadeInAnimation(100);
+  
+  // Start animations on mount
+  useEffect(() => {
+    headerAnimation.startAnimation();
+    contentAnimation.startAnimation();
+  }, []);
 
   const handleNameChange = (name) => {
     onSettingsChange({
@@ -154,14 +192,42 @@ export default function SettingsScreen({ settings, onSettingsChange, isDarkMode,
       <StatusBar style={isDarkMode ? "light" : "dark"} />
       
       <View style={{ paddingTop: insets.top, flex: 1 }}>
-        <View style={[styles.settingsHeader, { borderBottomColor: theme.borderColor }]}>
-          <TouchableOpacity onPress={onBack} style={styles.backButton}>
+        <Animated.View 
+          style={[
+            styles.settingsHeader, 
+            { borderBottomColor: theme.borderColor },
+            {
+              opacity: headerAnimation.animatedValue,
+              transform: [{
+                translateY: headerAnimation.animatedValue.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [-20, 0],
+                })
+              }]
+            }
+          ]}
+        >
+          <AnimatedButton onPress={onBack} style={styles.backButton}>
             <Text style={[styles.backButtonText, { color: theme.accentColor }]}>← Back</Text>
-          </TouchableOpacity>
+          </AnimatedButton>
           <Text style={[styles.settingsTitle, { color: theme.textColor }]}>Settings</Text>
-        </View>
+        </Animated.View>
 
-        <ScrollView style={styles.settingsContent}>
+        <Animated.View 
+          style={[
+            styles.settingsContent,
+            {
+              opacity: contentAnimation.animatedValue,
+              transform: [{
+                translateY: contentAnimation.animatedValue.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [20, 0],
+                })
+              }]
+            }
+          ]}
+        >
+          <ScrollView>
           {/* Profile Section */}
           <View style={[styles.settingsCard, { backgroundColor: theme.cardBackground }]}>
             <Text style={[styles.settingsSectionTitle, { color: theme.textColor }]}>Profile</Text>
@@ -223,7 +289,7 @@ export default function SettingsScreen({ settings, onSettingsChange, isDarkMode,
           <View style={[styles.settingsCard, { backgroundColor: theme.cardBackground }]}>
             <Text style={[styles.settingsSectionTitle, { color: theme.textColor }]}>Audio</Text>
             <Text style={[styles.settingsLabel, { color: theme.secondaryTextColor, marginBottom: 8 }]}>Run a 1-second test recording to verify mic permissions and audio session.</Text>
-            <TouchableOpacity
+            <AnimatedButton
               style={[styles.testButton, { backgroundColor: theme.accentColor }]}
               onPress={handleMicPreflight}
               disabled={isMicChecking}
@@ -233,7 +299,7 @@ export default function SettingsScreen({ settings, onSettingsChange, isDarkMode,
               ) : (
                 <Text style={styles.testButtonText}>Run mic preflight</Text>
               )}
-            </TouchableOpacity>
+            </AnimatedButton>
             {micCheckResult ? (
               <Text style={[styles.noteTime, { color: theme.secondaryTextColor, marginTop: 8 }]}>{micCheckResult}</Text>
             ) : null}
@@ -245,14 +311,15 @@ export default function SettingsScreen({ settings, onSettingsChange, isDarkMode,
             <Text style={[styles.settingsLabel, { color: theme.secondaryTextColor, marginBottom: 8 }]}>
               Clear all app data including notes, settings, and cached files. This action cannot be undone.
             </Text>
-            <TouchableOpacity
+            <AnimatedButton
               style={[styles.testButton, { backgroundColor: '#ff3b30' }]}
               onPress={confirmClearAllData}
             >
               <Text style={styles.testButtonText}>Clear All Data</Text>
-            </TouchableOpacity>
+            </AnimatedButton>
           </View>
         </ScrollView>
+        </Animated.View>
       </View>
     </View>
   );
@@ -277,8 +344,7 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   settingsTitle: {
-    fontSize: 24,
-    fontWeight: '600',
+    ...Typography.h2,
     marginLeft: 16,
   },
   settingsContent: {
@@ -287,13 +353,13 @@ const styles = StyleSheet.create({
     paddingTop: 20,
   },
   settingsCard: {
-    borderRadius: 12,
+    borderRadius: 16,
     padding: 20,
     marginBottom: 16,
+    ...Shadows.card,
   },
   settingsSectionTitle: {
-    fontSize: 18,
-    fontWeight: '600',
+    ...Typography.h3,
     marginBottom: 16,
   },
   settingsRow: {
@@ -303,7 +369,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   settingsLabel: {
-    fontSize: 16,
+    ...Typography.bodySmall,
     fontWeight: '500',
     flex: 1,
   },
@@ -345,18 +411,19 @@ const styles = StyleSheet.create({
   testButton: {
     paddingHorizontal: 16,
     paddingVertical: 10,
-    borderRadius: 8,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
     alignSelf: 'flex-start',
+    ...Shadows.button,
   },
   testButtonText: {
+    ...Typography.caption,
     color: '#fff',
-    fontSize: 14,
     fontWeight: '600',
   },
   noteTime: {
-    fontSize: 13,
+    ...Typography.captionSmall,
     fontWeight: '500',
   },
 });

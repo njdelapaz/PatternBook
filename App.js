@@ -16,7 +16,7 @@ import VoiceRecordingScreen from './screens/VoiceRecordingScreen';
 
 // Import Utilities
 import { loadNotes, saveNotes } from './utils/storage';
-import { darkTheme, lightTheme } from './utils/constants';
+import { darkTheme, lightTheme, Typography, Shadows } from './utils/constants';
 import { MarkdownText, formatTimestamp } from './utils/components';
 
 // Import Carbon icons (for remaining components)
@@ -556,14 +556,9 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
     <View style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
       <StatusBar style={isDarkMode ? "light" : "dark"} />
 
-      <KeyboardAvoidingView
-        style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={0}
-      >
-        <View style={{ paddingTop: insets.top, flex: 1 }}>
-          {/* Header with Today button, centered title, and undo/redo */}
-          <View style={[styles.editorHeader, { borderBottomColor: theme.borderColor }]}>
+      <View style={{ paddingTop: insets.top, flex: 1 }}>
+        {/* Header with Today button, centered title, and undo/redo */}
+        <View style={[styles.editorHeader, { borderBottomColor: theme.borderColor }]}>
             <TouchableOpacity onPress={onBack} style={styles.todayButton}>
               <Text style={[styles.todayButtonText, { color: theme.accentColor }]}>← Today</Text>
             </TouchableOpacity>
@@ -607,20 +602,26 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
           </View>
 
           {/* Editor Content */}
-          <TouchableWithoutFeedback onPress={handleDismissKeyboard}>
-            <View style={styles.editorContent}>
-              <TextInput
-                ref={contentInputRef}
-                style={[styles.contentInput, { color: theme.textColor, fontFamily: 'Times New Roman' }]}
-                value={content}
-                onChangeText={setContent}
-                placeholder="Start typing your note..."
-                placeholderTextColor={theme.placeholderColor}
-                multiline
-                textAlignVertical="top"
-              />
-            </View>
-          </TouchableWithoutFeedback>
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+          >
+            <TouchableWithoutFeedback onPress={handleDismissKeyboard}>
+              <View style={styles.editorContent}>
+                <TextInput
+                  ref={contentInputRef}
+                  style={[styles.contentInput, { color: theme.textColor, fontFamily: 'Times New Roman' }]}
+                  value={content}
+                  onChangeText={setContent}
+                  placeholder="Start typing your note..."
+                  placeholderTextColor={theme.placeholderColor}
+                  multiline
+                  textAlignVertical="top"
+                />
+              </View>
+            </TouchableWithoutFeedback>
+          </KeyboardAvoidingView>
         </View>
 
         {/* Footer with action buttons */}
@@ -654,7 +655,6 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
             <KeyboardIcon width={20} height={20} color={theme.iconColor} />
           </TouchableOpacity>
         </View>
-      </KeyboardAvoidingView>
 
       {/* Summary Modal */}
       <Modal
@@ -720,8 +720,8 @@ export default function App() {
 
   // Save notes whenever they change
   useEffect(() => {
-    if (notes.length > 0 || currentScreen === 'main') {
-      saveNotes(notes);
+    if ((notes && notes.length > 0) || currentScreen === 'main') {
+      saveNotes(notes || []);
     }
   }, [notes]);
 
@@ -1044,9 +1044,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerTitle: {
-    fontSize: 28,
-    fontWeight: '700',
-    letterSpacing: -0.5,
+    ...Typography.h1,
   },
   headerRight: {
     flexDirection: 'row',
@@ -1096,39 +1094,27 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionHeader: {
-    fontSize: 24,
-    fontWeight: '700',
+    ...Typography.h2,
     marginBottom: 20,
     marginTop: 16,
-    letterSpacing: -0.5,
   },
   noteCard: {
     borderRadius: 16,
     padding: 20,
     marginBottom: 16,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
+    ...Shadows.card,
   },
   noteTime: {
-    fontSize: 13,
+    ...Typography.caption,
     marginBottom: 10,
-    fontWeight: '500',
   },
   noteText: {
-    fontSize: 17,
-    lineHeight: 26,
+    ...Typography.body,
     marginBottom: 8,
     fontWeight: '600',
   },
   notePreview: {
-    fontSize: 15,
-    lineHeight: 22,
+    ...Typography.bodySmall,
     opacity: 0.7,
   },
   bottomNav: {
@@ -1568,27 +1554,18 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  // Modern save button styles (Lightpage-inspired)
+  // Modern save button styles with enhanced shadows
   modernSaveButton: {
     paddingHorizontal: 24,
     paddingVertical: 12,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
+    ...Shadows.button,
     minWidth: 120,
   },
   modernSaveButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    letterSpacing: 0.2,
+    ...Typography.button,
   },
   // Text Editor Screen styles
   textEditorFooter: {
