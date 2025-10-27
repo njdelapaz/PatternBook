@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text } from 'react-native';
+import { View, Text, TouchableOpacity } from 'react-native';
 
 // Helper function to format timestamp (with time)
 export function formatTimestamp(timestamp) {
@@ -133,6 +133,7 @@ export function MarkdownText({ children, style }) {
       const isHeading = line.match(/^(#{1,3})\s+(.+)$/);
       const isBullet = line.match(/^[-*]\s+(.+)$/);
       const isNumbered = line.match(/^\d+\.\s+(.+)$/);
+      const isQuote = line.match(/^>\s+(.+)$/);
 
       if (isHeading) {
         const level = isHeading[1].length;
@@ -142,22 +143,36 @@ export function MarkdownText({ children, style }) {
           3: { fontSize: 18, fontWeight: '600', marginVertical: 4 },
         };
         elements.push(
-          <Text key={index} style={[style, headingStyles[level]]}>
+          <Text key={index} style={[style, headingStyles[level], { marginTop: index > 0 ? 8 : 0 }]}>
             {isHeading[2]}
           </Text>
         );
       } else if (isBullet) {
         elements.push(
-          <View key={index} style={{ flexDirection: 'row', marginVertical: 2 }}>
-            <Text style={[style, { marginRight: 8 }]}>• </Text>
-            <Text style={style}>{isBullet[1]}</Text>
+          <View key={index} style={{ flexDirection: 'row', marginVertical: 3, paddingLeft: 8 }}>
+            <Text style={[style, { marginRight: 8, fontWeight: '600' }]}>• </Text>
+            <Text style={[style, { flex: 1 }]}>{isBullet[1]}</Text>
           </View>
         );
       } else if (isNumbered) {
         elements.push(
-          <View key={index} style={{ flexDirection: 'row', marginVertical: 2 }}>
-            <Text style={[style, { marginRight: 8 }]}>{isNumbered[0].match(/^\d+\./)[0]} </Text>
-            <Text style={style}>{isNumbered[1]}</Text>
+          <View key={index} style={{ flexDirection: 'row', marginVertical: 3, paddingLeft: 8 }}>
+            <Text style={[style, { marginRight: 8, fontWeight: '600' }]}>{isNumbered[0].match(/^\d+\./)[0]} </Text>
+            <Text style={[style, { flex: 1 }]}>{isNumbered[1]}</Text>
+          </View>
+        );
+      } else if (isQuote) {
+        elements.push(
+          <View key={index} style={{ 
+            borderLeftWidth: 3, 
+            borderLeftColor: '#007AFF', 
+            paddingLeft: 12, 
+            marginVertical: 4,
+            backgroundColor: 'rgba(0, 122, 255, 0.05)',
+            paddingVertical: 8,
+            borderRadius: 4
+          }}>
+            <Text style={[style, { fontStyle: 'italic' }]}>{isQuote[1]}</Text>
           </View>
         );
       } else if (parts.length > 0) {
@@ -186,4 +201,104 @@ export function MarkdownText({ children, style }) {
   };
 
   return <View>{parseMarkdown(children)}</View>;
+}
+
+// Formatting Toolbar Component
+export function FormattingToolbar({ 
+  onInsertFormat, 
+  isDarkMode, 
+  style,
+  isKeyboardVisible = true,
+  currentFormat = { bold: false, italic: false, header: 0 }
+}) {
+  const theme = isDarkMode ? {
+    backgroundColor: '#1C1C1E',
+    borderColor: '#38383A',
+    buttonBackground: '#2C2C2E',
+    buttonActiveBackground: '#007AFF',
+    textColor: '#FFFFFF',
+    secondaryTextColor: '#8E8E93'
+  } : {
+    backgroundColor: '#F2F2F7',
+    borderColor: '#C6C6C8',
+    buttonBackground: '#FFFFFF',
+    buttonActiveBackground: '#007AFF',
+    textColor: '#000000',
+    secondaryTextColor: '#8E8E93'
+  };
+
+  if (!isKeyboardVisible) return null;
+
+  const formatButtons = [
+    { id: 'bold', label: 'B', format: '**', tooltip: 'Bold' },
+    { id: 'italic', label: 'I', format: '*', tooltip: 'Italic' },
+    { id: 'h1', label: 'H1', format: '# ', tooltip: 'Heading 1' },
+    { id: 'h2', label: 'H2', format: '## ', tooltip: 'Heading 2' },
+    { id: 'h3', label: 'H3', format: '### ', tooltip: 'Heading 3' },
+    { id: 'bullet', label: '•', format: '- ', tooltip: 'Bullet List' },
+    { id: 'number', label: '1.', format: '1. ', tooltip: 'Numbered List' },
+    { id: 'quote', label: '"', format: '> ', tooltip: 'Quote' }
+  ];
+
+  return (
+    <View style={[
+      {
+        backgroundColor: theme.backgroundColor,
+        borderTopWidth: 0.5,
+        borderTopColor: theme.borderColor,
+        paddingVertical: 10,
+        paddingHorizontal: 12,
+        flexDirection: 'row',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: -1 },
+        shadowOpacity: 0.05,
+        shadowRadius: 4,
+        elevation: 8,
+      },
+      style
+    ]}>
+      {formatButtons.map((button) => {
+        // Check if this button is currently active
+        const isActive = 
+          (button.id === 'bold' && currentFormat.bold) ||
+          (button.id === 'italic' && currentFormat.italic) ||
+          (button.id.startsWith('h') && currentFormat.header === parseInt(button.id.charAt(1))) ||
+          (button.id === 'bullet' && currentFormat.listType === 'bullet') ||
+          (button.id === 'number' && currentFormat.listType === 'number') ||
+          (button.id === 'quote' && currentFormat.quote);
+          
+        return (
+          <TouchableOpacity
+            key={button.id}
+            style={{
+              backgroundColor: isActive ? theme.buttonActiveBackground : theme.buttonBackground,
+              paddingHorizontal: 12,
+              paddingVertical: 8,
+              borderRadius: 6,
+              minWidth: 36,
+              alignItems: 'center',
+              justifyContent: 'center',
+              borderWidth: isDarkMode ? 0.5 : 0,
+              borderColor: isDarkMode ? '#38383A' : 'transparent',
+            }}
+            onPress={() => onInsertFormat(button)}
+            activeOpacity={0.6}
+            accessibilityLabel={button.tooltip}
+            accessibilityRole="button"
+          >
+            <Text style={{
+              color: isActive ? '#FFFFFF' : theme.textColor,
+              fontSize: button.id.startsWith('h') ? 13 : button.id === 'number' ? 13 : 15,
+              fontWeight: button.id === 'bold' ? '700' : button.id.startsWith('h') ? '600' : '500',
+              fontStyle: button.id === 'italic' ? 'italic' : 'normal',
+            }}>
+              {button.label}
+            </Text>
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
 }
