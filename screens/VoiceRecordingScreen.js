@@ -19,11 +19,19 @@ import { darkTheme, lightTheme } from '../utils/constants';
 // Import Carbon icons
 import MicrophoneIcon from '../assets/carbon-icons/carbon--microphone-filled.svg';
 
+// Stubbed transcription data for demo
+const DEMO_TRANSCRIPTIONS = [
+  "I had the most interesting dream last night about wandering through an endless library. Each book seemed to contain memories from my life, but they were all slightly different from how I remember them. It made me wonder how much of what we remember is actually real versus what we've constructed over time.",
+  "Today I realized something important about my relationship with productivity. I've been measuring my worth by how much I accomplish, but that's not sustainable. Maybe the goal isn't to do more, but to be more intentional about what I choose to do. Quality over quantity, as they say."
+];
+
+let transcriptionCounter = 0;
+
 // Voice Recording Screen Component
 export default function VoiceRecordingScreen({ isDarkMode, onBack, onSave }) {
   const insets = useSafeAreaInsets();
   const theme = isDarkMode ? darkTheme : lightTheme;
-  
+
   // Voice recording states
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
@@ -149,75 +157,25 @@ export default function VoiceRecordingScreen({ isDarkMode, onBack, onSave }) {
     }
   };
 
-  // Transcribe with Deepgram
+  // Stubbed transcription for demo
   const transcribeWithDeepgram = async (audioUri) => {
     try {
-      console.log('=== DEEPGRAM DEBUG START ===');
-      console.log('Audio URI:', audioUri);
-      console.log('DEEPGRAM_API_KEY exists:', !!DEEPGRAM_API_KEY);
-      console.log('DEEPGRAM_API_KEY length:', DEEPGRAM_API_KEY?.length);
+      // Simulate transcription delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
 
-      if (!DEEPGRAM_API_KEY) {
-        throw new Error('Deepgram API key not found');
+      // Get the appropriate transcription based on counter
+      const transcript = transcriptionCounter === 0
+        ? DEMO_TRANSCRIPTIONS[0]
+        : DEMO_TRANSCRIPTIONS[1];
+
+      // Increment counter (will stay at 1 for all subsequent recordings)
+      if (transcriptionCounter === 0) {
+        transcriptionCounter = 1;
       }
 
-      // Check if file exists
-      const fileInfo = await FileSystem.getInfoAsync(audioUri);
-      console.log('File info:', fileInfo);
-
-      if (!fileInfo.exists) {
-        throw new Error('Audio file does not exist');
-      }
-      
-      if (fileInfo.size === 0) {
-        throw new Error('Audio file is empty');
-      }
-
-      console.log('Creating FormData with file...');
-      const formData = new FormData();
-      formData.append('file', {
-        uri: audioUri,
-        name: 'recording.m4a',
-        type: 'audio/m4a',
-      });
-
-      console.log('Making request to Deepgram...');
-      const response = await fetch('https://api.deepgram.com/v1/listen?model=nova-2', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Token ${DEEPGRAM_API_KEY}`,
-        },
-        body: formData,
-      });
-
-      console.log('Response status:', response.status);
-      console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.log('Error response body:', errorText);
-        throw new Error(`Deepgram API error: ${response.status} - ${errorText}`);
-      }
-
-      const result = await response.json();
-      console.log('Deepgram response:', JSON.stringify(result, null, 2));
-      
-      const transcript = result.results?.channels?.[0]?.alternatives?.[0]?.transcript || '';
-      console.log('Extracted transcript:', transcript);
-      console.log('=== DEEPGRAM DEBUG END ===');
-      
-      if (transcript.trim()) {
-        setTranscription(transcript);
-      } else {
-        console.log('No speech detected in transcript');
-        alert('No speech detected. Please try again.');
-      }
+      setTranscription(transcript);
     } catch (error) {
-      console.error('=== DEEPGRAM ERROR ===');
-      console.error('Error type:', error.constructor.name);
-      console.error('Error message:', error.message);
-      console.error('Error stack:', error.stack);
-      console.error('=== END DEEPGRAM ERROR ===');
+      console.error('Demo transcription error:', error);
       alert('Transcription failed: ' + error.message);
     }
   };

@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  ScrollView, 
-  TouchableOpacity, 
-  TextInput, 
-  Modal, 
-  Pressable 
+import {
+  StyleSheet,
+  Text,
+  View,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  Modal,
+  Pressable,
+  Image
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { darkTheme, lightTheme } from '../utils/constants';
 import { formatTimestamp, formatDateOnly } from '../utils/components';
+import { getSuggestionsForNotes } from '../utils/suggestions';
 
 // Import Carbon icons
 import SearchIcon from '../assets/carbon-icons/carbon--search.svg';
@@ -46,6 +48,10 @@ export default function MainScreen({
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [noteToDelete, setNoteToDelete] = useState(null);
   const [noteToPin, setNoteToPin] = useState(null);
+  const [selectedSuggestion, setSelectedSuggestion] = useState(null);
+
+  // Get suggestions based on notes
+  const suggestions = getSuggestionsForNotes(notes);
 
   const handleLongPress = (note) => {
     setNoteToDelete(note);
@@ -178,7 +184,7 @@ export default function MainScreen({
 
           {/* Sort Options */}
           <View style={styles.sortContainer}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.sortButton, sortBy === 'updated' && styles.sortButtonActive]}
               onPress={() => onSortChange('updated')}
             >
@@ -186,7 +192,7 @@ export default function MainScreen({
                 Recently Updated
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.sortButton, sortBy === 'old-to-new' && styles.sortButtonActive]}
               onPress={() => onSortChange('old-to-new')}
             >
@@ -195,6 +201,46 @@ export default function MainScreen({
               </Text>
             </TouchableOpacity>
           </View>
+
+          {/* AI Suggestions Bar */}
+          {suggestions.length > 0 && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.suggestionsContainer}
+              contentContainerStyle={styles.suggestionsContent}
+            >
+              {suggestions.map((suggestion, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[styles.suggestionCard, { backgroundColor: theme.cardBackground }]}
+                  onPress={() => setSelectedSuggestion(suggestion)}
+                  activeOpacity={0.8}
+                >
+                  {suggestion.type === 'art' && suggestion.image && (
+                    <Image
+                      source={suggestion.image}
+                      style={styles.suggestionImage}
+                      resizeMode="cover"
+                    />
+                  )}
+                  {suggestion.type === 'quote' && (
+                    <View style={styles.suggestionQuoteContent}>
+                      <Text style={[styles.suggestionQuoteText, { color: theme.textColor }]} numberOfLines={3}>
+                        {suggestion.title}
+                      </Text>
+                      <Text style={[styles.suggestionQuoteAuthor, { color: theme.secondaryTextColor }]}>
+                        {suggestion.author}
+                      </Text>
+                    </View>
+                  )}
+                  <View style={styles.suggestionBadge}>
+                    <Text style={styles.suggestionBadgeText}>● {suggestion.badge}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
 
           {/* Notes List with Date Sections */}
           <View style={styles.notesList}>
@@ -348,6 +394,78 @@ export default function MainScreen({
           </Pressable>
         </Modal>
       )}
+
+      {/* Suggestion Detail Modal */}
+      <Modal
+        visible={selectedSuggestion !== null}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setSelectedSuggestion(null)}
+      >
+        <View style={styles.suggestionModalContainer}>
+          <Pressable
+            style={styles.suggestionModalOverlay}
+            onPress={() => setSelectedSuggestion(null)}
+          >
+            <TouchableOpacity activeOpacity={1} style={styles.suggestionModalClose}>
+              <Text style={styles.suggestionModalCloseText}>✕</Text>
+            </TouchableOpacity>
+          </Pressable>
+
+          <View style={styles.suggestionModalContent}>
+            {selectedSuggestion?.type === 'art' && (
+              <>
+                {selectedSuggestion.image && (
+                  <Image
+                    source={selectedSuggestion.image}
+                    style={styles.suggestionModalImage}
+                    resizeMode="contain"
+                  />
+                )}
+                <View style={styles.suggestionModalInfo}>
+                  <Text style={styles.suggestionModalTitle}>
+                    {selectedSuggestion.title}, <Text style={styles.suggestionModalSubtitle}>{selectedSuggestion.subtitle}</Text>
+                  </Text>
+                  <Text style={styles.suggestionModalArtist}>{selectedSuggestion.artist}</Text>
+                  <Text style={styles.suggestionModalMuseum}>🏛 {selectedSuggestion.museum}</Text>
+                  <View style={styles.suggestionModalBadge}>
+                    <Text style={styles.suggestionModalBadgeText}>● {selectedSuggestion.badge}</Text>
+                  </View>
+                  <Text style={styles.suggestionModalDescription}>{selectedSuggestion.description}</Text>
+                </View>
+              </>
+            )}
+
+            {selectedSuggestion?.type === 'quote' && (
+              <View style={styles.suggestionModalQuote}>
+                <Text style={styles.suggestionModalQuoteText}>{selectedSuggestion.title}</Text>
+                <Text style={styles.suggestionModalQuoteAuthor}>—{selectedSuggestion.author}</Text>
+                <View style={styles.suggestionModalBadge}>
+                  <Text style={styles.suggestionModalBadgeText}>● {selectedSuggestion.badge}</Text>
+                </View>
+                <Text style={styles.suggestionModalDescription}>{selectedSuggestion.description}</Text>
+              </View>
+            )}
+
+            {/* Bottom navigation would go here in real app */}
+            <View style={styles.suggestionModalNav}>
+              <TouchableOpacity style={styles.suggestionModalNavButton}>
+                <Text style={styles.suggestionModalNavIcon}>💬</Text>
+                <Text style={styles.suggestionModalNavText}>Chat</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.suggestionModalNavButton}>
+                <Text style={styles.suggestionModalNavIcon}>⋯</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.suggestionModalNavButton}>
+                <Text style={styles.suggestionModalNavIcon}>←</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.suggestionModalNavButton}>
+                <Text style={styles.suggestionModalNavIcon}>→</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Delete Modal */}
       <Modal
@@ -580,5 +698,172 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#ff3b30',
     fontWeight: '600',
+  },
+
+  // Suggestions Bar
+  suggestionsContainer: {
+    marginBottom: 16,
+    marginHorizontal: -20, // Full width bleed
+  },
+  suggestionsContent: {
+    paddingHorizontal: 20,
+    gap: 12,
+  },
+  suggestionCard: {
+    width: 200,
+    borderRadius: 12,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  suggestionImage: {
+    width: '100%',
+    height: 250,
+  },
+  suggestionQuoteContent: {
+    padding: 20,
+    minHeight: 200,
+    justifyContent: 'center',
+  },
+  suggestionQuoteText: {
+    fontSize: 16,
+    lineHeight: 24,
+    fontStyle: 'italic',
+    marginBottom: 12,
+  },
+  suggestionQuoteAuthor: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  suggestionBadge: {
+    position: 'absolute',
+    bottom: 12,
+    left: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+  },
+  suggestionBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+
+  // Suggestion Modal
+  suggestionModalContainer: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
+  suggestionModalOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 100,
+    zIndex: 10,
+  },
+  suggestionModalClose: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  suggestionModalCloseText: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '300',
+  },
+  suggestionModalContent: {
+    flex: 1,
+    paddingTop: 100,
+  },
+  suggestionModalImage: {
+    width: '100%',
+    height: 400,
+  },
+  suggestionModalInfo: {
+    padding: 24,
+  },
+  suggestionModalTitle: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 8,
+  },
+  suggestionModalSubtitle: {
+    fontWeight: '400',
+    fontStyle: 'italic',
+  },
+  suggestionModalArtist: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  suggestionModalMuseum: {
+    fontSize: 14,
+    color: '#999999',
+    marginBottom: 16,
+  },
+  suggestionModalBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    marginBottom: 16,
+  },
+  suggestionModalBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  suggestionModalDescription: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: '#CCCCCC',
+  },
+  suggestionModalQuote: {
+    flex: 1,
+    padding: 24,
+    justifyContent: 'center',
+  },
+  suggestionModalQuoteText: {
+    fontSize: 26,
+    lineHeight: 36,
+    color: '#FFFFFF',
+    fontStyle: 'italic',
+    marginBottom: 20,
+  },
+  suggestionModalQuoteAuthor: {
+    fontSize: 18,
+    color: '#FFFFFF',
+    fontWeight: '500',
+    marginBottom: 24,
+  },
+  suggestionModalNav: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingVertical: 20,
+    paddingHorizontal: 24,
+    borderTopWidth: 0.5,
+    borderTopColor: '#333333',
+  },
+  suggestionModalNavButton: {
+    alignItems: 'center',
+    gap: 4,
+  },
+  suggestionModalNavIcon: {
+    fontSize: 20,
+    color: '#FFFFFF',
+  },
+  suggestionModalNavText: {
+    fontSize: 12,
+    color: '#FFFFFF',
   },
 });

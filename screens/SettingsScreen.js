@@ -184,11 +184,11 @@ export default function SettingsScreen({ settings, onSettingsChange, isDarkMode,
             <View style={styles.settingsRow}>
               <Text style={[styles.settingsLabel, { color: theme.textColor }]}>Weekly Letter</Text>
               <TouchableOpacity
-                style={[styles.toggle, { backgroundColor: settings.notifications.weeklyLetter ? '#4CAF50' : '#ccc' }]}
+                style={[styles.toggle, { backgroundColor: settings.notifications.weeklyLetter ? '#7FB069' : '#3a3a3a' }]}
                 onPress={() => handleNotificationToggle('weeklyLetter')}
               >
-                <View style={[styles.toggleThumb, { 
-                  transform: [{ translateX: settings.notifications.weeklyLetter ? 20 : 2 }] 
+                <View style={[styles.toggleThumb, {
+                  transform: [{ translateX: settings.notifications.weeklyLetter ? 20 : 2 }]
                 }]} />
               </TouchableOpacity>
             </View>
@@ -196,11 +196,11 @@ export default function SettingsScreen({ settings, onSettingsChange, isDarkMode,
             <View style={styles.settingsRow}>
               <Text style={[styles.settingsLabel, { color: theme.textColor }]}>Daily reminder</Text>
               <TouchableOpacity
-                style={[styles.toggle, { backgroundColor: settings.notifications.dailyReminder ? '#4CAF50' : '#ccc' }]}
+                style={[styles.toggle, { backgroundColor: settings.notifications.dailyReminder ? '#7FB069' : '#3a3a3a' }]}
                 onPress={() => handleNotificationToggle('dailyReminder')}
               >
-                <View style={[styles.toggleThumb, { 
-                  transform: [{ translateX: settings.notifications.dailyReminder ? 20 : 2 }] 
+                <View style={[styles.toggleThumb, {
+                  transform: [{ translateX: settings.notifications.dailyReminder ? 20 : 2 }]
                 }]} />
               </TouchableOpacity>
             </View>
