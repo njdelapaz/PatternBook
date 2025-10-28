@@ -49,9 +49,34 @@ export default function MainScreen({
   const [noteToDelete, setNoteToDelete] = useState(null);
   const [noteToPin, setNoteToPin] = useState(null);
   const [selectedSuggestion, setSelectedSuggestion] = useState(null);
+  const [currentSuggestionIndex, setCurrentSuggestionIndex] = useState(0);
 
   // Get suggestions based on notes
   const suggestions = getSuggestionsForNotes(notes);
+
+  const handleNavigateLeft = () => {
+    if (currentSuggestionIndex > 0) {
+      setCurrentSuggestionIndex(currentSuggestionIndex - 1);
+      setSelectedSuggestion(suggestions[currentSuggestionIndex - 1]);
+    }
+  };
+
+  const handleNavigateRight = () => {
+    if (currentSuggestionIndex < suggestions.length - 1) {
+      setCurrentSuggestionIndex(currentSuggestionIndex + 1);
+      setSelectedSuggestion(suggestions[currentSuggestionIndex + 1]);
+    }
+  };
+
+  const handleOpenSuggestion = (suggestion, index) => {
+    setSelectedSuggestion(suggestion);
+    setCurrentSuggestionIndex(index);
+  };
+
+  const handleCloseSuggestion = () => {
+    setSelectedSuggestion(null);
+    setCurrentSuggestionIndex(0);
+  };
 
   const handleLongPress = (note) => {
     setNoteToDelete(note);
@@ -169,7 +194,7 @@ export default function MainScreen({
           </View>
 
           {/* Search Bar */}
-          {showSearch && (
+          {showSearch && notes.length > 0 && (
             <View style={[styles.searchContainer, { backgroundColor: theme.cardBackground }]}>
               <TextInput
                 style={[styles.searchInput, { color: theme.textColor }]}
@@ -182,25 +207,27 @@ export default function MainScreen({
             </View>
           )}
 
-          {/* Sort Options */}
-          <View style={styles.sortContainer}>
-            <TouchableOpacity
-              style={[styles.sortButton, sortBy === 'updated' && styles.sortButtonActive]}
-              onPress={() => onSortChange('updated')}
-            >
-              <Text style={[styles.sortText, { color: sortBy === 'updated' ? theme.accentColor : theme.secondaryTextColor }]}>
-                Recently Updated
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.sortButton, sortBy === 'old-to-new' && styles.sortButtonActive]}
-              onPress={() => onSortChange('old-to-new')}
-            >
-              <Text style={[styles.sortText, { color: sortBy === 'old-to-new' ? theme.accentColor : theme.secondaryTextColor }]}>
-                Oldest First
-              </Text>
-            </TouchableOpacity>
-          </View>
+          {/* Sort Options - Only show when there are notes */}
+          {notes.length > 0 && (
+            <View style={styles.sortContainer}>
+              <TouchableOpacity
+                style={[styles.sortButton, sortBy === 'updated' && styles.sortButtonActive]}
+                onPress={() => onSortChange('updated')}
+              >
+                <Text style={[styles.sortText, { color: sortBy === 'updated' ? theme.accentColor : theme.secondaryTextColor }]}>
+                  Recently Updated
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.sortButton, sortBy === 'old-to-new' && styles.sortButtonActive]}
+                onPress={() => onSortChange('old-to-new')}
+              >
+                <Text style={[styles.sortText, { color: sortBy === 'old-to-new' ? theme.accentColor : theme.secondaryTextColor }]}>
+                  Oldest First
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* AI Suggestions Bar */}
           {suggestions.length > 0 && (
@@ -214,7 +241,7 @@ export default function MainScreen({
                 <TouchableOpacity
                   key={index}
                   style={[styles.suggestionCard, { backgroundColor: theme.cardBackground }]}
-                  onPress={() => setSelectedSuggestion(suggestion)}
+                  onPress={() => handleOpenSuggestion(suggestion, index)}
                   activeOpacity={0.8}
                 >
                   {suggestion.type === 'art' && suggestion.image && (
@@ -242,10 +269,37 @@ export default function MainScreen({
             </ScrollView>
           )}
 
-          {/* Notes List with Date Sections */}
-          <View style={styles.notesList}>
-            {/* Pinned Section */}
-            {noteSections.pinned.length > 0 && (
+          {/* Empty State or Notes List */}
+          {notes.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={[styles.emptyStateTitle, { color: theme.textColor }]}>Brain dump about anything</Text>
+              <View style={[styles.emptyStateCard, { backgroundColor: theme.cardBackground }]}>
+                <Text style={[styles.emptyStateCardTitle, { color: theme.textColor }]}>Note</Text>
+                <Text style={[styles.emptyStateCardText, { color: theme.secondaryTextColor }]}>
+                  I want to spend more time...
+                </Text>
+              </View>
+              <View style={styles.emptyStateButtons}>
+                <TouchableOpacity
+                  style={[styles.emptyStateButton, styles.emptyStateDictateButton, { backgroundColor: theme.accentColor }]}
+                  onPress={onNavigateToVoiceRecord}
+                >
+                  <MicrophoneIcon width={32} height={32} color="#000000" />
+                  <Text style={styles.emptyStateButtonText}>Dictate</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.emptyStateButton, { backgroundColor: theme.cardBackground }]}
+                  onPress={onNavigateToTextEditor}
+                >
+                  <PenIcon width={32} height={32} color={theme.textColor} />
+                  <Text style={[styles.emptyStateButtonText, { color: theme.textColor }]}>Type</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.notesList}>
+              {/* Pinned Section */}
+              {noteSections.pinned.length > 0 && (
               <View style={styles.dateSection}>
                 <Text style={[styles.sectionHeader, { color: theme.textColor }]}>Pinned</Text>
                 {noteSections.pinned.map((note) => (
@@ -339,7 +393,8 @@ export default function MainScreen({
                 ))}
               </View>
             )}
-          </View>
+            </View>
+          )}
         </ScrollView>
       </View>
 
@@ -400,19 +455,31 @@ export default function MainScreen({
         visible={selectedSuggestion !== null}
         transparent={true}
         animationType="fade"
-        onRequestClose={() => setSelectedSuggestion(null)}
+        onRequestClose={handleCloseSuggestion}
       >
         <View style={styles.suggestionModalContainer}>
-          <Pressable
-            style={styles.suggestionModalOverlay}
-            onPress={() => setSelectedSuggestion(null)}
+          {/* Close button at top */}
+          <TouchableOpacity
+            style={styles.suggestionModalClose}
+            onPress={handleCloseSuggestion}
           >
-            <TouchableOpacity activeOpacity={1} style={styles.suggestionModalClose}>
-              <Text style={styles.suggestionModalCloseText}>✕</Text>
-            </TouchableOpacity>
-          </Pressable>
+            <Text style={styles.suggestionModalCloseText}>✕</Text>
+          </TouchableOpacity>
 
-          <View style={styles.suggestionModalContent}>
+          {/* Tab indicators */}
+          <View style={styles.suggestionModalTabs}>
+            {suggestions.map((_, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.suggestionModalTab,
+                  index === currentSuggestionIndex && styles.suggestionModalTabActive
+                ]}
+              />
+            ))}
+          </View>
+
+          <ScrollView style={styles.suggestionModalScroll} contentContainerStyle={styles.suggestionModalScrollContent}>
             {selectedSuggestion?.type === 'art' && (
               <>
                 {selectedSuggestion.image && (
@@ -437,32 +504,42 @@ export default function MainScreen({
             )}
 
             {selectedSuggestion?.type === 'quote' && (
-              <View style={styles.suggestionModalQuote}>
-                <Text style={styles.suggestionModalQuoteText}>{selectedSuggestion.title}</Text>
-                <Text style={styles.suggestionModalQuoteAuthor}>—{selectedSuggestion.author}</Text>
-                <View style={styles.suggestionModalBadge}>
-                  <Text style={styles.suggestionModalBadgeText}>● {selectedSuggestion.badge}</Text>
+              <View style={styles.suggestionModalQuoteContainer}>
+                <View style={styles.suggestionModalQuote}>
+                  <Text style={styles.suggestionModalQuoteText}>{selectedSuggestion.title}</Text>
+                  <Text style={styles.suggestionModalQuoteAuthor}>—{selectedSuggestion.author}</Text>
+                  <View style={styles.suggestionModalBadge}>
+                    <Text style={styles.suggestionModalBadgeText}>● {selectedSuggestion.badge}</Text>
+                  </View>
+                  <Text style={styles.suggestionModalDescription}>{selectedSuggestion.description}</Text>
                 </View>
-                <Text style={styles.suggestionModalDescription}>{selectedSuggestion.description}</Text>
               </View>
             )}
+          </ScrollView>
 
-            {/* Bottom navigation would go here in real app */}
-            <View style={styles.suggestionModalNav}>
-              <TouchableOpacity style={styles.suggestionModalNavButton}>
-                <Text style={styles.suggestionModalNavIcon}>💬</Text>
-                <Text style={styles.suggestionModalNavText}>Chat</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.suggestionModalNavButton}>
-                <Text style={styles.suggestionModalNavIcon}>⋯</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.suggestionModalNavButton}>
-                <Text style={styles.suggestionModalNavIcon}>←</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.suggestionModalNavButton}>
-                <Text style={styles.suggestionModalNavIcon}>→</Text>
-              </TouchableOpacity>
-            </View>
+          {/* Bottom navigation */}
+          <View style={styles.suggestionModalNav}>
+            <TouchableOpacity style={styles.suggestionModalNavButton}>
+              <Text style={styles.suggestionModalNavIcon}>💬</Text>
+              <Text style={styles.suggestionModalNavText}>Chat</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.suggestionModalNavButton}>
+              <Text style={styles.suggestionModalNavIcon}>⋯</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.suggestionModalNavButton, currentSuggestionIndex === 0 && styles.suggestionModalNavButtonDisabled]}
+              onPress={handleNavigateLeft}
+              disabled={currentSuggestionIndex === 0}
+            >
+              <Text style={[styles.suggestionModalNavIcon, currentSuggestionIndex === 0 && styles.suggestionModalNavIconDisabled]}>←</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.suggestionModalNavButton, currentSuggestionIndex === suggestions.length - 1 && styles.suggestionModalNavButtonDisabled]}
+              onPress={handleNavigateRight}
+              disabled={currentSuggestionIndex === suggestions.length - 1}
+            >
+              <Text style={[styles.suggestionModalNavIcon, currentSuggestionIndex === suggestions.length - 1 && styles.suggestionModalNavIconDisabled]}>→</Text>
+            </TouchableOpacity>
           </View>
         </View>
       </Modal>
@@ -576,6 +653,65 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
   },
+
+  // Empty State
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 40,
+    paddingTop: 80,
+  },
+  emptyStateTitle: {
+    fontSize: 24,
+    fontWeight: '400',
+    marginBottom: 40,
+    textAlign: 'center',
+  },
+  emptyStateCard: {
+    width: '100%',
+    maxWidth: 300,
+    borderRadius: 16,
+    padding: 24,
+    marginBottom: 50,
+    minHeight: 160,
+  },
+  emptyStateCardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 16,
+  },
+  emptyStateCardText: {
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  emptyStateButtons: {
+    flexDirection: 'row',
+    gap: 20,
+    alignItems: 'center',
+  },
+  emptyStateButton: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  emptyStateDictateButton: {
+    // Dictate button uses accent color from theme
+  },
+  emptyStateButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#000000',
+  },
+
   notesList: {
     marginTop: 10,
   },
@@ -754,17 +890,9 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#000000',
   },
-  suggestionModalOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    height: 100,
-    zIndex: 10,
-  },
   suggestionModalClose: {
     position: 'absolute',
-    top: 50,
+    top: 60,
     right: 20,
     width: 40,
     height: 40,
@@ -772,19 +900,40 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
+    zIndex: 100,
   },
   suggestionModalCloseText: {
     color: '#FFFFFF',
     fontSize: 20,
     fontWeight: '300',
   },
-  suggestionModalContent: {
+  suggestionModalTabs: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 60,
+    paddingBottom: 20,
+    gap: 8,
+  },
+  suggestionModalTab: {
+    width: 40,
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 2,
+  },
+  suggestionModalTabActive: {
+    backgroundColor: '#FFFFFF',
+  },
+  suggestionModalScroll: {
     flex: 1,
-    paddingTop: 100,
+  },
+  suggestionModalScrollContent: {
+    flexGrow: 1,
   },
   suggestionModalImage: {
     width: '100%',
-    height: 400,
+    height: 450,
+    backgroundColor: '#1a1a1a',
   },
   suggestionModalInfo: {
     padding: 24,
@@ -827,23 +976,27 @@ const styles = StyleSheet.create({
     lineHeight: 22,
     color: '#CCCCCC',
   },
-  suggestionModalQuote: {
+  suggestionModalQuoteContainer: {
     flex: 1,
-    padding: 24,
     justifyContent: 'center',
+    minHeight: 500,
+  },
+  suggestionModalQuote: {
+    padding: 32,
   },
   suggestionModalQuoteText: {
-    fontSize: 26,
-    lineHeight: 36,
+    fontSize: 28,
+    lineHeight: 38,
     color: '#FFFFFF',
     fontStyle: 'italic',
-    marginBottom: 20,
+    marginBottom: 24,
+    fontWeight: '400',
   },
   suggestionModalQuoteAuthor: {
     fontSize: 18,
     color: '#FFFFFF',
     fontWeight: '500',
-    marginBottom: 24,
+    marginBottom: 32,
   },
   suggestionModalNav: {
     flexDirection: 'row',
@@ -853,14 +1006,22 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     borderTopWidth: 0.5,
     borderTopColor: '#333333',
+    backgroundColor: '#000000',
   },
   suggestionModalNavButton: {
     alignItems: 'center',
     gap: 4,
+    padding: 8,
+  },
+  suggestionModalNavButtonDisabled: {
+    opacity: 0.3,
   },
   suggestionModalNavIcon: {
     fontSize: 20,
     color: '#FFFFFF',
+  },
+  suggestionModalNavIconDisabled: {
+    opacity: 0.3,
   },
   suggestionModalNavText: {
     fontSize: 12,

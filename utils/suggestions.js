@@ -4,24 +4,24 @@ export const SUGGESTIONS = {
   // First note (dream library) - Art suggestion
   dream: {
     type: 'art',
-    title: 'Turtle in a Lotus Pond',
-    subtitle: '1700 - 1799',
-    artist: 'Edo period Japanese artist',
-    museum: 'Cleveland Museum of Art',
+    title: 'The Library',
+    subtitle: '1526',
+    artist: 'Giuseppe Arcimboldo',
+    museum: 'Skokloster Castle, Sweden',
     badge: 'Picked for you',
-    description: 'This gentle turtle gazing upward beside a floating lotus leaf captures a moment of quiet resilience and patient contemplation that might mirror your own need for peaceful reflection right now.',
-    image: require('../assets/suggestions/turtle-lotus.jpg'), // You'll add this image
-    imageAlt: 'Japanese ink painting of a turtle next to a lotus leaf'
+    description: 'Arcimboldo\'s "The Librarian" depicts a portrait composed entirely of books, creating a figure that is both human and library itself. This surreal fusion speaks to your dream of wandering through an endless library—where memories, identity, and stories become inseparable from one another.',
+    image: require('../assets/suggestions/library-art.jpg'), // You'll add this image
+    imageAlt: 'Giuseppe Arcimboldo\'s painting of a figure made of books'
   },
 
   // Second note (productivity) - Quote suggestion
   productivity: {
     type: 'quote',
-    title: '"If you\'re going through hell, keep going."',
-    author: 'Winston Churchill',
+    title: '"It is not enough to be busy. So are the ants. The question is: What are we busy about?"',
+    author: 'Henry David Thoreau',
     badge: 'Picked for you',
-    description: 'Commonly attributed to Winston Churchill, this pithy line is a blunt encouragement to persist through hardship rather than stop or surrender. It\'s often used when steady endurance is needed most.',
-    imageAlt: 'Winston Churchill quote about perseverance'
+    description: 'Thoreau\'s reflection from Walden challenges the modern obsession with productivity for its own sake. His question cuts to the heart of your insight—that measuring worth by accomplishment misses the deeper question of purpose and intentionality.',
+    imageAlt: 'Henry David Thoreau quote about meaningful productivity'
   }
 };
 
