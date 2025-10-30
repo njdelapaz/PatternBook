@@ -261,6 +261,23 @@ export default function MainScreen({
                       </Text>
                     </View>
                   )}
+                  {suggestion.type === 'letter' && (
+                    <View style={styles.suggestionLetterContent}>
+                      {suggestion.gradient && (
+                        <Image
+                          source={suggestion.gradient}
+                          style={styles.suggestionLetterGradient}
+                          resizeMode="cover"
+                        />
+                      )}
+                      <Text style={[styles.suggestionLetterTitle, { color: theme.textColor }]}>
+                        {suggestion.title}
+                      </Text>
+                      <Text style={[styles.suggestionLetterSubtitle, { color: theme.secondaryTextColor }]}>
+                        {suggestion.subtitle}
+                      </Text>
+                    </View>
+                  )}
                   <View style={styles.suggestionBadge}>
                     <Text style={styles.suggestionBadgeText}>● {suggestion.badge}</Text>
                   </View>
@@ -513,6 +530,30 @@ export default function MainScreen({
                   </View>
                   <Text style={styles.suggestionModalDescription}>{selectedSuggestion.description}</Text>
                 </View>
+              </View>
+            )}
+
+            {selectedSuggestion?.type === 'letter' && (
+              <View style={styles.suggestionModalLetter}>
+                <View style={styles.suggestionModalLetterHeader}>
+                  <View style={styles.suggestionModalLetterBadge}>
+                    <Text style={styles.suggestionModalLetterBadgeText}>● {selectedSuggestion.subtitle}</Text>
+                  </View>
+                  <Text style={styles.suggestionModalLetterDate}>{selectedSuggestion.date}</Text>
+                </View>
+                <Text style={styles.suggestionModalLetterTitle}>{selectedSuggestion.title}</Text>
+                {selectedSuggestion.gradient && (
+                  <Image
+                    source={selectedSuggestion.gradient}
+                    style={styles.suggestionModalLetterGradientLarge}
+                    resizeMode="cover"
+                  />
+                )}
+                {selectedSuggestion.content.map((paragraph, index) => (
+                  <Text key={index} style={styles.suggestionModalLetterParagraph}>
+                    {paragraph}
+                  </Text>
+                ))}
               </View>
             )}
           </ScrollView>
@@ -870,6 +911,29 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
   },
+  suggestionLetterContent: {
+    padding: 20,
+    minHeight: 200,
+    justifyContent: 'flex-end',
+  },
+  suggestionLetterGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 120,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+  },
+  suggestionLetterTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  suggestionLetterSubtitle: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
   suggestionBadge: {
     position: 'absolute',
     bottom: 12,
@@ -997,6 +1061,50 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontWeight: '500',
     marginBottom: 32,
+  },
+  suggestionModalLetter: {
+    flex: 1,
+    padding: 24,
+    paddingTop: 0,
+  },
+  suggestionModalLetterHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  suggestionModalLetterBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+  },
+  suggestionModalLetterBadgeText: {
+    color: '#9B4DCA',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  suggestionModalLetterDate: {
+    color: '#999999',
+    fontSize: 14,
+  },
+  suggestionModalLetterTitle: {
+    fontSize: 32,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 24,
+  },
+  suggestionModalLetterGradientLarge: {
+    width: '100%',
+    height: 200,
+    borderRadius: 16,
+    marginBottom: 24,
+  },
+  suggestionModalLetterParagraph: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#FFFFFF',
+    marginBottom: 20,
   },
   suggestionModalNav: {
     flexDirection: 'row',

@@ -22,6 +22,23 @@ export const SUGGESTIONS = {
     badge: 'Picked for you',
     description: 'Thoreau\'s reflection from Walden challenges the modern obsession with productivity for its own sake. His question cuts to the heart of your insight—that measuring worth by accomplishment misses the deeper question of purpose and intentionality.',
     imageAlt: 'Henry David Thoreau quote about meaningful productivity'
+  },
+
+  // Weekly letter - Appears after both notes are created
+  weeklyLetter: {
+    type: 'letter',
+    title: 'Hello, Nathan',
+    subtitle: 'Weekly letter',
+    date: 'Oct 26, 2025',
+    badge: 'Weekly letter',
+    gradient: require('../assets/gradient.png'), // Gradient image
+    content: [
+      'Well hello there! I\'m your new AI guide, and I have to say—you\'re quite the mystery. Just two notes, but what notes they are. Either you\'re the most zen person on the planet, or you\'re still figuring out what this whole PatternBook thing is about.',
+      'This week, we talked about the strange nature of memory—how each time we recall something, we might be subtly rewriting it, like books in an endless library that shift with every reading. We also explored your relationship with productivity, questioning whether worth should be measured by accomplishment or by intention. Quality over quantity, as you put it.',
+      'Here\'s a micro-challenge for you: sometime this week, notice one small thing that made you smile. Could be a good cup of coffee, a text from a friend, or even just the way sunlight hit your wall. No need to journal it or analyze it—just notice it.',
+      'What\'s one thing you\'re curious about exploring in your life right now?'
+    ],
+    imageAlt: 'Weekly letter greeting'
   }
 };
 
@@ -50,6 +67,11 @@ export function getSuggestionsForNotes(notes) {
 
   if (hasProductivityNote) {
     suggestions.push(SUGGESTIONS.productivity);
+  }
+
+  // Show weekly letter when both notes exist
+  if (hasDreamNote && hasProductivityNote) {
+    suggestions.push(SUGGESTIONS.weeklyLetter);
   }
 
   return suggestions;

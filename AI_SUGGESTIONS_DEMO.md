@@ -19,6 +19,14 @@ The app now includes a horizontal scrollable bar of AI suggestions at the top of
    - Displays as a text card with badge
    - Directly addresses the note's theme about intentionality over busyness
 
+3. **Weekly Letter** - Appears after both demo notes are created
+   - Personalized greeting: "Hello, Nathan"
+   - Features a colorful gradient banner
+   - Includes a warm, conversational summary of the week's journaling
+   - References the chat conversations about memory and productivity
+   - Ends with a micro-challenge and reflective question
+   - Badge labeled "Weekly letter"
+
 ### User Interaction
 
 1. **Scrollable Bar**: The suggestions appear as a horizontal scrollable row at the top of the notes list, below the sort options.
@@ -61,14 +69,24 @@ The app now includes a horizontal scrollable bar of AI suggestions at the top of
 2. Note will automatically get titled "Rethinking productivity and worth"
 3. After creating this note, the **quote suggestion card** will also appear
 
-### Step 4: Navigate Between Suggestions
-1. Tap on either suggestion card to open it in full-screen
-2. Notice the two tab indicators at the top showing your position
-3. Use the right arrow (→) button at the bottom to navigate to the next suggestion
-4. Use the left arrow (←) button to go back to the previous suggestion
-5. Watch the tab indicators update as you navigate
-6. The arrows will be dimmed when you can't go further in that direction
-7. Close the modal when done
+### Step 4: Navigate Between All Three Suggestions
+1. After creating both notes, you should now see three suggestion cards in the scrollable bar
+2. Tap on any suggestion card to open it in full-screen
+3. Notice the three tab indicators at the top showing your position
+4. Use the right arrow (→) button at the bottom to navigate through all suggestions:
+   - Art (The Librarian)
+   - Quote (Thoreau on busyness)
+   - Weekly Letter (personalized summary)
+5. Use the left arrow (←) button to go back through the suggestions
+6. Watch the tab indicators update as you navigate
+7. The arrows will be dimmed when you can't go further in that direction
+8. The weekly letter includes:
+   - A greeting with the user's name (Nathan)
+   - A colorful gradient banner
+   - References to the chat conversations ("we talked about...")
+   - A micro-challenge for the week
+   - A reflective question
+9. Close the modal when done
 
 ## Required Asset
 

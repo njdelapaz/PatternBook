@@ -39,6 +39,20 @@ const DEMO_TRANSCRIPTIONS_EDITOR = [
 
 let editorTranscriptionCounter = 0;
 
+// Demo user messages that auto-fill for easy presentation
+const DEMO_USER_MESSAGES = {
+  dream: [
+    "What do you think this dream means?",
+    "I'm not sure, maybe I've been thinking about nostalgia lately",
+    "That makes sense"
+  ],
+  productivity: [
+    "How can I actually make this change?",
+    "Maybe I should focus on one thing at a time",
+    "I think it means choosing projects that align with my values"
+  ]
+};
+
 // Canned chat responses for demo - organized by note content
 const CHAT_RESPONSES = {
   // For the "dream library" note (first voice recording)
@@ -285,6 +299,22 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
       alert('Note is empty. Please add some content first.');
       return;
     }
+
+    // Auto-fill the next demo message for easy presentation
+    const noteType = content.toLowerCase().includes('dream') && content.toLowerCase().includes('library')
+      ? 'dream'
+      : 'productivity';
+
+    // Count how many user messages have been sent
+    const userMessageCount = chatMessages.filter(msg => msg.role === 'user').length;
+    const demoMessages = DEMO_USER_MESSAGES[noteType];
+
+    // Auto-fill with the next message in sequence (cycles if exceeded)
+    if (demoMessages && demoMessages.length > 0) {
+      const nextMessage = demoMessages[userMessageCount % demoMessages.length];
+      setChatInput(nextMessage);
+    }
+
     setShowChat(true);
   };
 
@@ -304,6 +334,7 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
     // Determine which response set to use based on note content
     const isDreamNote = content.toLowerCase().includes('dream') || content.toLowerCase().includes('library');
     const responseSet = isDreamNote ? CHAT_RESPONSES.dream : CHAT_RESPONSES.productivity;
+    const noteType = isDreamNote ? 'dream' : 'productivity';
 
     // Get the appropriate canned response based on message count
     const responseIndex = chatMessageCount % responseSet.length;
@@ -314,6 +345,15 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
     setChatMessages(prev => [...prev, aiMessage]);
     setChatMessageCount(prev => prev + 1);
     setIsLoadingChat(false);
+
+    // Auto-fill the next demo message for easy presentation
+    const newUserMessageCount = chatMessages.filter(msg => msg.role === 'user').length + 1; // +1 for message we just sent
+    const demoMessages = DEMO_USER_MESSAGES[noteType];
+
+    if (demoMessages && demoMessages.length > 0) {
+      const nextMessage = demoMessages[newUserMessageCount % demoMessages.length];
+      setChatInput(nextMessage);
+    }
   };
 
   // Voice Recording: Start (API-based)
@@ -732,17 +772,21 @@ export default function App() {
       pinned: false,
       summary: 'Generating summary...',
     };
-    
+
     // Add note immediately
     const updatedNotes = [newNote, ...notes];
     setNotes(updatedNotes);
     saveNotes(updatedNotes);
-    
+
+    // For demo: Navigate to the note editor instead of going back to dashboard
+    setSelectedNoteId(newNote.id);
+    setCurrentScreen('editor');
+
     // Generate summary asynchronously and cache it
     try {
       const summary = await generateSummary(transcription);
       const noteWithSummary = { ...newNote, summary, aiSummary: summary };
-      const notesWithSummary = updatedNotes.map(note => 
+      const notesWithSummary = updatedNotes.map(note =>
         note.id === newNote.id ? noteWithSummary : note
       );
       setNotes(notesWithSummary);

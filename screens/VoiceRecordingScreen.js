@@ -184,7 +184,7 @@ export default function VoiceRecordingScreen({ isDarkMode, onBack, onSave }) {
   const handleSave = () => {
     if (transcription.trim()) {
       onSave(transcription.trim());
-      onBack();
+      // For demo: Don't go back to dashboard, let App.js handle navigation to editor
     }
   };
 

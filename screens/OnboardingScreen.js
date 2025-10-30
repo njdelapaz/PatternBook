@@ -18,7 +18,7 @@ export default function OnboardingScreen({ onComplete }) {
 
   const slides = [
     {
-      title: "Welcome to Lightpage, your living notebook",
+      title: "Welcome to PatternBook, your living notebook",
       image: require('../assets/onboarding/welcome-notebook.jpg'),
       hasButton: true,
       buttonText: "Continue →",
@@ -72,7 +72,7 @@ export default function OnboardingScreen({ onComplete }) {
     },
     {
       title: "Want a daily reminder to make it a habit?",
-      subtitle: "Lightpage works best when you brain dump regularly",
+      subtitle: "Patternbook works best when you brain dump regularly",
       timeSelector: "8:00 AM",
       disclaimer: "You'll only get a daily reminder if you haven't created any notes or chats recently",
       hasButtons: true,
