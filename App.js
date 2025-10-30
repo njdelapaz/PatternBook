@@ -128,8 +128,8 @@ async function generateSummary(content) {
     const summary = data.choices[0]?.message?.content || '';
     return summary.trim() || content.slice(0, 100) + '...';
   } catch (error) {
-    console.error('Error generating summary:', error);
-    // Fallback to truncated content
+    // Silently handle error for demo - just return fallback
+    // console.error('Error generating summary:', error);
     return content.slice(0, 100) + (content.length > 100 ? '...' : '');
   }
 }
@@ -792,10 +792,11 @@ export default function App() {
       setNotes(notesWithSummary);
       saveNotes(notesWithSummary);
     } catch (error) {
-      console.error('Error generating summary:', error);
+      // Silently handle error for demo - just use fallback
+      // console.error('Error generating summary:', error);
       const fallbackSummary = transcription.slice(0, 100) + '...';
       const noteWithError = { ...newNote, summary: fallbackSummary, aiSummary: fallbackSummary };
-      const notesWithError = updatedNotes.map(note => 
+      const notesWithError = updatedNotes.map(note =>
         note.id === newNote.id ? noteWithError : note
       );
       setNotes(notesWithError);
@@ -830,10 +831,11 @@ export default function App() {
       setNotes(notesWithSummary);
       saveNotes(notesWithSummary);
     } catch (error) {
-      console.error('Error generating summary:', error);
+      // Silently handle error for demo - just use fallback
+      // console.error('Error generating summary:', error);
       const fallbackSummary = content.slice(0, 100) + '...';
       const noteWithError = { ...newNote, summary: fallbackSummary, aiSummary: fallbackSummary };
-      const notesWithError = updatedNotes.map(note => 
+      const notesWithError = updatedNotes.map(note =>
         note.id === newNote.id ? noteWithError : note
       );
       setNotes(notesWithError);
