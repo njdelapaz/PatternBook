@@ -8,6 +8,8 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { Audio as AVAudio } from 'expo-av';
 
 // Import Screen Components
+import LoginScreen from './screens/LoginScreen';
+import OnboardingScreen from './screens/OnboardingScreen';
 import MainScreen from './screens/MainScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import RecentlyDeletedScreen from './screens/RecentlyDeletedScreen';
@@ -29,7 +31,61 @@ import ChatIcon from './assets/carbon-icons/carbon--chat.svg';
 // OpenAI API Configuration
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
+// Stubbed transcription data for demo (in-editor voice recording)
+const DEMO_TRANSCRIPTIONS_EDITOR = [
+  "I had the most interesting dream last night about wandering through an endless library. Each book seemed to contain memories from my life, but they were all slightly different from how I remember them. It made me wonder how much of what we remember is actually real versus what we've constructed over time.",
+  "Today I realized something important about my relationship with productivity. I've been measuring my worth by how much I accomplish, but that's not sustainable. Maybe the goal isn't to do more, but to be more intentional about what I choose to do. Quality over quantity, as they say."
+];
 
+let editorTranscriptionCounter = 0;
+
+// Demo user messages that auto-fill for easy presentation
+const DEMO_USER_MESSAGES = {
+  dream: [
+    "What do you think this dream means?",
+    "I'm not sure, maybe I've been thinking about nostalgia lately",
+    "That makes sense"
+  ],
+  productivity: [
+    "How can I actually make this change?",
+    "Maybe I should focus on one thing at a time",
+    "I think it means choosing projects that align with my values"
+  ]
+};
+
+// Canned chat responses for demo - organized by note content
+const CHAT_RESPONSES = {
+  // For the "dream library" note (first voice recording)
+  dream: [
+    "That's a fascinating dream! The library of altered memories sounds like your subconscious exploring the malleability of memory. What do you think triggered this dream?",
+    "It's interesting how dreams can reveal our deeper thoughts about identity and truth. The fact that each book was slightly different suggests you might be processing how perspective shapes our past.",
+    "This reminds me of the concept of 'memory reconsolidation' - each time we recall something, we actually change it slightly. Your dream seems to be grappling with that very idea."
+  ],
+  // For the "productivity" note (second voice recording and beyond)
+  productivity: [
+    "That's a really mature insight about productivity culture. What do you think would help you shift from quantity to quality in practice?",
+    "It sounds like you're recognizing the difference between being busy and being purposeful. Have you thought about what 'intentional' looks like for you specifically?",
+    "This is such an important realization. Measuring worth by accomplishments can be exhausting. What would it look like to measure your worth differently?"
+  ]
+};
+
+// Generate title based on content (hard-coded for demo)
+function generateTitleFromContent(content) {
+  const lowerContent = content.toLowerCase();
+
+  // Check for dream/library note
+  if (lowerContent.includes('dream') && lowerContent.includes('library')) {
+    return "Dream about an endless library";
+  }
+
+  // Check for productivity note
+  if (lowerContent.includes('productivity') || lowerContent.includes('accomplish')) {
+    return "Rethinking productivity and worth";
+  }
+
+  // Fallback to first few words
+  return content.split(' ').slice(0, 5).join(' ') || 'Untitled Note';
+}
 
 // Generate AI summary for note content (internal function)
 async function generateSummary(content) {
@@ -72,8 +128,8 @@ async function generateSummary(content) {
     const summary = data.choices[0]?.message?.content || '';
     return summary.trim() || content.slice(0, 100) + '...';
   } catch (error) {
-    console.error('Error generating summary:', error);
-    // Fallback to truncated content
+    // Silently handle error for demo - just return fallback
+    // console.error('Error generating summary:', error);
     return content.slice(0, 100) + (content.length > 100 ? '...' : '');
   }
 }
@@ -106,9 +162,11 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
   const [title, setTitle] = useState(note?.title || 'New Note');
   const [content, setContent] = useState(note?.content || '');
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
-  const [summary, setSummary] = useState('');
-  const [isLoadingSummary, setIsLoadingSummary] = useState(false);
-  const [showSummary, setShowSummary] = useState(false);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [isLoadingChat, setIsLoadingChat] = useState(false);
+  const [showChat, setShowChat] = useState(false);
+  const [chatMessageCount, setChatMessageCount] = useState(0);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [history, setHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -235,63 +293,66 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
     Keyboard.dismiss();
   };
 
-  // Handle chat button - summarize note with ChatGPT
-  const handleSummarizeNote = async () => {
+  // Handle chat button - open chat about the note
+  const handleOpenChat = () => {
     if (!content.trim() && !title.trim()) {
       alert('Note is empty. Please add some content first.');
       return;
     }
 
-    setIsLoadingSummary(true);
-    setShowSummary(true);
-    setSummary('');
+    // Auto-fill the next demo message for easy presentation
+    const noteType = content.toLowerCase().includes('dream') && content.toLowerCase().includes('library')
+      ? 'dream'
+      : 'productivity';
 
-    try {
-      const response = await fetch(OPENAI_API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${OPENAI_API_KEY}`,
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o-mini',
-          messages: [
-            {
-              role: 'system',
-              content: 'You are a helpful assistant that summarizes notes concisely and clearly.',
-            },
-            {
-              role: 'user',
-              content: `Please summarize the following note:\n\nTitle: ${title}\n\nContent: ${content.slice(0, 2000)}${content.length > 2000 ? '...' : ''}`,
-            },
-          ],
-          temperature: 0.7,
-          max_tokens: 500,
-        }),
-      });
+    // Count how many user messages have been sent
+    const userMessageCount = chatMessages.filter(msg => msg.role === 'user').length;
+    const demoMessages = DEMO_USER_MESSAGES[noteType];
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        
-        if (response.status === 429) {
-          throw new Error('OpenAI quota exceeded. Please add credits to your account at platform.openai.com/account/billing');
-        } else if (response.status === 401) {
-          throw new Error('OpenAI API key is invalid or expired.');
-        } else if (response.status === 403) {
-          throw new Error('OpenAI API access forbidden. Check your API key permissions.');
-        } else {
-          throw new Error(errorData.error?.message || `API Error (${response.status}): Failed to get summary`);
-        }
-      }
+    // Auto-fill with the next message in sequence (cycles if exceeded)
+    if (demoMessages && demoMessages.length > 0) {
+      const nextMessage = demoMessages[userMessageCount % demoMessages.length];
+      setChatInput(nextMessage);
+    }
 
-      const data = await response.json();
-      const summaryText = data.choices[0]?.message?.content || 'No summary available';
-      setSummary(summaryText);
-    } catch (error) {
-      console.error('Error summarizing note:', error);
-      setSummary(`Error: ${error.message}`);
-    } finally {
-      setIsLoadingSummary(false);
+    setShowChat(true);
+  };
+
+  // Handle sending a chat message (stubbed with canned responses)
+  const handleSendChatMessage = async () => {
+    if (!chatInput.trim()) return;
+
+    // Add user message
+    const userMessage = { role: 'user', content: chatInput };
+    setChatMessages(prev => [...prev, userMessage]);
+    setChatInput('');
+    setIsLoadingChat(true);
+
+    // Simulate AI thinking delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Determine which response set to use based on note content
+    const isDreamNote = content.toLowerCase().includes('dream') || content.toLowerCase().includes('library');
+    const responseSet = isDreamNote ? CHAT_RESPONSES.dream : CHAT_RESPONSES.productivity;
+    const noteType = isDreamNote ? 'dream' : 'productivity';
+
+    // Get the appropriate canned response based on message count
+    const responseIndex = chatMessageCount % responseSet.length;
+    const aiResponse = responseSet[responseIndex];
+
+    // Add AI message
+    const aiMessage = { role: 'assistant', content: aiResponse };
+    setChatMessages(prev => [...prev, aiMessage]);
+    setChatMessageCount(prev => prev + 1);
+    setIsLoadingChat(false);
+
+    // Auto-fill the next demo message for easy presentation
+    const newUserMessageCount = chatMessages.filter(msg => msg.role === 'user').length + 1; // +1 for message we just sent
+    const demoMessages = DEMO_USER_MESSAGES[noteType];
+
+    if (demoMessages && demoMessages.length > 0) {
+      const nextMessage = demoMessages[newUserMessageCount % demoMessages.length];
+      setChatInput(nextMessage);
     }
   };
 
@@ -434,119 +495,32 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
     }
   };
 
-  // Transcription using Deepgram only
+  // Stubbed transcription for demo (in-editor)
   const transcribeAudio = async (fileUri) => {
-    console.log('Using Deepgram for transcription');
-    
-    if (!DEEPGRAM_API_KEY) {
-      alert('Deepgram API key is required for voice transcription. Please add DEEPGRAM_API_KEY to your environment.');
+    try {
+      // Simulate transcription delay
+      await new Promise(resolve => setTimeout(resolve, 1500));
+
+      // Get the appropriate transcription based on counter
+      const transcript = editorTranscriptionCounter === 0
+        ? DEMO_TRANSCRIPTIONS_EDITOR[0]
+        : DEMO_TRANSCRIPTIONS_EDITOR[1];
+
+      // Increment counter (will stay at 1 for all subsequent recordings)
+      if (editorTranscriptionCounter === 0) {
+        editorTranscriptionCounter = 1;
+      }
+
+      return transcript;
+    } catch (error) {
+      console.error('Demo transcription error:', error);
       return '';
     }
-    
-    const transcript = await transcribeWithDeepgram(fileUri);
-    return transcript || '';
   };
 
-  // Deepgram transcription
+  // Placeholder for compatibility
   const transcribeWithDeepgram = async (fileUri) => {
-    try {
-      if (!DEEPGRAM_API_KEY) {
-        console.log('Deepgram: No API key found');
-        return '';
-      }
-      // console.log('Deepgram: Preparing request for', fileUri);
-      // console.log('Deepgram: API key exists:', !!DEEPGRAM_API_KEY);
-      // console.log('Deepgram: API key prefix:', DEEPGRAM_API_KEY ? DEEPGRAM_API_KEY.substring(0, 8) + '...' : 'NONE');
-      
-      // Check if file exists
-      const fileInfo = await FileSystem.getInfoAsync(fileUri);
-      
-      if (!fileInfo.exists) {
-        throw new Error('Audio file does not exist');
-      }
-      
-      if (fileInfo.size === 0) {
-        throw new Error('Audio file is empty');
-      }
-      
-      const formData = new FormData();
-      
-      formData.append('file', {
-        uri: fileUri,
-        name: 'recording.m4a',
-        type: 'audio/m4a',
-      });
-      
-      // model can be tuned; nova-2 is a good general English model
-      const response = await fetch('https://api.deepgram.com/v1/listen?model=nova-2', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Token ${DEEPGRAM_API_KEY}`,
-          'Content-Type': 'audio/m4a',
-        },
-        body: {
-          uri: fileUri,
-          name: 'recording.m4a',
-          type: 'audio/m4a',
-        },
-      });
-      
-      if (!response.ok) {
-        const errTxt = await response.text();
-        console.error('Deepgram: API error response:', errTxt);
-        
-        // If this approach fails, try the FormData approach as fallback
-        console.log('Deepgram: Direct upload failed, trying FormData approach...');
-        
-        const formData = new FormData();
-        formData.append('file', {
-          uri: fileUri,
-          name: 'recording.m4a',
-          type: 'audio/m4a',
-        });
-        
-        const fallbackResponse = await fetch('https://api.deepgram.com/v1/listen?model=nova-2', {
-          method: 'POST',
-          headers: {
-            'Authorization': `Token ${DEEPGRAM_API_KEY}`,
-          },
-          body: formData,
-        });
-        
-        console.log('Deepgram: Fallback response status:', fallbackResponse.status, fallbackResponse.ok);
-        
-        if (!fallbackResponse.ok) {
-          const fallbackErrTxt = await fallbackResponse.text();
-          console.error('Deepgram: Fallback API error response:', fallbackErrTxt);
-          throw new Error(`HTTP ${fallbackResponse.status}: ${fallbackErrTxt}`);
-        }
-        
-        const fallbackData = await fallbackResponse.json();
-        console.log('Deepgram: Fallback response data:', JSON.stringify(fallbackData, null, 2));
-        
-        // Parse transcript from fallback
-        const transcript = fallbackData?.results?.channels?.[0]?.alternatives?.[0]?.transcript || '';
-        const duration = fallbackData?.metadata?.duration || 0;
-        return transcript;
-      }
-      
-      const data = await response.json();
-      const transcript = data?.results?.channels?.[0]?.alternatives?.[0]?.transcript || '';
-      const duration = data?.metadata?.duration || 0;
-      console.log('Deepgram: Extracted transcript:', transcript);
-      
-      if (!transcript && duration < 0.5) {
-        console.log('Deepgram: Recording too short, returning empty');
-        alert('Recording too short. Please hold the mic button longer while speaking.');
-      }
-      
-      return transcript;
-    } catch (err) {
-      console.error('Deepgram transcription error', err);
-      console.error('Deepgram error message:', err.message);
-      console.error('Deepgram error stack:', err.stack);
-      return null; // Return null on actual errors to trigger fallback
-    }
+    return await transcribeAudio(fileUri);
   };
 
   const contentInputRef = useRef(null);
@@ -625,7 +599,7 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
 
         {/* Footer with action buttons */}
         <View style={[styles.editorFooter, { paddingBottom: insets.bottom, backgroundColor: theme.navBackground, borderTopColor: theme.borderColor }]}>
-          <TouchableOpacity style={[styles.editorFooterButton, { backgroundColor: theme.cardBackground }]} onPress={handleSummarizeNote}>
+          <TouchableOpacity style={[styles.editorFooterButton, { backgroundColor: theme.cardBackground }]} onPress={handleOpenChat}>
             <ChatIcon width={20} height={20} color={theme.iconColor} />
           </TouchableOpacity>
           <TouchableOpacity
@@ -656,36 +630,81 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
         </View>
       </KeyboardAvoidingView>
 
-      {/* Summary Modal */}
+      {/* Chat Modal */}
       <Modal
-        visible={showSummary}
+        visible={showChat}
         transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowSummary(false)}
+        animationType="slide"
+        onRequestClose={() => setShowChat(false)}
       >
-        <Pressable
-          style={styles.modalOverlay}
-          onPress={() => setShowSummary(false)}
-        >
-          <Pressable style={[styles.summaryModal, { backgroundColor: theme.cardBackground }]} onPress={(e) => e.stopPropagation()}>
-            <View style={[styles.summaryHeader, { borderBottomColor: theme.borderColor }]}>
-              <Text style={[styles.summaryTitle, { color: theme.textColor }]}>AI Summary</Text>
-              <TouchableOpacity onPress={() => setShowSummary(false)} style={styles.closeButton}>
+        <View style={styles.chatModalContainer}>
+          <View style={[styles.chatModal, { backgroundColor: theme.backgroundColor }]}>
+            {/* Chat Header */}
+            <View style={[styles.chatHeader, { borderBottomColor: theme.borderColor, paddingTop: insets.top }]}>
+              <Text style={[styles.chatTitle, { color: theme.textColor }]}>Chat about your note</Text>
+              <TouchableOpacity onPress={() => setShowChat(false)} style={styles.closeButton}>
                 <Text style={[styles.closeButtonText, { color: theme.secondaryTextColor }]}>✕</Text>
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.summaryContent}>
-              {isLoadingSummary ? (
-                <View style={styles.loadingContainer}>
-                  <Text style={[styles.loadingText, { color: theme.secondaryTextColor }]}>Generating summary...</Text>
+            {/* Chat Messages */}
+            <ScrollView style={styles.chatMessages} contentContainerStyle={styles.chatMessagesContent}>
+              {chatMessages.length === 0 && (
+                <View style={styles.chatEmptyState}>
+                  <Text style={[styles.chatEmptyText, { color: theme.secondaryTextColor }]}>
+                    Ask me anything about your note...
+                  </Text>
                 </View>
-              ) : (
-                <MarkdownText style={[styles.summaryText, { color: theme.textColor }]}>{summary}</MarkdownText>
+              )}
+              {chatMessages.map((message, index) => (
+                <View
+                  key={index}
+                  style={[
+                    styles.chatMessageBubble,
+                    message.role === 'user' ? styles.userMessage : styles.aiMessage
+                  ]}
+                >
+                  <Text style={[
+                    styles.chatMessageText,
+                    { color: message.role === 'user' ? '#000' : theme.textColor }
+                  ]}>
+                    {message.content}
+                  </Text>
+                </View>
+              ))}
+              {isLoadingChat && (
+                <View style={[styles.chatMessageBubble, styles.aiMessage]}>
+                  <ActivityIndicator size="small" color={theme.textColor} />
+                </View>
               )}
             </ScrollView>
-          </Pressable>
-        </Pressable>
+
+            {/* Chat Input */}
+            <KeyboardAvoidingView
+              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+              keyboardVerticalOffset={0}
+            >
+              <View style={[styles.chatInputContainer, { backgroundColor: theme.cardBackground, borderTopColor: theme.borderColor, paddingBottom: insets.bottom }]}>
+                <TextInput
+                  style={[styles.chatInput, { color: theme.textColor }]}
+                  value={chatInput}
+                  onChangeText={setChatInput}
+                  placeholder="Type your message..."
+                  placeholderTextColor={theme.placeholderColor}
+                  multiline
+                  maxLength={500}
+                />
+                <TouchableOpacity
+                  style={[styles.chatSendButton, { backgroundColor: chatInput.trim() ? theme.accentColor : theme.borderColor }]}
+                  onPress={handleSendChatMessage}
+                  disabled={!chatInput.trim() || isLoadingChat}
+                >
+                  <Text style={styles.chatSendButtonText}>Send</Text>
+                </TouchableOpacity>
+              </View>
+            </KeyboardAvoidingView>
+          </View>
+        </View>
       </Modal>
     </View>
   );
@@ -693,6 +712,8 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
 
 // Main App Component
 export default function App() {
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
   const [notes, setNotes] = useState([]);
   const [deletedNotes, setDeletedNotes] = useState([]);
   const [currentScreen, setCurrentScreen] = useState('main'); // 'main', 'editor', 'voice-record', 'text-editor', 'settings', 'recently-deleted'
@@ -744,33 +765,38 @@ export default function App() {
   const handleCreateNoteFromTranscription = async (transcription) => {
     const newNote = {
       id: Date.now().toString(),
-      title: transcription.split(' ').slice(0, 5).join(' ') || 'Voice Note',
+      title: generateTitleFromContent(transcription),
       content: transcription,
       createdAt: Date.now(),
       updatedAt: Date.now(),
       pinned: false,
       summary: 'Generating summary...',
     };
-    
+
     // Add note immediately
     const updatedNotes = [newNote, ...notes];
     setNotes(updatedNotes);
     saveNotes(updatedNotes);
-    
+
+    // For demo: Navigate to the note editor instead of going back to dashboard
+    setSelectedNoteId(newNote.id);
+    setCurrentScreen('editor');
+
     // Generate summary asynchronously and cache it
     try {
       const summary = await generateSummary(transcription);
       const noteWithSummary = { ...newNote, summary, aiSummary: summary };
-      const notesWithSummary = updatedNotes.map(note => 
+      const notesWithSummary = updatedNotes.map(note =>
         note.id === newNote.id ? noteWithSummary : note
       );
       setNotes(notesWithSummary);
       saveNotes(notesWithSummary);
     } catch (error) {
-      console.error('Error generating summary:', error);
+      // Silently handle error for demo - just use fallback
+      // console.error('Error generating summary:', error);
       const fallbackSummary = transcription.slice(0, 100) + '...';
       const noteWithError = { ...newNote, summary: fallbackSummary, aiSummary: fallbackSummary };
-      const notesWithError = updatedNotes.map(note => 
+      const notesWithError = updatedNotes.map(note =>
         note.id === newNote.id ? noteWithError : note
       );
       setNotes(notesWithError);
@@ -782,7 +808,7 @@ export default function App() {
   const handleCreateNoteFromText = async (title, content) => {
     const newNote = {
       id: Date.now().toString(),
-      title: title,
+      title: generateTitleFromContent(content),
       content: content,
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -805,10 +831,11 @@ export default function App() {
       setNotes(notesWithSummary);
       saveNotes(notesWithSummary);
     } catch (error) {
-      console.error('Error generating summary:', error);
+      // Silently handle error for demo - just use fallback
+      // console.error('Error generating summary:', error);
       const fallbackSummary = content.slice(0, 100) + '...';
       const noteWithError = { ...newNote, summary: fallbackSummary, aiSummary: fallbackSummary };
-      const notesWithError = updatedNotes.map(note => 
+      const notesWithError = updatedNotes.map(note =>
         note.id === newNote.id ? noteWithError : note
       );
       setNotes(notesWithError);
@@ -961,6 +988,32 @@ export default function App() {
     setDeletedNotes(prev => prev.filter(note => note.id !== noteId));
   };
 
+  const handleLogin = () => {
+    setIsLoggedIn(true);
+  };
+
+  const handleCompleteOnboarding = () => {
+    setHasCompletedOnboarding(true);
+  };
+
+  // Show login screen if not logged in
+  if (!isLoggedIn) {
+    return (
+      <SafeAreaProvider>
+        <LoginScreen onLogin={handleLogin} />
+      </SafeAreaProvider>
+    );
+  }
+
+  // Show onboarding screen if not completed
+  if (!hasCompletedOnboarding) {
+    return (
+      <SafeAreaProvider>
+        <OnboardingScreen onComplete={handleCompleteOnboarding} />
+      </SafeAreaProvider>
+    );
+  }
+
   return (
     <SafeAreaProvider>
       {currentScreen === 'main' ? (
@@ -1082,8 +1135,8 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   sortButtonActive: {
-    backgroundColor: '#007AFF20',
-    borderColor: '#007AFF',
+    backgroundColor: 'rgba(200, 213, 185, 0.2)',
+    borderColor: '#C8D5B9',
   },
   sortText: {
     fontSize: 14,
@@ -1189,7 +1242,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     padding: 12,
     borderWidth: 1,
-    borderColor: '#007AFF',
+    borderColor: '#C8D5B9',
     borderRadius: 12,
     minWidth: 200,
   },
@@ -1257,31 +1310,26 @@ const styles = StyleSheet.create({
     color: '#ff3b30',
     fontWeight: '600',
   },
-  // Summary Modal styles
-  summaryModal: {
-    borderRadius: 20,
-    marginHorizontal: 20,
-    marginVertical: 100,
-    maxHeight: '70%',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+  // Chat Modal styles
+  chatModalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
   },
-  summaryHeader: {
+  chatModal: {
+    flex: 1,
+    marginTop: 50,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  chatHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 10,
+    paddingVertical: 16,
     borderBottomWidth: 1,
   },
-  summaryTitle: {
+  chatTitle: {
     fontSize: 20,
     fontWeight: '600',
   },
@@ -1292,13 +1340,65 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: '300',
   },
-  summaryContent: {
-    padding: 20,
-    maxHeight: '100%',
+  chatMessages: {
+    flex: 1,
   },
-  summaryText: {
+  chatMessagesContent: {
+    padding: 20,
+    flexGrow: 1,
+  },
+  chatEmptyState: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  chatEmptyText: {
     fontSize: 16,
-    lineHeight: 24,
+    fontStyle: 'italic',
+  },
+  chatMessageBubble: {
+    maxWidth: '80%',
+    padding: 12,
+    borderRadius: 16,
+    marginBottom: 12,
+  },
+  userMessage: {
+    alignSelf: 'flex-end',
+    backgroundColor: '#C8D5B9',
+  },
+  aiMessage: {
+    alignSelf: 'flex-start',
+    backgroundColor: '#2a2a2a',
+  },
+  chatMessageText: {
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  chatInputContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 12,
+    borderTopWidth: 1,
+    gap: 12,
+  },
+  chatInput: {
+    flex: 1,
+    fontSize: 15,
+    maxHeight: 100,
+    paddingVertical: 8,
+  },
+  chatSendButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  chatSendButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#000',
   },
   loadingContainer: {
     padding: 20,
@@ -1373,7 +1473,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#333333',
+    borderBottomColor: '#2a2a2a',
   },
   settingsTitle: {
     fontSize: 24,

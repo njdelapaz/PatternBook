@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  ScrollView, 
-  TouchableOpacity, 
-  TextInput, 
-  Modal, 
-  Pressable 
+import {
+  StyleSheet,
+  Text,
+  View,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
+  Modal,
+  Pressable,
+  Image
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { darkTheme, lightTheme } from '../utils/constants';
 import { formatTimestamp, formatDateOnly } from '../utils/components';
+import { getSuggestionsForNotes } from '../utils/suggestions';
 
 // Import Carbon icons
 import SearchIcon from '../assets/carbon-icons/carbon--search.svg';
@@ -46,6 +48,35 @@ export default function MainScreen({
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [noteToDelete, setNoteToDelete] = useState(null);
   const [noteToPin, setNoteToPin] = useState(null);
+  const [selectedSuggestion, setSelectedSuggestion] = useState(null);
+  const [currentSuggestionIndex, setCurrentSuggestionIndex] = useState(0);
+
+  // Get suggestions based on notes
+  const suggestions = getSuggestionsForNotes(notes);
+
+  const handleNavigateLeft = () => {
+    if (currentSuggestionIndex > 0) {
+      setCurrentSuggestionIndex(currentSuggestionIndex - 1);
+      setSelectedSuggestion(suggestions[currentSuggestionIndex - 1]);
+    }
+  };
+
+  const handleNavigateRight = () => {
+    if (currentSuggestionIndex < suggestions.length - 1) {
+      setCurrentSuggestionIndex(currentSuggestionIndex + 1);
+      setSelectedSuggestion(suggestions[currentSuggestionIndex + 1]);
+    }
+  };
+
+  const handleOpenSuggestion = (suggestion, index) => {
+    setSelectedSuggestion(suggestion);
+    setCurrentSuggestionIndex(index);
+  };
+
+  const handleCloseSuggestion = () => {
+    setSelectedSuggestion(null);
+    setCurrentSuggestionIndex(0);
+  };
 
   const handleLongPress = (note) => {
     setNoteToDelete(note);
@@ -163,7 +194,7 @@ export default function MainScreen({
           </View>
 
           {/* Search Bar */}
-          {showSearch && (
+          {showSearch && notes.length > 0 && (
             <View style={[styles.searchContainer, { backgroundColor: theme.cardBackground }]}>
               <TextInput
                 style={[styles.searchInput, { color: theme.textColor }]}
@@ -176,30 +207,116 @@ export default function MainScreen({
             </View>
           )}
 
-          {/* Sort Options */}
-          <View style={styles.sortContainer}>
-            <TouchableOpacity 
-              style={[styles.sortButton, sortBy === 'updated' && styles.sortButtonActive]}
-              onPress={() => onSortChange('updated')}
-            >
-              <Text style={[styles.sortText, { color: sortBy === 'updated' ? theme.accentColor : theme.secondaryTextColor }]}>
-                Recently Updated
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.sortButton, sortBy === 'old-to-new' && styles.sortButtonActive]}
-              onPress={() => onSortChange('old-to-new')}
-            >
-              <Text style={[styles.sortText, { color: sortBy === 'old-to-new' ? theme.accentColor : theme.secondaryTextColor }]}>
-                Oldest First
-              </Text>
-            </TouchableOpacity>
-          </View>
+          {/* Sort Options - Only show when there are notes */}
+          {notes.length > 0 && (
+            <View style={styles.sortContainer}>
+              <TouchableOpacity
+                style={[styles.sortButton, sortBy === 'updated' && styles.sortButtonActive]}
+                onPress={() => onSortChange('updated')}
+              >
+                <Text style={[styles.sortText, { color: sortBy === 'updated' ? theme.accentColor : theme.secondaryTextColor }]}>
+                  Recently Updated
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.sortButton, sortBy === 'old-to-new' && styles.sortButtonActive]}
+                onPress={() => onSortChange('old-to-new')}
+              >
+                <Text style={[styles.sortText, { color: sortBy === 'old-to-new' ? theme.accentColor : theme.secondaryTextColor }]}>
+                  Oldest First
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
-          {/* Notes List with Date Sections */}
-          <View style={styles.notesList}>
-            {/* Pinned Section */}
-            {noteSections.pinned.length > 0 && (
+          {/* AI Suggestions Bar */}
+          {suggestions.length > 0 && (
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              style={styles.suggestionsContainer}
+              contentContainerStyle={styles.suggestionsContent}
+            >
+              {suggestions.map((suggestion, index) => (
+                <TouchableOpacity
+                  key={index}
+                  style={[styles.suggestionCard, { backgroundColor: theme.cardBackground }]}
+                  onPress={() => handleOpenSuggestion(suggestion, index)}
+                  activeOpacity={0.8}
+                >
+                  {suggestion.type === 'art' && suggestion.image && (
+                    <Image
+                      source={suggestion.image}
+                      style={styles.suggestionImage}
+                      resizeMode="cover"
+                    />
+                  )}
+                  {suggestion.type === 'quote' && (
+                    <View style={styles.suggestionQuoteContent}>
+                      <Text style={[styles.suggestionQuoteText, { color: theme.textColor }]} numberOfLines={3}>
+                        {suggestion.title}
+                      </Text>
+                      <Text style={[styles.suggestionQuoteAuthor, { color: theme.secondaryTextColor }]}>
+                        {suggestion.author}
+                      </Text>
+                    </View>
+                  )}
+                  {suggestion.type === 'letter' && (
+                    <View style={styles.suggestionLetterContent}>
+                      {suggestion.gradient && (
+                        <Image
+                          source={suggestion.gradient}
+                          style={styles.suggestionLetterGradient}
+                          resizeMode="cover"
+                        />
+                      )}
+                      <Text style={[styles.suggestionLetterTitle, { color: theme.textColor }]}>
+                        {suggestion.title}
+                      </Text>
+                      <Text style={[styles.suggestionLetterSubtitle, { color: theme.secondaryTextColor }]}>
+                        {suggestion.subtitle}
+                      </Text>
+                    </View>
+                  )}
+                  <View style={styles.suggestionBadge}>
+                    <Text style={styles.suggestionBadgeText}>● {suggestion.badge}</Text>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
+
+          {/* Empty State or Notes List */}
+          {notes.length === 0 ? (
+            <View style={styles.emptyState}>
+              <Text style={[styles.emptyStateTitle, { color: theme.textColor }]}>Brain dump about anything</Text>
+              <View style={[styles.emptyStateCard, { backgroundColor: theme.cardBackground }]}>
+                <Text style={[styles.emptyStateCardTitle, { color: theme.textColor }]}>Note</Text>
+                <Text style={[styles.emptyStateCardText, { color: theme.secondaryTextColor }]}>
+                  I want to spend more time...
+                </Text>
+              </View>
+              <View style={styles.emptyStateButtons}>
+                <TouchableOpacity
+                  style={[styles.emptyStateButton, styles.emptyStateDictateButton, { backgroundColor: theme.accentColor }]}
+                  onPress={onNavigateToVoiceRecord}
+                >
+                  <MicrophoneIcon width={32} height={32} color="#000000" />
+                  <Text style={styles.emptyStateButtonText}>Dictate</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[styles.emptyStateButton, { backgroundColor: theme.cardBackground }]}
+                  onPress={onNavigateToTextEditor}
+                >
+                  <PenIcon width={32} height={32} color={theme.textColor} />
+                  <Text style={[styles.emptyStateButtonText, { color: theme.textColor }]}>Type</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.notesList}>
+              {/* Pinned Section */}
+              {noteSections.pinned.length > 0 && (
               <View style={styles.dateSection}>
                 <Text style={[styles.sectionHeader, { color: theme.textColor }]}>Pinned</Text>
                 {noteSections.pinned.map((note) => (
@@ -293,7 +410,8 @@ export default function MainScreen({
                 ))}
               </View>
             )}
-          </View>
+            </View>
+          )}
         </ScrollView>
       </View>
 
@@ -348,6 +466,124 @@ export default function MainScreen({
           </Pressable>
         </Modal>
       )}
+
+      {/* Suggestion Detail Modal */}
+      <Modal
+        visible={selectedSuggestion !== null}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={handleCloseSuggestion}
+      >
+        <View style={styles.suggestionModalContainer}>
+          {/* Close button at top */}
+          <TouchableOpacity
+            style={styles.suggestionModalClose}
+            onPress={handleCloseSuggestion}
+          >
+            <Text style={styles.suggestionModalCloseText}>✕</Text>
+          </TouchableOpacity>
+
+          {/* Tab indicators */}
+          <View style={styles.suggestionModalTabs}>
+            {suggestions.map((_, index) => (
+              <View
+                key={index}
+                style={[
+                  styles.suggestionModalTab,
+                  index === currentSuggestionIndex && styles.suggestionModalTabActive
+                ]}
+              />
+            ))}
+          </View>
+
+          <ScrollView style={styles.suggestionModalScroll} contentContainerStyle={styles.suggestionModalScrollContent}>
+            {selectedSuggestion?.type === 'art' && (
+              <>
+                {selectedSuggestion.image && (
+                  <Image
+                    source={selectedSuggestion.image}
+                    style={styles.suggestionModalImage}
+                    resizeMode="contain"
+                  />
+                )}
+                <View style={styles.suggestionModalInfo}>
+                  <Text style={styles.suggestionModalTitle}>
+                    {selectedSuggestion.title}, <Text style={styles.suggestionModalSubtitle}>{selectedSuggestion.subtitle}</Text>
+                  </Text>
+                  <Text style={styles.suggestionModalArtist}>{selectedSuggestion.artist}</Text>
+                  <Text style={styles.suggestionModalMuseum}>🏛 {selectedSuggestion.museum}</Text>
+                  <View style={styles.suggestionModalBadge}>
+                    <Text style={styles.suggestionModalBadgeText}>● {selectedSuggestion.badge}</Text>
+                  </View>
+                  <Text style={styles.suggestionModalDescription}>{selectedSuggestion.description}</Text>
+                </View>
+              </>
+            )}
+
+            {selectedSuggestion?.type === 'quote' && (
+              <View style={styles.suggestionModalQuoteContainer}>
+                <View style={styles.suggestionModalQuote}>
+                  <Text style={styles.suggestionModalQuoteText}>{selectedSuggestion.title}</Text>
+                  <Text style={styles.suggestionModalQuoteAuthor}>—{selectedSuggestion.author}</Text>
+                  <View style={styles.suggestionModalBadge}>
+                    <Text style={styles.suggestionModalBadgeText}>● {selectedSuggestion.badge}</Text>
+                  </View>
+                  <Text style={styles.suggestionModalDescription}>{selectedSuggestion.description}</Text>
+                </View>
+              </View>
+            )}
+
+            {selectedSuggestion?.type === 'letter' && (
+              <View style={styles.suggestionModalLetter}>
+                <View style={styles.suggestionModalLetterHeader}>
+                  <View style={styles.suggestionModalLetterBadge}>
+                    <Text style={styles.suggestionModalLetterBadgeText}>● {selectedSuggestion.subtitle}</Text>
+                  </View>
+                  <Text style={styles.suggestionModalLetterDate}>{selectedSuggestion.date}</Text>
+                </View>
+                <Text style={styles.suggestionModalLetterTitle}>{selectedSuggestion.title}</Text>
+                {selectedSuggestion.gradient && (
+                  <Image
+                    source={selectedSuggestion.gradient}
+                    style={styles.suggestionModalLetterGradientLarge}
+                    resizeMode="cover"
+                  />
+                )}
+                {selectedSuggestion.content.map((paragraph, index) => (
+                  <Text key={index} style={styles.suggestionModalLetterParagraph}>
+                    {paragraph}
+                  </Text>
+                ))}
+              </View>
+            )}
+          </ScrollView>
+
+          {/* Bottom navigation */}
+          <View style={styles.suggestionModalNav}>
+            <TouchableOpacity style={styles.suggestionModalNavButton}>
+              <Text style={styles.suggestionModalNavIcon}>💬</Text>
+              <Text style={styles.suggestionModalNavText}>Chat</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.suggestionModalNavButton}>
+              <Text style={styles.suggestionModalNavIcon}>⋯</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.suggestionModalNavButton, currentSuggestionIndex === 0 && styles.suggestionModalNavButtonDisabled]}
+              onPress={handleNavigateLeft}
+              disabled={currentSuggestionIndex === 0}
+            >
+              <Text style={[styles.suggestionModalNavIcon, currentSuggestionIndex === 0 && styles.suggestionModalNavIconDisabled]}>←</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.suggestionModalNavButton, currentSuggestionIndex === suggestions.length - 1 && styles.suggestionModalNavButtonDisabled]}
+              onPress={handleNavigateRight}
+              disabled={currentSuggestionIndex === suggestions.length - 1}
+            >
+              <Text style={[styles.suggestionModalNavIcon, currentSuggestionIndex === suggestions.length - 1 && styles.suggestionModalNavIconDisabled]}>→</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* Delete Modal */}
       <Modal
@@ -458,6 +694,65 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '500',
   },
+
+  // Empty State
+  emptyState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 40,
+    paddingTop: 80,
+  },
+  emptyStateTitle: {
+    fontSize: 24,
+    fontWeight: '400',
+    marginBottom: 40,
+    textAlign: 'center',
+  },
+  emptyStateCard: {
+    width: '100%',
+    maxWidth: 300,
+    borderRadius: 16,
+    padding: 24,
+    marginBottom: 50,
+    minHeight: 160,
+  },
+  emptyStateCardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 16,
+  },
+  emptyStateCardText: {
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  emptyStateButtons: {
+    flexDirection: 'row',
+    gap: 20,
+    alignItems: 'center',
+  },
+  emptyStateButton: {
+    width: 140,
+    height: 140,
+    borderRadius: 70,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  emptyStateDictateButton: {
+    // Dictate button uses accent color from theme
+  },
+  emptyStateButtonText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#000000',
+  },
+
   notesList: {
     marginTop: 10,
   },
@@ -580,5 +875,264 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#ff3b30',
     fontWeight: '600',
+  },
+
+  // Suggestions Bar
+  suggestionsContainer: {
+    marginBottom: 16,
+    marginHorizontal: -20, // Full width bleed
+  },
+  suggestionsContent: {
+    paddingHorizontal: 20,
+    gap: 12,
+  },
+  suggestionCard: {
+    width: 200,
+    borderRadius: 12,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  suggestionImage: {
+    width: '100%',
+    height: 250,
+  },
+  suggestionQuoteContent: {
+    padding: 20,
+    minHeight: 200,
+    justifyContent: 'center',
+  },
+  suggestionQuoteText: {
+    fontSize: 16,
+    lineHeight: 24,
+    fontStyle: 'italic',
+    marginBottom: 12,
+  },
+  suggestionQuoteAuthor: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  suggestionLetterContent: {
+    padding: 20,
+    minHeight: 200,
+    justifyContent: 'flex-end',
+  },
+  suggestionLetterGradient: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 120,
+    borderTopLeftRadius: 12,
+    borderTopRightRadius: 12,
+  },
+  suggestionLetterTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  suggestionLetterSubtitle: {
+    fontSize: 13,
+    fontWeight: '500',
+  },
+  suggestionBadge: {
+    position: 'absolute',
+    bottom: 12,
+    left: 12,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    borderRadius: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+  },
+  suggestionBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontWeight: '600',
+  },
+
+  // Suggestion Modal
+  suggestionModalContainer: {
+    flex: 1,
+    backgroundColor: '#000000',
+  },
+  suggestionModalClose: {
+    position: 'absolute',
+    top: 60,
+    right: 20,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 100,
+  },
+  suggestionModalCloseText: {
+    color: '#FFFFFF',
+    fontSize: 20,
+    fontWeight: '300',
+  },
+  suggestionModalTabs: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingTop: 60,
+    paddingBottom: 20,
+    gap: 8,
+  },
+  suggestionModalTab: {
+    width: 40,
+    height: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    borderRadius: 2,
+  },
+  suggestionModalTabActive: {
+    backgroundColor: '#FFFFFF',
+  },
+  suggestionModalScroll: {
+    flex: 1,
+  },
+  suggestionModalScrollContent: {
+    flexGrow: 1,
+  },
+  suggestionModalImage: {
+    width: '100%',
+    height: 450,
+    backgroundColor: '#1a1a1a',
+  },
+  suggestionModalInfo: {
+    padding: 24,
+  },
+  suggestionModalTitle: {
+    fontSize: 24,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 8,
+  },
+  suggestionModalSubtitle: {
+    fontWeight: '400',
+    fontStyle: 'italic',
+  },
+  suggestionModalArtist: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    marginBottom: 4,
+  },
+  suggestionModalMuseum: {
+    fontSize: 14,
+    color: '#999999',
+    marginBottom: 16,
+  },
+  suggestionModalBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 12,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    marginBottom: 16,
+  },
+  suggestionModalBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  suggestionModalDescription: {
+    fontSize: 15,
+    lineHeight: 22,
+    color: '#CCCCCC',
+  },
+  suggestionModalQuoteContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    minHeight: 500,
+  },
+  suggestionModalQuote: {
+    padding: 32,
+  },
+  suggestionModalQuoteText: {
+    fontSize: 28,
+    lineHeight: 38,
+    color: '#FFFFFF',
+    fontStyle: 'italic',
+    marginBottom: 24,
+    fontWeight: '400',
+  },
+  suggestionModalQuoteAuthor: {
+    fontSize: 18,
+    color: '#FFFFFF',
+    fontWeight: '500',
+    marginBottom: 32,
+  },
+  suggestionModalLetter: {
+    flex: 1,
+    padding: 24,
+    paddingTop: 0,
+  },
+  suggestionModalLetterHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  suggestionModalLetterBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 12,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+  },
+  suggestionModalLetterBadgeText: {
+    color: '#9B4DCA',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  suggestionModalLetterDate: {
+    color: '#999999',
+    fontSize: 14,
+  },
+  suggestionModalLetterTitle: {
+    fontSize: 32,
+    fontWeight: '600',
+    color: '#FFFFFF',
+    marginBottom: 24,
+  },
+  suggestionModalLetterGradientLarge: {
+    width: '100%',
+    height: 200,
+    borderRadius: 16,
+    marginBottom: 24,
+  },
+  suggestionModalLetterParagraph: {
+    fontSize: 16,
+    lineHeight: 24,
+    color: '#FFFFFF',
+    marginBottom: 20,
+  },
+  suggestionModalNav: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingVertical: 20,
+    paddingHorizontal: 24,
+    borderTopWidth: 0.5,
+    borderTopColor: '#333333',
+    backgroundColor: '#000000',
+  },
+  suggestionModalNavButton: {
+    alignItems: 'center',
+    gap: 4,
+    padding: 8,
+  },
+  suggestionModalNavButtonDisabled: {
+    opacity: 0.3,
+  },
+  suggestionModalNavIcon: {
+    fontSize: 20,
+    color: '#FFFFFF',
+  },
+  suggestionModalNavIconDisabled: {
+    opacity: 0.3,
+  },
+  suggestionModalNavText: {
+    fontSize: 12,
+    color: '#FFFFFF',
   },
 });

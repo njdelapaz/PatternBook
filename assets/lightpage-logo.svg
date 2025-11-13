@@ -1,0 +1,16 @@
+<svg width="80" height="80" viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Sunburst rays -->
+  <path d="M40 10 L40 2" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M52 14 L57 7" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M62 22 L69 17" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M68 34 L76 34" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M66 46 L73 51" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M58 56 L63 63" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M46 64 L46 72" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M34 64 L34 72" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M22 56 L17 63" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M14 46 L7 51" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M12 34 L4 34" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M14 22 L7 17" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+  <path d="M26 14 L21 7" stroke="white" stroke-width="2.5" stroke-linecap="round"/>
+</svg>

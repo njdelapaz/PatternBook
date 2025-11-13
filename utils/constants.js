@@ -4,16 +4,16 @@ export const NOTES_STORAGE_KEY = '@patternbook_notes';
 // Themes
 export const darkTheme = {
   backgroundColor: '#000000',
-  cardBackground: '#111111',
-  textColor: '#ffffff',
-  secondaryTextColor: '#8e8e93',
-  placeholderColor: '#6d6d70',
-  accentColor: '#007AFF',
-  iconColor: '#8e8e93',
+  cardBackground: '#2a2a2a',
+  textColor: '#FFFFFF',
+  secondaryTextColor: '#999999',
+  placeholderColor: '#666666',
+  accentColor: '#C8D5B9',
+  iconColor: '#FFFFFF',
   navBackground: '#000000',
-  borderColor: '#1c1c1e',
+  borderColor: '#2a2a2a',
   headerBackground: '#000000',
-  inputBackground: '#1c1c1e',
+  inputBackground: '#2a2a2a',
 };
 
 export const lightTheme = {
