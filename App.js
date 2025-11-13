@@ -3,7 +3,7 @@ import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Modal,
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { OPENAI_API_KEY, DEEPGRAM_API_KEY } from '@env';
+import { OPENAI_API_KEY } from '@env';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Audio as AVAudio } from 'expo-av';
 
@@ -19,6 +19,7 @@ import VoiceRecordingScreen from './screens/VoiceRecordingScreen';
 // Import Utilities
 import { loadNotes, saveNotes } from './utils/storage';
 import { darkTheme, lightTheme } from './utils/constants';
+import { transcribeAudioWithDeepgram, isDeepgramConfigured } from './utils/deepgram';
 import { MarkdownText, formatTimestamp } from './utils/components';
 
 // Import Carbon icons (for remaining components)
@@ -30,14 +31,6 @@ import ChatIcon from './assets/carbon-icons/carbon--chat.svg';
 
 // OpenAI API Configuration
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
-
-// Stubbed transcription data for demo (in-editor voice recording)
-const DEMO_TRANSCRIPTIONS_EDITOR = [
-  "I had the most interesting dream last night about wandering through an endless library. Each book seemed to contain memories from my life, but they were all slightly different from how I remember them. It made me wonder how much of what we remember is actually real versus what we've constructed over time.",
-  "Today I realized something important about my relationship with productivity. I've been measuring my worth by how much I accomplish, but that's not sustainable. Maybe the goal isn't to do more, but to be more intentional about what I choose to do. Quality over quantity, as they say."
-];
-
-let editorTranscriptionCounter = 0;
 
 // Demo user messages that auto-fill for easy presentation
 const DEMO_USER_MESSAGES = {
@@ -176,10 +169,6 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
   const recordingRef = useRef(null);
   const isStartingRef = useRef(false);
 
-  // On-device speech-to-text state (DISABLED - using API instead)
-  const [useDeviceSTT, setUseDeviceSTT] = useState(false); // Always use API
-  const [isListening, setIsListening] = useState(false);
-  // Setup audio recording (API-based transcription only)
   // Initialize audio mode on mount for iOS (expo-av)
   useEffect(() => {
     const setupAudioMode = async () => {
@@ -483,7 +472,18 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
       if (!uri) return;
 
       setIsTranscribing(true);
-      const transcription = await transcribeAudio(uri);
+      
+      // Check if Deepgram is configured
+      if (!isDeepgramConfigured()) {
+        Alert.alert(
+          'Configuration Error',
+          'Deepgram API key is not configured. Please check your .env file.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+      
+      const transcription = await transcribeAudioWithDeepgram(uri);
       if (transcription) {
         setContent(prev => (prev ? prev + (prev.endsWith('\n') ? '' : '\n') + transcription : transcription));
       }
@@ -495,33 +495,7 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
     }
   };
 
-  // Stubbed transcription for demo (in-editor)
-  const transcribeAudio = async (fileUri) => {
-    try {
-      // Simulate transcription delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
 
-      // Get the appropriate transcription based on counter
-      const transcript = editorTranscriptionCounter === 0
-        ? DEMO_TRANSCRIPTIONS_EDITOR[0]
-        : DEMO_TRANSCRIPTIONS_EDITOR[1];
-
-      // Increment counter (will stay at 1 for all subsequent recordings)
-      if (editorTranscriptionCounter === 0) {
-        editorTranscriptionCounter = 1;
-      }
-
-      return transcript;
-    } catch (error) {
-      console.error('Demo transcription error:', error);
-      return '';
-    }
-  };
-
-  // Placeholder for compatibility
-  const transcribeWithDeepgram = async (fileUri) => {
-    return await transcribeAudio(fileUri);
-  };
 
   const contentInputRef = useRef(null);
   const theme = isDarkMode ? darkTheme : lightTheme;
@@ -605,16 +579,11 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
           <TouchableOpacity
             style={[styles.editorFooterButton, { backgroundColor: isRecording ? '#ff3b30' : theme.cardBackground }]}
             onPress={() => {
-              console.log('DEBUG: Mic button clicked! Platform:', Platform.OS, 'useDeviceSTT:', useDeviceSTT, 'isListening:', isListening, 'isRecording:', isRecording);
-              // Always use API recording since useDeviceSTT is now always false
               if (isRecording) {
-                console.log('DEBUG: Stopping API recording...');
                 stopAndTranscribe();
               } else {
-                console.log('DEBUG: Starting API recording...');
                 startRecording();
               }
-              console.log('DEBUG: Mic button click handler finished');
             }}
           >
             {isTranscribing ? (
@@ -623,7 +592,6 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
               <MicrophoneIcon width={20} height={20} color={theme.iconColor} />
             )}
           </TouchableOpacity>
-          {/* Remove the device STT toggle button for now */}
           <TouchableOpacity style={[styles.editorFooterButton, { backgroundColor: theme.cardBackground }]} onPress={handleKeyboardToggle}>
             <KeyboardIcon width={20} height={20} color={theme.iconColor} />
           </TouchableOpacity>
