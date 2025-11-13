@@ -13,30 +13,30 @@ import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Audio as AVAudio } from 'expo-av';
-import { DEEPGRAM_API_KEY } from '@env';
 import { darkTheme, lightTheme } from '../utils/constants';
+import { transcribeAudioWithDeepgram, isDeepgramConfigured } from '../utils/deepgram';
 
 // Import Carbon icons
 import MicrophoneIcon from '../assets/carbon-icons/carbon--microphone-filled.svg';
-
-// Stubbed transcription data for demo
-const DEMO_TRANSCRIPTIONS = [
-  "I had the most interesting dream last night about wandering through an endless library. Each book seemed to contain memories from my life, but they were all slightly different from how I remember them. It made me wonder how much of what we remember is actually real versus what we've constructed over time.",
-  "Today I realized something important about my relationship with productivity. I've been measuring my worth by how much I accomplish, but that's not sustainable. Maybe the goal isn't to do more, but to be more intentional about what I choose to do. Quality over quantity, as they say."
-];
-
-let transcriptionCounter = 0;
 
 // Voice Recording Screen Component
 export default function VoiceRecordingScreen({ isDarkMode, onBack, onSave }) {
   const insets = useSafeAreaInsets();
   const theme = isDarkMode ? darkTheme : lightTheme;
 
+  // Check Deepgram configuration on component mount
+  React.useEffect(() => {
+    if (!isDeepgramConfigured()) {
+      console.warn('Deepgram API key is not configured');
+    }
+  }, []);
+
   // Voice recording states
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcription, setTranscription] = useState('');
   const [recordingDuration, setRecordingDuration] = useState(0);
+  const [transcriptionStatus, setTranscriptionStatus] = useState('');
   const recordingRef = useRef(null);
   const isStartingRef = useRef(false);
   const durationTimerRef = useRef(null);
@@ -148,35 +148,53 @@ export default function VoiceRecordingScreen({ isDarkMode, onBack, onSave }) {
       }
 
       setIsTranscribing(true);
+      setTranscriptionStatus('Uploading audio...');
       await transcribeWithDeepgram(uri);
     } catch (error) {
       console.error('Error stopping recording:', error);
-      alert('Error processing recording: ' + error.message);
+      Alert.alert(
+        'Recording Error',
+        'Error processing recording: ' + error.message,
+        [{ text: 'OK' }]
+      );
     } finally {
       setIsTranscribing(false);
+      setTranscriptionStatus('');
     }
   };
 
-  // Stubbed transcription for demo
+  // Real transcription using Deepgram API
   const transcribeWithDeepgram = async (audioUri) => {
     try {
-      // Simulate transcription delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // Get the appropriate transcription based on counter
-      const transcript = transcriptionCounter === 0
-        ? DEMO_TRANSCRIPTIONS[0]
-        : DEMO_TRANSCRIPTIONS[1];
-
-      // Increment counter (will stay at 1 for all subsequent recordings)
-      if (transcriptionCounter === 0) {
-        transcriptionCounter = 1;
+      // Check if Deepgram is configured
+      if (!isDeepgramConfigured()) {
+        Alert.alert(
+          'Configuration Error',
+          'Deepgram API key is not configured. Please check your .env file.',
+          [{ text: 'OK' }]
+        );
+        return;
       }
 
+      console.log('Starting transcription for audio file:', audioUri);
+      
+      setTranscriptionStatus('Processing with Deepgram...');
+      
+      // Use the Deepgram API to transcribe the audio
+      const transcript = await transcribeAudioWithDeepgram(audioUri);
+      
+      console.log('Transcription completed successfully');
       setTranscription(transcript);
+      setTranscriptionStatus('');
+      
     } catch (error) {
-      console.error('Demo transcription error:', error);
-      alert('Transcription failed: ' + error.message);
+      console.error('Transcription error:', error);
+      setTranscriptionStatus('');
+      Alert.alert(
+        'Transcription Failed',
+        error.message || 'An error occurred during transcription. Please try again.',
+        [{ text: 'OK' }]
+      );
     }
   };
 
@@ -233,7 +251,7 @@ export default function VoiceRecordingScreen({ isDarkMode, onBack, onSave }) {
             )}
             
             <Text style={[styles.recordingLabel, { color: theme.secondaryTextColor }]}>
-              {isRecording ? 'Recording...' : isTranscribing ? 'Transcribing...' : 'Tap to record'}
+              {isRecording ? 'Recording...' : isTranscribing ? (transcriptionStatus || 'Transcribing...') : 'Tap to record'}
             </Text>
           </View>
 
