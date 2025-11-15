@@ -1,5 +1,6 @@
 // Storage keys
 export const NOTES_STORAGE_KEY = '@patternbook_notes';
+export const VOICE_API_CONSENT_KEY = '@patternbook_voice_api_consent';
 
 // Themes
 export const darkTheme = {
