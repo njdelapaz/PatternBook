@@ -7,36 +7,70 @@ import {
   ScrollView,
   Platform,
   ActivityIndicator,
-  Alert
+  Alert,
+  Modal,
+  Pressable
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Audio as AVAudio } from 'expo-av';
-import { DEEPGRAM_API_KEY } from '@env';
 import { darkTheme, lightTheme } from '../utils/constants';
+import { transcribeAudioWithDeepgram, isDeepgramConfigured } from '../utils/deepgram';
+import { hasVoiceApiConsent, setVoiceApiConsent } from '../utils/storage';
 
 // Import Carbon icons
 import MicrophoneIcon from '../assets/carbon-icons/carbon--microphone-filled.svg';
-
-// Stubbed transcription data for demo
-const DEMO_TRANSCRIPTIONS = [
-  "I had the most interesting dream last night about wandering through an endless library. Each book seemed to contain memories from my life, but they were all slightly different from how I remember them. It made me wonder how much of what we remember is actually real versus what we've constructed over time.",
-  "Today I realized something important about my relationship with productivity. I've been measuring my worth by how much I accomplish, but that's not sustainable. Maybe the goal isn't to do more, but to be more intentional about what I choose to do. Quality over quantity, as they say."
-];
-
-let transcriptionCounter = 0;
 
 // Voice Recording Screen Component
 export default function VoiceRecordingScreen({ isDarkMode, onBack, onSave }) {
   const insets = useSafeAreaInsets();
   const theme = isDarkMode ? darkTheme : lightTheme;
 
+  // Check Deepgram configuration and consent on component mount
+  React.useEffect(() => {
+    if (!isDeepgramConfigured()) {
+      console.warn('Deepgram API key is not configured');
+    }
+    
+    // Check if user has given consent for voice API usage
+    checkVoiceApiConsent();
+  }, []);
+
+  const checkVoiceApiConsent = async () => {
+    try {
+      const hasConsent = await hasVoiceApiConsent();
+      if (!hasConsent) {
+        setShowConsentModal(true);
+      }
+    } catch (error) {
+      console.error('Error checking voice API consent:', error);
+      setShowConsentModal(true);
+    }
+  };
+
+  const handleAcceptConsent = async () => {
+    try {
+      await setVoiceApiConsent(true);
+      setShowConsentModal(false);
+    } catch (error) {
+      console.error('Error saving voice API consent:', error);
+      Alert.alert('Error', 'Failed to save consent. Please try again.');
+    }
+  };
+
+  const handleDeclineConsent = () => {
+    setShowConsentModal(false);
+    onBack(); // Navigate back to home page
+  };
+
   // Voice recording states
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [transcription, setTranscription] = useState('');
   const [recordingDuration, setRecordingDuration] = useState(0);
+  const [transcriptionStatus, setTranscriptionStatus] = useState('');
+  const [showConsentModal, setShowConsentModal] = useState(false);
   const recordingRef = useRef(null);
   const isStartingRef = useRef(false);
   const durationTimerRef = useRef(null);
@@ -148,35 +182,53 @@ export default function VoiceRecordingScreen({ isDarkMode, onBack, onSave }) {
       }
 
       setIsTranscribing(true);
+      setTranscriptionStatus('Uploading audio...');
       await transcribeWithDeepgram(uri);
     } catch (error) {
       console.error('Error stopping recording:', error);
-      alert('Error processing recording: ' + error.message);
+      Alert.alert(
+        'Recording Error',
+        'Error processing recording: ' + error.message,
+        [{ text: 'OK' }]
+      );
     } finally {
       setIsTranscribing(false);
+      setTranscriptionStatus('');
     }
   };
 
-  // Stubbed transcription for demo
+  // Real transcription using Deepgram API
   const transcribeWithDeepgram = async (audioUri) => {
     try {
-      // Simulate transcription delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
-
-      // Get the appropriate transcription based on counter
-      const transcript = transcriptionCounter === 0
-        ? DEMO_TRANSCRIPTIONS[0]
-        : DEMO_TRANSCRIPTIONS[1];
-
-      // Increment counter (will stay at 1 for all subsequent recordings)
-      if (transcriptionCounter === 0) {
-        transcriptionCounter = 1;
+      // Check if Deepgram is configured
+      if (!isDeepgramConfigured()) {
+        Alert.alert(
+          'Configuration Error',
+          'Deepgram API key is not configured. Please check your .env file.',
+          [{ text: 'OK' }]
+        );
+        return;
       }
 
+      console.log('Starting transcription for audio file:', audioUri);
+      
+      setTranscriptionStatus('Processing with Deepgram...');
+      
+      // Use the Deepgram API to transcribe the audio
+      const transcript = await transcribeAudioWithDeepgram(audioUri);
+      
+      console.log('Transcription completed successfully');
       setTranscription(transcript);
+      setTranscriptionStatus('');
+      
     } catch (error) {
-      console.error('Demo transcription error:', error);
-      alert('Transcription failed: ' + error.message);
+      console.error('Transcription error:', error);
+      setTranscriptionStatus('');
+      Alert.alert(
+        'Transcription Failed',
+        error.message || 'An error occurred during transcription. Please try again.',
+        [{ text: 'OK' }]
+      );
     }
   };
 
@@ -233,7 +285,7 @@ export default function VoiceRecordingScreen({ isDarkMode, onBack, onSave }) {
             )}
             
             <Text style={[styles.recordingLabel, { color: theme.secondaryTextColor }]}>
-              {isRecording ? 'Recording...' : isTranscribing ? 'Transcribing...' : 'Tap to record'}
+              {isRecording ? 'Recording...' : isTranscribing ? (transcriptionStatus || 'Transcribing...') : 'Tap to record'}
             </Text>
           </View>
 
@@ -273,6 +325,57 @@ export default function VoiceRecordingScreen({ isDarkMode, onBack, onSave }) {
           )}
         </View>
       </View>
+
+      {/* Voice API Consent Modal */}
+      <Modal
+        visible={showConsentModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {}} // Prevent closing by back button
+      >
+        <View style={styles.consentModalOverlay}>
+          <View style={[styles.consentModalContainer, { backgroundColor: theme.cardBackground }]}>
+            {/* Header */}
+            <View style={styles.consentModalHeader}>
+              <Text style={[styles.consentModalTitle, { color: theme.textColor }]}>
+                Voice Transcription Notice
+              </Text>
+            </View>
+
+            {/* Content */}
+            <View style={styles.consentModalContent}>
+              <Text style={[styles.consentModalText, { color: theme.textColor }]}>
+                This feature uses an external API service (Deepgram) to convert your voice recordings into text.
+              </Text>
+              
+              <Text style={[styles.consentModalText, { color: theme.textColor }]}>
+                Your audio will be processed by this third-party service to provide transcription. No audio is stored permanently by the service.
+              </Text>
+
+              <Text style={[styles.consentModalText, { color: theme.secondaryTextColor }]}>
+                Do you agree to use this voice transcription feature?
+              </Text>
+            </View>
+
+            {/* Actions */}
+            <View style={styles.consentModalActions}>
+              <TouchableOpacity
+                style={[styles.consentModalButton, styles.consentModalDeclineButton]}
+                onPress={handleDeclineConsent}
+              >
+                <Text style={styles.consentModalDeclineText}>No, take me back</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.consentModalButton, styles.consentModalAcceptButton, { backgroundColor: theme.accentColor }]}
+                onPress={handleAcceptConsent}
+              >
+                <Text style={styles.consentModalAcceptText}>Yes, I agree</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -391,5 +494,87 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     letterSpacing: 0.2,
+  },
+  // Consent modal styles
+  consentModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  consentModalContainer: {
+    borderRadius: 20,
+    width: '100%',
+    maxWidth: 400,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 16,
+    elevation: 16,
+  },
+  consentModalHeader: {
+    padding: 24,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(0,0,0,0.1)',
+  },
+  consentModalTitle: {
+    fontSize: 20,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  consentModalContent: {
+    padding: 24,
+    paddingTop: 20,
+    paddingBottom: 20,
+  },
+  consentModalText: {
+    fontSize: 16,
+    lineHeight: 24,
+    marginBottom: 16,
+    textAlign: 'left',
+  },
+  consentModalActions: {
+    flexDirection: 'row',
+    padding: 24,
+    paddingTop: 16,
+    gap: 12,
+  },
+  consentModalButton: {
+    flex: 1,
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  consentModalDeclineButton: {
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#999999',
+  },
+  consentModalAcceptButton: {
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  consentModalDeclineText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#999999',
+  },
+  consentModalAcceptText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
   },
 });
