@@ -4,19 +4,27 @@ module.exports = {
     '<rootDir>/jest.setup.js'
   ],
   testEnvironment: 'node',
+  setupFiles: ['<rootDir>/jest.setup.js'],
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
   transformIgnorePatterns: [
-    'node_modules/(?!(react-native|@react-native|react-native-svg|expo|@expo|axios)/)'
+    'node_modules/(?!(react-native|@react-native|react-native-svg|expo|@expo|axios)/)',
+    'node_modules/(?!(expo-file-system|react-native|@react-native|expo)/)'
   ],
+  transform: {
+    '^.+\\.jsx?$': 'babel-jest',
+  },
   moduleNameMapper: {
     '^@env$': '<rootDir>/__mocks__/@env.js',
-    '\\.(svg)$': '<rootDir>/__mocks__/svg.js'
+    '^expo-file-system/legacy$': '<rootDir>/__mocks__/expo-file-system.js',
+    '^react-native$': '<rootDir>/__mocks__/react-native.js',
   },
   collectCoverageFrom: [
     'utils/**/*.{js,jsx}',
     'screens/**/*.{js,jsx}',
     '!**/*.test.{js,jsx}',
     '!**/node_modules/**',
+    'services/**/*.js',
+    '!services/**/*.test.js'
   ],
   testMatch: [
     '**/__tests__/**/*.{js,jsx}',

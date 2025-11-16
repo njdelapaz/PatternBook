@@ -168,6 +168,8 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
   const [isTranscribing, setIsTranscribing] = useState(false);
   const recordingRef = useRef(null);
   const isStartingRef = useRef(false);
+  const [syncStatus, setSyncStatus] = useState('synced'); // 'syncing', 'synced'
+  const syncTimeoutRef = useRef(null);
 
   // Initialize audio mode on mount for iOS (expo-av)
   useEffect(() => {
@@ -212,19 +214,33 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
     };
   }, []);
 
-  // Auto-save with debouncing
+  // Auto-save with debouncing and sync status
   useEffect(() => {
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
+    if (syncTimeoutRef.current) {
+      clearTimeout(syncTimeoutRef.current);
+    }
+
+    // Show syncing status immediately
+    setSyncStatus('syncing');
 
     saveTimeoutRef.current = setTimeout(() => {
       onSave(title, content);
+
+      // After save, wait 1 second then show synced
+      syncTimeoutRef.current = setTimeout(() => {
+        setSyncStatus('synced');
+      }, 1000);
     }, 500);
 
     return () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
+      }
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current);
       }
     };
   }, [title, content]);
@@ -446,7 +462,7 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
   const stopAndTranscribe = async () => {
     try {
       console.log('=== STOP RECORDING CALLED ===', new Date().toISOString());
-      
+
       // Wait for recording to actually start if it's still initializing
       let attempts = 0;
       while (isStartingRef.current && attempts < 50) {
@@ -454,7 +470,7 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
         await new Promise(resolve => setTimeout(resolve, 20));
         attempts++;
       }
-      
+
       if (!recordingRef.current) {
         console.log('No recording to stop');
         return;
@@ -463,7 +479,7 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
       setIsRecording(false);
       const status = await recordingRef.current.getStatusAsync();
       console.log('Recording status before stop:', status);
-      
+
       await recordingRef.current.stopAndUnloadAsync();
       const uri = recordingRef.current.getURI();
       recordingRef.current = null;
@@ -486,6 +502,15 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
       const transcription = await transcribeAudioWithDeepgram(uri);
       if (transcription) {
         setContent(prev => (prev ? prev + (prev.endsWith('\n') ? '' : '\n') + transcription : transcription));
+
+        // Trigger sync animation after transcription
+        setSyncStatus('syncing');
+        if (syncTimeoutRef.current) {
+          clearTimeout(syncTimeoutRef.current);
+        }
+        syncTimeoutRef.current = setTimeout(() => {
+          setSyncStatus('synced');
+        }, 1000);
       }
     } catch (e) {
       console.error('Failed to stop or transcribe', e);
@@ -515,7 +540,7 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
             <TouchableOpacity onPress={onBack} style={styles.todayButton}>
               <Text style={[styles.todayButtonText, { color: theme.accentColor }]}>← Today</Text>
             </TouchableOpacity>
-            
+
             <View style={styles.titleContainer}>
               {isEditingTitle ? (
                 <TextInput
@@ -526,26 +551,31 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
                   autoFocus
                 />
               ) : (
-                <TouchableOpacity 
-                  style={styles.titleDisplay}
-                  onPress={() => setIsEditingTitle(true)}
-                >
-                  <Text style={[styles.titleText, { color: theme.textColor }]}>{title}</Text>
-                  <Text style={[styles.renameArrow, { color: theme.secondaryTextColor }]}>⌄</Text>
-                </TouchableOpacity>
+                <View style={styles.titleWithSync}>
+                  <TouchableOpacity
+                    style={styles.titleDisplay}
+                    onPress={() => setIsEditingTitle(true)}
+                  >
+                    <Text style={[styles.titleText, { color: theme.textColor }]}>{title}</Text>
+                    <Text style={[styles.renameArrow, { color: theme.secondaryTextColor }]}>⌄</Text>
+                  </TouchableOpacity>
+                  <Text style={[styles.syncIndicator, { color: '#fff' }]}>
+                    {syncStatus === 'syncing' ? 'syncing...' : 'synced'}
+                  </Text>
+                </View>
               )}
             </View>
 
             <View style={styles.editorActions}>
-              <TouchableOpacity 
-                onPress={handleUndo} 
+              <TouchableOpacity
+                onPress={handleUndo}
                 style={[styles.actionButton, { backgroundColor: theme.cardBackground, opacity: historyIndex > 0 ? 1 : 0.3 }]}
                 disabled={historyIndex <= 0}
               >
                 <UndoIcon width={20} height={20} color={theme.textColor} />
               </TouchableOpacity>
-              <TouchableOpacity 
-                onPress={handleRedo} 
+              <TouchableOpacity
+                onPress={handleRedo}
                 style={[styles.actionButton, { backgroundColor: theme.cardBackground, opacity: historyIndex < history.length - 1 ? 1 : 0.3 }]}
                 disabled={historyIndex >= history.length - 1}
               >
@@ -958,6 +988,7 @@ export default function App() {
 
   const handleLogin = () => {
     setIsLoggedIn(true);
+    setHasCompletedOnboarding(true); // Skip onboarding for demo
   };
 
   const handleCompleteOnboarding = () => {
@@ -1189,6 +1220,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
   },
+  titleWithSync: {
+    alignItems: 'center',
+  },
   titleDisplay: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1199,6 +1233,13 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginRight: 8,
     letterSpacing: -0.2,
+  },
+  syncIndicator: {
+    fontSize: 14,
+    opacity: 1,
+    fontStyle: 'italic',
+    fontWeight: '600',
+    marginTop: 2,
   },
   renameArrow: {
     fontSize: 14,
