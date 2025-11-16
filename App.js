@@ -22,6 +22,7 @@ import { darkTheme, lightTheme } from './utils/constants';
 import { transcribeAudioWithDeepgram, isDeepgramConfigured } from './utils/deepgram';
 import { MarkdownText, formatTimestamp } from './utils/components';
 import { buildChatMessages, getDefaultChatModel, getDefaultMaxTokens, getDefaultTemperature } from './utils/chat';
+import { buildSecurePrompt, sanitizeInput, MAX_INPUT_LENGTHS } from './utils/llmGuardrails';
 
 // Import LLM Service
 import { callLLM } from './services/llmService';
@@ -85,48 +86,71 @@ function generateTitleFromContent(content) {
   return content.split(' ').slice(0, 5).join(' ') || 'Untitled Note';
 }
 
+// Summary prompt template
+const SUMMARY_TEMPLATE = `You are a helpful assistant that creates concise, clear summaries. Keep summaries under 50 words and capture the main point.
+
+Please summarize this note in 1-2 sentences:
+
+{{content}}`;
+
 // Generate AI summary for note content (internal function)
+// Applies security guardrails: sanitization, PII detection, length validation
 async function generateSummary(content) {
   try {
-    const response = await fetch(OPENAI_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a helpful assistant that creates concise, clear summaries. Keep summaries under 50 words and capture the main point.',
-          },
-          {
-            role: 'user',
-            content: `Please summarize this note in 1-2 sentences:\n\n${content.slice(0, 2000)}${content.length > 2000 ? '...' : ''}`,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 100,
-      }),
+    // Sanitize content with guardrails
+    const contentSanitized = sanitizeInput(content || '', {
+      maxLength: MAX_INPUT_LENGTHS.summary,
+      sanitizePII: true,
+      sanitizeInjection: true,
+      truncate: true, // Truncate if too long
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      if (response.status === 429) {
-        throw new Error('OpenAI quota exceeded. Please add credits to your account.');
-      } else if (response.status === 401) {
-        throw new Error('OpenAI API key is invalid or expired.');
-      } else {
-        throw new Error(errorData.error?.message || `API Error (${response.status}): Failed to generate summary`);
-      }
+    if (!contentSanitized.isValid) {
+      // If validation fails, use truncated fallback
+      const fallback = content.slice(0, 100) + (content.length > 100 ? '...' : '');
+      return fallback;
     }
 
-    const data = await response.json();
-    const summary = data.choices[0]?.message?.content || '';
-    return summary.trim() || content.slice(0, 100) + '...';
+    // Build secure prompt using template
+    const promptResult = buildSecurePrompt(SUMMARY_TEMPLATE, {
+      content: contentSanitized.sanitized,
+    }, {
+      maxLength: MAX_INPUT_LENGTHS.summary,
+      sanitizePII: true,
+      sanitizeInjection: true,
+    });
+
+    if (!promptResult.isValid) {
+      // Fallback if prompt building fails
+      const fallback = contentSanitized.sanitized.slice(0, 100) + (contentSanitized.sanitized.length > 100 ? '...' : '');
+      return fallback;
+    }
+
+    // Use callLLM service instead of direct fetch for consistency and guardrails
+    const result = await callLLM({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a helpful assistant that creates concise, clear summaries. Keep summaries under 50 words and capture the main point.',
+        },
+        {
+          role: 'user',
+          content: `Please summarize this note in 1-2 sentences:\n\n${promptResult.prompt}`,
+        },
+      ],
+      temperature: 0.7,
+      maxTokens: 100,
+    });
+
+    if (result.success && result.data && result.data.content) {
+      return result.data.content.trim() || contentSanitized.sanitized.slice(0, 100) + '...';
+    }
+
+    // Fallback on error
+    return contentSanitized.sanitized.slice(0, 100) + (contentSanitized.sanitized.length > 100 ? '...' : '');
   } catch (error) {
-    // Silently handle error for demo - just return fallback
+    // Silently handle error - return fallback
     // console.error('Error generating summary:', error);
     return content.slice(0, 100) + (content.length > 100 ? '...' : '');
   }
@@ -342,7 +366,8 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
 
     // Build message history with note context BEFORE adding user message to UI
     // This ensures we don't duplicate the current message
-    const messages = buildChatMessages(
+    // Guardrails are applied: sanitization, PII detection, length validation
+    const chatResult = buildChatMessages(
       title,
       content,
       chatMessages, // Previous conversation history (before current message)
@@ -352,12 +377,16 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
     // Add user message to chat UI
     setChatMessages(prev => [...prev, userMessage]);
 
-    try {
+    // Log warnings if any (PII detected, injection attempts, etc.)
+    if (chatResult.warnings && chatResult.warnings.length > 0) {
+      console.log('[Chat Guardrails] Warnings:', chatResult.warnings);
+    }
 
-      // Call OpenAI API
+    try {
+      // Call OpenAI API with sanitized messages
       const result = await callLLM({
         model: getDefaultChatModel(),
-        messages,
+        messages: chatResult.messages,
         temperature: getDefaultTemperature(),
         maxTokens: getDefaultMaxTokens(),
       });

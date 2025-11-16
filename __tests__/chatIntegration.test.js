@@ -21,15 +21,15 @@ describe('Chat Integration', () => {
       const previousMessages = [];
       const currentMessage = 'What do you think?';
 
-      const messages = buildChatMessages(title, content, previousMessages, currentMessage);
+      const result = buildChatMessages(title, content, previousMessages, currentMessage);
 
-      expect(messages).toHaveLength(2);
-      expect(messages[0].role).toBe('system');
-      expect(messages[0].content).toContain('You are a helpful assistant');
-      expect(messages[0].content).toContain(title);
-      expect(messages[0].content).toContain(content);
-      expect(messages[1].role).toBe('user');
-      expect(messages[1].content).toBe(currentMessage);
+      expect(result.messages).toHaveLength(2);
+      expect(result.messages[0].role).toBe('system');
+      expect(result.messages[0].content).toContain('You are a helpful assistant');
+      expect(result.messages[0].content).toContain(title);
+      expect(result.messages[0].content).toContain(content);
+      expect(result.messages[1].role).toBe('user');
+      expect(result.messages[1].content).toBe(currentMessage);
     });
 
     test('should include conversation history', () => {
@@ -41,13 +41,13 @@ describe('Chat Integration', () => {
       ];
       const currentMessage = 'Follow-up question';
 
-      const messages = buildChatMessages(title, content, previousMessages, currentMessage);
+      const result = buildChatMessages(title, content, previousMessages, currentMessage);
 
-      expect(messages).toHaveLength(4);
-      expect(messages[0].role).toBe('system');
-      expect(messages[1].content).toBe('First question');
-      expect(messages[2].content).toBe('First answer');
-      expect(messages[3].content).toBe('Follow-up question');
+      expect(result.messages).toHaveLength(4);
+      expect(result.messages[0].role).toBe('system');
+      expect(result.messages[1].content).toBe('First question');
+      expect(result.messages[2].content).toBe('First answer');
+      expect(result.messages[3].content).toBe('Follow-up question');
     });
   });
 
@@ -63,11 +63,11 @@ describe('Chat Integration', () => {
 
       const title = 'Test Note';
       const content = 'Test content';
-      const messages = buildChatMessages(title, content, [], 'Test question');
+      const chatResult = buildChatMessages(title, content, [], 'Test question');
 
       await callLLM({
         model: 'gpt-4o-mini',
-        messages,
+        messages: chatResult.messages,
         temperature: 0.7,
         maxTokens: 500,
       });
@@ -150,11 +150,11 @@ describe('Chat Integration', () => {
       const content = '';
       const currentMessage = 'Hello';
 
-      const messages = buildChatMessages(title, content, [], currentMessage);
+      const result = buildChatMessages(title, content, [], currentMessage);
 
-      expect(messages).toHaveLength(2);
-      expect(messages[0].role).toBe('system');
-      expect(messages[1].content).toBe('Hello');
+      expect(result.messages).toHaveLength(2);
+      expect(result.messages[0].role).toBe('system');
+      expect(result.messages[1].content).toBe('Hello');
     });
 
     test('should handle very long note content', () => {
@@ -162,10 +162,11 @@ describe('Chat Integration', () => {
       const content = 'A'.repeat(10000);
       const currentMessage = 'Question';
 
-      const messages = buildChatMessages(title, content, [], currentMessage);
+      const result = buildChatMessages(title, content, [], currentMessage);
 
-      expect(messages).toHaveLength(2);
-      expect(messages[0].content).toContain(content);
+      expect(result.messages).toHaveLength(2);
+      // Content should be truncated but system message should still be valid
+      expect(result.messages[0].content.length).toBeGreaterThan(0);
     });
   });
 });
