@@ -23,6 +23,7 @@ import { transcribeAudioWithDeepgram, isDeepgramConfigured } from './utils/deepg
 import { MarkdownText, formatTimestamp } from './utils/components';
 import { buildChatMessages, getDefaultChatModel, getDefaultMaxTokens, getDefaultTemperature } from './utils/chat';
 import { buildSecurePrompt, sanitizeInput, MAX_INPUT_LENGTHS } from './utils/llmGuardrails';
+import { generateTextSummary } from './utils/textSummarization';
 
 // Import LLM Service
 import { callLLM } from './services/llmService';
@@ -95,6 +96,7 @@ Please summarize this note in 1-2 sentences:
 
 // Generate AI summary for note content (internal function)
 // Applies security guardrails: sanitization, PII detection, length validation
+// Uses text-based fallback when AI API fails (after retries with exponential backoff)
 async function generateSummary(content) {
   try {
     // Sanitize content with guardrails
@@ -106,9 +108,8 @@ async function generateSummary(content) {
     });
 
     if (!contentSanitized.isValid) {
-      // If validation fails, use truncated fallback
-      const fallback = content.slice(0, 100) + (content.length > 100 ? '...' : '');
-      return fallback;
+      // If validation fails, use text-based fallback
+      return generateTextSummary(content);
     }
 
     // Build secure prompt using template
@@ -122,11 +123,10 @@ async function generateSummary(content) {
 
     if (!promptResult.isValid) {
       // Fallback if prompt building fails
-      const fallback = contentSanitized.sanitized.slice(0, 100) + (contentSanitized.sanitized.length > 100 ? '...' : '');
-      return fallback;
+      return generateTextSummary(contentSanitized.sanitized);
     }
 
-    // Use callLLM service instead of direct fetch for consistency and guardrails
+    // Use callLLM service (includes retry logic with exponential backoff)
     const result = await callLLM({
       model: 'gpt-4o-mini',
       messages: [
@@ -143,16 +143,21 @@ async function generateSummary(content) {
       maxTokens: 100,
     });
 
+    // If API call succeeded, return AI-generated summary
     if (result.success && result.data && result.data.content) {
-      return result.data.content.trim() || contentSanitized.sanitized.slice(0, 100) + '...';
+      const aiSummary = result.data.content.trim();
+      if (aiSummary.length > 0) {
+        return aiSummary;
+      }
     }
 
-    // Fallback on error
-    return contentSanitized.sanitized.slice(0, 100) + (contentSanitized.sanitized.length > 100 ? '...' : '');
+    // API failed after retries - use text-based fallback
+    // This handles: rate limits, network errors, API errors, quota exceeded, etc.
+    return generateTextSummary(contentSanitized.sanitized);
   } catch (error) {
-    // Silently handle error - return fallback
-    // console.error('Error generating summary:', error);
-    return content.slice(0, 100) + (content.length > 100 ? '...' : '');
+    // Unexpected error - use text-based fallback
+    // Silently handle error (no user-facing messages as per requirements)
+    return generateTextSummary(content);
   }
 }
 
@@ -878,6 +883,7 @@ export default function App() {
     setCurrentScreen('editor');
 
     // Generate summary asynchronously and cache it
+    // generateSummary handles retries and fallbacks internally
     try {
       const summary = await generateSummary(transcription);
       const noteWithSummary = { ...newNote, summary, aiSummary: summary };
@@ -887,9 +893,8 @@ export default function App() {
       setNotes(notesWithSummary);
       saveNotes(notesWithSummary);
     } catch (error) {
-      // Silently handle error for demo - just use fallback
-      // console.error('Error generating summary:', error);
-      const fallbackSummary = transcription.slice(0, 100) + '...';
+      // Silently handle error - use text-based fallback
+      const fallbackSummary = generateTextSummary(transcription);
       const noteWithError = { ...newNote, summary: fallbackSummary, aiSummary: fallbackSummary };
       const notesWithError = updatedNotes.map(note =>
         note.id === newNote.id ? noteWithError : note
