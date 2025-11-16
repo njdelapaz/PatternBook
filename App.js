@@ -21,6 +21,10 @@ import { loadNotes, saveNotes } from './utils/storage';
 import { darkTheme, lightTheme } from './utils/constants';
 import { transcribeAudioWithDeepgram, isDeepgramConfigured } from './utils/deepgram';
 import { MarkdownText, formatTimestamp } from './utils/components';
+import { buildChatMessages, getDefaultChatModel, getDefaultMaxTokens, getDefaultTemperature } from './utils/chat';
+
+// Import LLM Service
+import { callLLM } from './services/llmService';
 
 // Import Carbon icons (for remaining components)
 import KeyboardIcon from './assets/carbon-icons/carbon--keyboard.svg';
@@ -32,8 +36,8 @@ import ChatIcon from './assets/carbon-icons/carbon--chat.svg';
 // OpenAI API Configuration
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
-// Demo user messages that auto-fill for easy presentation
-const DEMO_USER_MESSAGES = {
+// Demo user messages that auto-fill for easy presentation (development only)
+const DEMO_USER_MESSAGES = __DEV__ ? {
   dream: [
     "What do you think this dream means?",
     "I'm not sure, maybe I've been thinking about nostalgia lately",
@@ -44,10 +48,11 @@ const DEMO_USER_MESSAGES = {
     "Maybe I should focus on one thing at a time",
     "I think it means choosing projects that align with my values"
   ]
-};
+} : null;
 
-// Canned chat responses for demo - organized by note content
-const CHAT_RESPONSES = {
+// Canned chat responses for demo - organized by note content (development only)
+// Note: These are only used as fallback if API fails
+const CHAT_RESPONSES = __DEV__ ? {
   // For the "dream library" note (first voice recording)
   dream: [
     "That's a fascinating dream! The library of altered memories sounds like your subconscious exploring the malleability of memory. What do you think triggered this dream?",
@@ -60,7 +65,7 @@ const CHAT_RESPONSES = {
     "It sounds like you're recognizing the difference between being busy and being purposeful. Have you thought about what 'intentional' looks like for you specifically?",
     "This is such an important realization. Measuring worth by accomplishments can be exhausting. What would it look like to measure your worth differently?"
   ]
-};
+} : null;
 
 // Generate title based on content (hard-coded for demo)
 function generateTitleFromContent(content) {
@@ -305,59 +310,122 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
       return;
     }
 
-    // Auto-fill the next demo message for easy presentation
-    const noteType = content.toLowerCase().includes('dream') && content.toLowerCase().includes('library')
-      ? 'dream'
-      : 'productivity';
+    // Auto-fill demo message only in development mode
+    if (__DEV__ && DEMO_USER_MESSAGES) {
+      const noteType = content.toLowerCase().includes('dream') && content.toLowerCase().includes('library')
+        ? 'dream'
+        : 'productivity';
 
-    // Count how many user messages have been sent
-    const userMessageCount = chatMessages.filter(msg => msg.role === 'user').length;
-    const demoMessages = DEMO_USER_MESSAGES[noteType];
+      // Count how many user messages have been sent
+      const userMessageCount = chatMessages.filter(msg => msg.role === 'user').length;
+      const demoMessages = DEMO_USER_MESSAGES[noteType];
 
-    // Auto-fill with the next message in sequence (cycles if exceeded)
-    if (demoMessages && demoMessages.length > 0) {
-      const nextMessage = demoMessages[userMessageCount % demoMessages.length];
-      setChatInput(nextMessage);
+      // Auto-fill with the next message in sequence (cycles if exceeded)
+      if (demoMessages && demoMessages.length > 0) {
+        const nextMessage = demoMessages[userMessageCount % demoMessages.length];
+        setChatInput(nextMessage);
+      }
     }
 
     setShowChat(true);
   };
 
-  // Handle sending a chat message (stubbed with canned responses)
+  // Handle sending a chat message with OpenAI API integration
   const handleSendChatMessage = async () => {
     if (!chatInput.trim()) return;
 
-    // Add user message
-    const userMessage = { role: 'user', content: chatInput };
-    setChatMessages(prev => [...prev, userMessage]);
+    // Store user input and clear input field
+    const userInput = chatInput.trim();
+    const userMessage = { role: 'user', content: userInput };
     setChatInput('');
     setIsLoadingChat(true);
 
-    // Simulate AI thinking delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Build message history with note context BEFORE adding user message to UI
+    // This ensures we don't duplicate the current message
+    const messages = buildChatMessages(
+      title,
+      content,
+      chatMessages, // Previous conversation history (before current message)
+      userInput // Current user message
+    );
 
-    // Determine which response set to use based on note content
-    const isDreamNote = content.toLowerCase().includes('dream') || content.toLowerCase().includes('library');
-    const responseSet = isDreamNote ? CHAT_RESPONSES.dream : CHAT_RESPONSES.productivity;
-    const noteType = isDreamNote ? 'dream' : 'productivity';
+    // Add user message to chat UI
+    setChatMessages(prev => [...prev, userMessage]);
 
-    // Get the appropriate canned response based on message count
-    const responseIndex = chatMessageCount % responseSet.length;
-    const aiResponse = responseSet[responseIndex];
+    try {
 
-    // Add AI message
-    const aiMessage = { role: 'assistant', content: aiResponse };
-    setChatMessages(prev => [...prev, aiMessage]);
-    setChatMessageCount(prev => prev + 1);
-    setIsLoadingChat(false);
+      // Call OpenAI API
+      const result = await callLLM({
+        model: getDefaultChatModel(),
+        messages,
+        temperature: getDefaultTemperature(),
+        maxTokens: getDefaultMaxTokens(),
+      });
 
-    // Auto-fill the next demo message for easy presentation
-    const newUserMessageCount = chatMessages.filter(msg => msg.role === 'user').length + 1; // +1 for message we just sent
-    const demoMessages = DEMO_USER_MESSAGES[noteType];
+      if (result.success && result.data && result.data.content) {
+        // Add AI response to chat
+        const aiMessage = { role: 'assistant', content: result.data.content };
+        setChatMessages(prev => [...prev, aiMessage]);
+      } else {
+        // Gracefully handle error - use fallback response in development, otherwise silently fail
+        if (__DEV__ && CHAT_RESPONSES) {
+          const isDreamNote = content.toLowerCase().includes('dream') || content.toLowerCase().includes('library');
+          const responseSet = isDreamNote ? CHAT_RESPONSES.dream : CHAT_RESPONSES.productivity;
+          const noteType = isDreamNote ? 'dream' : 'productivity';
+          
+          if (responseSet && responseSet.length > 0) {
+            const responseIndex = chatMessageCount % responseSet.length;
+            const fallbackResponse = responseSet[responseIndex];
+            const aiMessage = { role: 'assistant', content: fallbackResponse };
+            setChatMessages(prev => [...prev, aiMessage]);
+            setChatMessageCount(prev => prev + 1);
+          } else {
+            // Remove user message if we can't provide a response
+            setChatMessages(prev => prev.slice(0, -1));
+          }
+        } else {
+          // In production, silently remove the user message if API fails
+          setChatMessages(prev => prev.slice(0, -1));
+        }
+      }
+    } catch (error) {
+      // Gracefully handle unexpected errors - no user-facing error messages
+      console.error('[Chat] Error sending message:', error);
+      
+      // Use fallback in development, otherwise silently fail
+      if (__DEV__ && CHAT_RESPONSES) {
+        const isDreamNote = content.toLowerCase().includes('dream') || content.toLowerCase().includes('library');
+        const responseSet = isDreamNote ? CHAT_RESPONSES.dream : CHAT_RESPONSES.productivity;
+        const noteType = isDreamNote ? 'dream' : 'productivity';
+        
+        if (responseSet && responseSet.length > 0) {
+          const responseIndex = chatMessageCount % responseSet.length;
+          const fallbackResponse = responseSet[responseIndex];
+          const aiMessage = { role: 'assistant', content: fallbackResponse };
+          setChatMessages(prev => [...prev, aiMessage]);
+          setChatMessageCount(prev => prev + 1);
+        } else {
+          setChatMessages(prev => prev.slice(0, -1));
+        }
+      } else {
+        // Silently remove user message on error
+        setChatMessages(prev => prev.slice(0, -1));
+      }
+    } finally {
+      setIsLoadingChat(false);
 
-    if (demoMessages && demoMessages.length > 0) {
-      const nextMessage = demoMessages[newUserMessageCount % demoMessages.length];
-      setChatInput(nextMessage);
+      // Auto-fill next demo message only in development mode
+      if (__DEV__ && DEMO_USER_MESSAGES) {
+        const isDreamNote = content.toLowerCase().includes('dream') || content.toLowerCase().includes('library');
+        const noteType = isDreamNote ? 'dream' : 'productivity';
+        const newUserMessageCount = chatMessages.filter(msg => msg.role === 'user').length + 1;
+        const demoMessages = DEMO_USER_MESSAGES[noteType];
+
+        if (demoMessages && demoMessages.length > 0) {
+          const nextMessage = demoMessages[newUserMessageCount % demoMessages.length];
+          setChatInput(nextMessage);
+        }
+      }
     }
   };
 
