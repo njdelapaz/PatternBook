@@ -18,7 +18,7 @@ import { Audio as AVAudio } from 'expo-av';
 import { darkTheme, lightTheme } from '../utils/constants';
 
 // Settings Screen Component
-export default function SettingsScreen({ settings, onSettingsChange, isDarkMode, onBack, onClearAllData }) {
+export default function SettingsScreen({ settings, onSettingsChange, isDarkMode, onBack, onClearAllData, onLogout }) {
   const insets = useSafeAreaInsets();
   const theme = isDarkMode ? darkTheme : lightTheme;
   const [isMicChecking, setIsMicChecking] = useState(false);
@@ -149,6 +149,17 @@ export default function SettingsScreen({ settings, onSettingsChange, isDarkMode,
     );
   };
 
+  const confirmLogout = () => {
+    Alert.alert(
+      'Log Out',
+      'Are you sure you want to log out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Log Out', style: 'destructive', onPress: onLogout }
+      ]
+    );
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
       <StatusBar style={isDarkMode ? "light" : "dark"} />
@@ -237,6 +248,20 @@ export default function SettingsScreen({ settings, onSettingsChange, isDarkMode,
             {micCheckResult ? (
               <Text style={[styles.noteTime, { color: theme.secondaryTextColor, marginTop: 8 }]}>{micCheckResult}</Text>
             ) : null}
+          </View>
+
+          {/* Account Section */}
+          <View style={[styles.settingsCard, { backgroundColor: theme.cardBackground }]}>
+            <Text style={[styles.settingsSectionTitle, { color: theme.textColor }]}>Account</Text>
+            <Text style={[styles.settingsLabel, { color: theme.secondaryTextColor, marginBottom: 8 }]}>
+              Log out of your account and return to the login screen.
+            </Text>
+            <TouchableOpacity
+              style={[styles.testButton, { backgroundColor: theme.accentColor }]}
+              onPress={confirmLogout}
+            >
+              <Text style={styles.testButtonText}>Log Out</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Data Management Section */}

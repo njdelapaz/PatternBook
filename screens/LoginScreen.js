@@ -12,10 +12,9 @@ import { StatusBar } from 'expo-status-bar';
 // Import icons
 import LightpageLogo from '../assets/lightpage-logo.svg';
 import GoogleIcon from '../assets/google-icon.svg';
-import AppleIcon from '../assets/apple-icon.svg';
 import EmailIcon from '../assets/email-icon.svg';
 
-export default function LoginScreen({ onLogin }) {
+export default function LoginScreen({ onLogin, onNavigateToEmail }) {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
@@ -55,16 +54,7 @@ export default function LoginScreen({ onLogin }) {
 
           <TouchableOpacity
             style={styles.loginButton}
-            onPress={onLogin}
-            activeOpacity={0.8}
-          >
-            <AppleIcon width={20} height={20} />
-            <Text style={styles.loginButtonText}>Continue with Apple</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.loginButton}
-            onPress={onLogin}
+            onPress={onNavigateToEmail}
             activeOpacity={0.8}
           >
             <EmailIcon width={20} height={20} />
