@@ -83,7 +83,7 @@ class LLMLogger {
   /**
    * Log successful API call
    */
-  async logSuccess({ requestId, model, promptTokens, completionTokens, duration, response }) {
+  async logSuccess({ requestId, model, promptTokens, completionTokens, duration, response, messages }) {
     const totalTokens = promptTokens + completionTokens;
     const cost = this.calculateCost(model, promptTokens, completionTokens);
 
@@ -91,6 +91,7 @@ class LLMLogger {
     console.log(
       `[LLM] ${model} | success ${duration}ms | ${this.formatTokens(totalTokens)} tokens | ${this.formatCost(cost)}`
     );
+    console.log('[LLM] Messages sent:', JSON.stringify(messages, null, 2));
 
     // Update session metrics
     this.sessionMetrics.totalCalls++;
@@ -123,6 +124,7 @@ class LLMLogger {
       },
       cost,
       duration,
+      messages,
       sessionMetrics: { ...this.sessionMetrics },
     };
 
@@ -132,9 +134,10 @@ class LLMLogger {
   /**
    * Log failed API call
    */
-  async logError({ requestId, model, duration, error, errorType }) {
+  async logError({ requestId, model, duration, error, errorType, messages }) {
     // Console log
     console.log(`[LLM] ${model} | error | ${error.message} (${errorType})`);
+    console.log('[LLM] Messages sent:', JSON.stringify(messages, null, 2));
 
     // Update session metrics
     this.sessionMetrics.totalCalls++;
@@ -153,6 +156,7 @@ class LLMLogger {
         details: error.details || null,
       },
       duration,
+      messages,
       sessionMetrics: { ...this.sessionMetrics },
     };
 

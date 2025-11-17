@@ -18,7 +18,7 @@ import { Audio as AVAudio } from 'expo-av';
 import { darkTheme, lightTheme } from '../utils/constants';
 
 // Settings Screen Component
-export default function SettingsScreen({ settings, onSettingsChange, isDarkMode, onBack, onClearAllData }) {
+export default function SettingsScreen({ settings, onSettingsChange, isDarkMode, onBack, onClearAllData, onNavigateToAdminPanel }) {
   const insets = useSafeAreaInsets();
   const theme = isDarkMode ? darkTheme : lightTheme;
   const [isMicChecking, setIsMicChecking] = useState(false);
@@ -242,6 +242,15 @@ export default function SettingsScreen({ settings, onSettingsChange, isDarkMode,
           {/* Data Management Section */}
           <View style={[styles.settingsCard, { backgroundColor: theme.cardBackground }]}>
             <Text style={[styles.settingsSectionTitle, { color: theme.textColor }]}>Data Management</Text>
+            <Text style={[styles.settingsLabel, { color: theme.secondaryTextColor, marginBottom: 8 }]}>
+              View RAG operations, chat queries, and system logs in the admin panel.
+            </Text>
+            <TouchableOpacity
+              style={[styles.testButton, { backgroundColor: theme.accentColor, marginBottom: 12 }]}
+              onPress={onNavigateToAdminPanel}
+            >
+              <Text style={styles.testButtonText}>🔧 Admin Panel</Text>
+            </TouchableOpacity>
             <Text style={[styles.settingsLabel, { color: theme.secondaryTextColor, marginBottom: 8 }]}>
               Clear all app data including notes, settings, and cached files. This action cannot be undone.
             </Text>

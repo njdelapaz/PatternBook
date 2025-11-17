@@ -42,7 +42,8 @@ export default function MainScreen({
   onNavigateToSettings, 
   onNavigateToRecentlyDeleted, 
   onNavigateToVoiceRecord, 
-  onNavigateToTextEditor 
+  onNavigateToTextEditor,
+  onNavigateToGlobalChat 
 }) {
   const insets = useSafeAreaInsets();
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
@@ -420,7 +421,7 @@ export default function MainScreen({
         <TouchableOpacity style={styles.navButton} onPress={onToggleSearch}>
           <SearchIcon width={24} height={24} color={theme.iconColor} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton}>
+        <TouchableOpacity style={styles.navButton} onPress={onNavigateToGlobalChat}>
           <ChatIcon width={24} height={24} color={theme.iconColor} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.navButton} onPress={onNavigateToVoiceRecord}>

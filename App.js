@@ -15,18 +15,24 @@ import SettingsScreen from './screens/SettingsScreen';
 import RecentlyDeletedScreen from './screens/RecentlyDeletedScreen';
 import TextEditorScreen from './screens/TextEditorScreen';
 import VoiceRecordingScreen from './screens/VoiceRecordingScreen';
+import GlobalChatScreen from './screens/GlobalChatScreen';
+import AdminPanelScreen from './screens/AdminPanelScreen';
 
 // Import Utilities
 import { loadNotes, saveNotes } from './utils/storage';
-import { darkTheme, lightTheme } from './utils/constants';
+import { darkTheme, lightTheme, RETRIEVAL_CONFIG } from './utils/constants';
 import { transcribeAudioWithDeepgram, isDeepgramConfigured } from './utils/deepgram';
 import { MarkdownText, formatTimestamp } from './utils/components';
 import { buildChatMessages, getDefaultChatModel, getDefaultMaxTokens, getDefaultTemperature } from './utils/chat';
 import { buildSecurePrompt, sanitizeInput, MAX_INPUT_LENGTHS } from './utils/llmGuardrails';
 import { generateTextSummary } from './utils/textSummarization';
+import { loadChatHistory, saveChatHistory } from './utils/chatStorage';
+import { buildNoteChatContext } from './utils/contextBuilder';
 
 // Import LLM Service
 import { callLLM } from './services/llmService';
+import retrievalService from './services/noteRetrievalService';
+import ragLogger from './services/ragLogger';
 
 // Import Carbon icons (for remaining components)
 import KeyboardIcon from './assets/carbon-icons/carbon--keyboard.svg';
@@ -184,7 +190,7 @@ async function getCachedSummary(note, notes, setNotes) {
 }
 
 // Note Editor Screen Component
-function NoteEditor({ note, onBack, onSave, isDarkMode }) {
+function NoteEditor({ note, notes, onBack, onSave, isDarkMode }) {
   const insets = useSafeAreaInsets();
   const [title, setTitle] = useState(note?.title || 'New Note');
   const [content, setContent] = useState(note?.content || '');
@@ -200,8 +206,41 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
   const saveTimeoutRef = useRef(null);
   const [isRecording, setIsRecording] = useState(false);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [referencedNotes, setReferencedNotes] = useState([]);
   const recordingRef = useRef(null);
   const isStartingRef = useRef(false);
+
+  // Load chat history on mount
+  useEffect(() => {
+    const loadHistory = async () => {
+      if (note && note.id) {
+        try {
+          const history = await loadChatHistory(note.id);
+          setChatMessages(history);
+        } catch (error) {
+          console.error('[NoteEditor] Error loading chat history:', error);
+        }
+      }
+    };
+    loadHistory();
+  }, [note?.id]);
+
+  // Index notes for retrieval when notes change
+  useEffect(() => {
+    if (notes && notes.length > 0) {
+      const startTime = Date.now();
+      retrievalService.indexNotes(notes);
+      const executionTime = Date.now() - startTime;
+      
+      // Log index building
+      const stats = retrievalService.getStats();
+      ragLogger.logIndexBuild({
+        noteCount: stats.noteCount,
+        chunkCount: stats.chunkCount,
+        executionTime,
+      });
+    }
+  }, [notes]);
 
   // Initialize audio mode on mount for iOS (expo-av)
   useEffect(() => {
@@ -326,92 +365,121 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
     setShowChat(true);
   };
 
-  // Handle sending a chat message with OpenAI API integration
+  // Handle sending a chat message with OpenAI API integration and RAG
   const handleSendChatMessage = async () => {
     if (!chatInput.trim()) return;
 
-    // Store user input and clear input field
     const userInput = chatInput.trim();
-    const userMessage = { role: 'user', content: userInput };
     setChatInput('');
     setIsLoadingChat(true);
 
-    // Build message history with note context BEFORE adding user message to UI
-    // This ensures we don't duplicate the current message
-    // Guardrails are applied: sanitization, PII detection, length validation
-    const chatResult = buildChatMessages(
-      title,
-      content,
-      chatMessages, // Previous conversation history (before current message)
-      userInput // Current user message
-    );
-
-    // Add user message to chat UI
-    setChatMessages(prev => [...prev, userMessage]);
-
-    // Log warnings if any (PII detected, injection attempts, etc.)
-    if (chatResult.warnings && chatResult.warnings.length > 0) {
-      console.log('[Chat Guardrails] Warnings:', chatResult.warnings);
-    }
+    // Add user message to UI
+    const newUserMessage = {
+      role: 'user',
+      content: userInput,
+      timestamp: Date.now(),
+    };
+    
+    const updatedMessages = [...chatMessages, newUserMessage];
+    setChatMessages(updatedMessages);
 
     try {
-      // Call OpenAI API with sanitized messages
+      // Log chat query
+      await ragLogger.logChatQuery({
+        query: userInput,
+        chatType: 'note',
+        noteId: note?.id,
+        noteTitle: title,
+        retrievedChunksCount: 0, // Will update after retrieval
+      });
+
+      // Retrieve relevant note chunks (excluding current note)
+      const startTime = Date.now();
+      const retrievedChunks = retrievalService.retrieve(userInput, {
+        topK: RETRIEVAL_CONFIG.TOP_K,
+        minScore: RETRIEVAL_CONFIG.MIN_SCORE,
+        excludeNoteId: note?.id,
+      });
+      const executionTime = Date.now() - startTime;
+
+      // Log retrieval
+      await ragLogger.logRetrieval({
+        query: userInput,
+        resultsCount: retrievedChunks.length,
+        results: retrievedChunks,
+        executionTime,
+        excludeNoteId: note?.id,
+      });
+
+      console.log('[NoteEditor] Retrieved chunks:', retrievedChunks.length);
+
+      // Build context with retrieval
+      const contextResult = buildNoteChatContext(
+        { title, content, id: note?.id },
+        userInput,
+        chatMessages, // Previous history (without current message)
+        retrievedChunks
+      );
+
+      // Log context building
+      await ragLogger.logContextBuild({
+        chatType: 'note',
+        ...contextResult.metadata,
+      });
+
+      // Store referenced notes for UI
+      setReferencedNotes(contextResult.metadata.retrievedNotes);
+
+      // Call LLM
       const result = await callLLM({
         model: getDefaultChatModel(),
-        messages: chatResult.messages,
+        messages: contextResult.messages,
         temperature: getDefaultTemperature(),
         maxTokens: getDefaultMaxTokens(),
       });
 
       if (result.success && result.data && result.data.content) {
-        // Add AI response to chat
-        const aiMessage = { role: 'assistant', content: result.data.content };
-        setChatMessages(prev => [...prev, aiMessage]);
-      } else {
-        // Gracefully handle error - use fallback response in development, otherwise silently fail
-        if (__DEV__ && CHAT_RESPONSES) {
-          const isDreamNote = content.toLowerCase().includes('dream') || content.toLowerCase().includes('library');
-          const responseSet = isDreamNote ? CHAT_RESPONSES.dream : CHAT_RESPONSES.productivity;
-          const noteType = isDreamNote ? 'dream' : 'productivity';
+        const assistantMessage = {
+          role: 'assistant',
+          content: result.data.content,
+          timestamp: Date.now(),
+          retrievedNotes: contextResult.metadata.retrievedNotes,
+        };
+
+        const finalMessages = [...updatedMessages, assistantMessage];
+        setChatMessages(finalMessages);
+        
+        // Save chat history
+        if (note && note.id) {
+          await saveChatHistory(note.id, finalMessages);
           
-          if (responseSet && responseSet.length > 0) {
-            const responseIndex = chatMessageCount % responseSet.length;
-            const fallbackResponse = responseSet[responseIndex];
-            const aiMessage = { role: 'assistant', content: fallbackResponse };
-            setChatMessages(prev => [...prev, aiMessage]);
-            setChatMessageCount(prev => prev + 1);
-          } else {
-            // Remove user message if we can't provide a response
-            setChatMessages(prev => prev.slice(0, -1));
-          }
-        } else {
-          // In production, silently remove the user message if API fails
-          setChatMessages(prev => prev.slice(0, -1));
+          // Log chat save
+          await ragLogger.logChatSave({
+            chatId: note.id,
+            messageCount: finalMessages.length,
+            lastMessage: assistantMessage,
+          });
         }
+
+        // Clear referenced notes after displaying
+        setTimeout(() => setReferencedNotes([]), 3000);
+      } else {
+        // Handle error - remove user message
+        setChatMessages(chatMessages);
+        console.error('[Chat] API error:', result.error);
       }
     } catch (error) {
-      // Gracefully handle unexpected errors - no user-facing error messages
       console.error('[Chat] Error sending message:', error);
       
-      // Use fallback in development, otherwise silently fail
-      if (__DEV__ && CHAT_RESPONSES) {
-        const isDreamNote = content.toLowerCase().includes('dream') || content.toLowerCase().includes('library');
-        const responseSet = isDreamNote ? CHAT_RESPONSES.dream : CHAT_RESPONSES.productivity;
-        const noteType = isDreamNote ? 'dream' : 'productivity';
-        
-        if (responseSet && responseSet.length > 0) {
-          const responseIndex = chatMessageCount % responseSet.length;
-          const fallbackResponse = responseSet[responseIndex];
-          const aiMessage = { role: 'assistant', content: fallbackResponse };
-          setChatMessages(prev => [...prev, aiMessage]);
-          setChatMessageCount(prev => prev + 1);
-        } else {
-          setChatMessages(prev => prev.slice(0, -1));
-        }
-      } else {
-        // Silently remove user message on error
-        setChatMessages(prev => prev.slice(0, -1));
-      }
+      // Log error
+      await ragLogger.logError({
+        operation: 'note_chat_send',
+        error,
+        context: { noteId: note?.id, noteTitle: title, query: userInput },
+      });
+      
+      // Remove user message on error
+      setChatMessages(chatMessages);
     } finally {
       setIsLoadingChat(false);
     }
@@ -702,19 +770,27 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
                   </View>
                 )}
                 {chatMessages.map((message, index) => (
-                  <View
-                    key={index}
-                    style={[
-                      styles.chatMessageBubble,
-                      message.role === 'user' ? styles.userMessage : styles.aiMessage
-                    ]}
-                  >
-                    <Text style={[
-                      styles.chatMessageText,
-                      { color: message.role === 'user' ? '#000' : theme.textColor }
-                    ]}>
-                      {message.content}
-                    </Text>
+                  <View key={index}>
+                    <View
+                      style={[
+                        styles.chatMessageBubble,
+                        message.role === 'user' ? styles.userMessage : styles.aiMessage
+                      ]}
+                    >
+                      <Text style={[
+                        styles.chatMessageText,
+                        { color: message.role === 'user' ? '#000' : theme.textColor }
+                      ]}>
+                        {message.content}
+                      </Text>
+                    </View>
+                    {message.role === 'assistant' && message.retrievedNotes && message.retrievedNotes.length > 0 && (
+                      <View style={styles.referencedNotesContainer}>
+                        <Text style={[styles.referencedNotesLabel, { color: theme.secondaryTextColor }]}>
+                          Referenced: {message.retrievedNotes.map(n => n.noteTitle).join(', ')}
+                        </Text>
+                      </View>
+                    )}
                   </View>
                 ))}
                 {isLoadingChat && (
@@ -757,7 +833,7 @@ export default function App() {
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
   const [notes, setNotes] = useState([]);
   const [deletedNotes, setDeletedNotes] = useState([]);
-  const [currentScreen, setCurrentScreen] = useState('main'); // 'main', 'editor', 'voice-record', 'text-editor', 'settings', 'recently-deleted'
+  const [currentScreen, setCurrentScreen] = useState('main'); // 'main', 'editor', 'voice-record', 'text-editor', 'settings', 'recently-deleted', 'global-chat', 'admin-panel'
   const [selectedNoteId, setSelectedNoteId] = useState(null);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -892,6 +968,16 @@ export default function App() {
   // Navigate to text editor screen
   const handleNavigateToTextEditor = () => {
     setCurrentScreen('text-editor');
+  };
+
+  // Navigate to global chat screen
+  const handleNavigateToGlobalChat = () => {
+    setCurrentScreen('global-chat');
+  };
+
+  // Navigate to admin panel screen
+  const handleNavigateToAdminPanel = () => {
+    setCurrentScreen('admin-panel');
   };
 
   // Handle opening an existing note
@@ -1079,10 +1165,12 @@ export default function App() {
           onNavigateToRecentlyDeleted={handleNavigateToRecentlyDeleted}
           onNavigateToVoiceRecord={handleNavigateToVoiceRecord}
           onNavigateToTextEditor={handleNavigateToTextEditor}
+          onNavigateToGlobalChat={handleNavigateToGlobalChat}
         />
       ) : currentScreen === 'editor' ? (
         <NoteEditor
           note={selectedNote}
+          notes={notes}
           onBack={handleBack}
           onSave={handleSaveNote}
           isDarkMode={isDarkMode}
@@ -1106,12 +1194,25 @@ export default function App() {
           isDarkMode={isDarkMode}
           onBack={handleNavigateBack}
           onClearAllData={handleClearAllData}
+          onNavigateToAdminPanel={handleNavigateToAdminPanel}
         />
       ) : currentScreen === 'recently-deleted' ? (
         <RecentlyDeletedScreen
           deletedNotes={deletedNotes}
           onRestoreNote={handleRestoreNote}
           onPermanentlyDeleteNote={handlePermanentlyDeleteNote}
+          isDarkMode={isDarkMode}
+          onBack={handleNavigateBack}
+        />
+      ) : currentScreen === 'global-chat' ? (
+        <GlobalChatScreen
+          isDarkMode={isDarkMode}
+          onBack={handleNavigateBack}
+          notes={notes}
+          onNotePress={handleNotePress}
+        />
+      ) : currentScreen === 'admin-panel' ? (
+        <AdminPanelScreen
           isDarkMode={isDarkMode}
           onBack={handleNavigateBack}
         />
@@ -1416,6 +1517,15 @@ const styles = StyleSheet.create({
   chatMessageText: {
     fontSize: 15,
     lineHeight: 22,
+  },
+  referencedNotesContainer: {
+    marginLeft: 8,
+    marginTop: 4,
+    marginBottom: 8,
+  },
+  referencedNotesLabel: {
+    fontSize: 12,
+    fontStyle: 'italic',
   },
   chatInputContainer: {
     flexDirection: 'row',

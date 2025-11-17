@@ -187,6 +187,7 @@ async function makeRequestWithRetry(requestId, model, messages, temperature, max
         completionTokens: result.usage.completionTokens,
         duration: result.duration,
         response: result.data,
+        messages,
       });
 
       return {
@@ -211,6 +212,7 @@ async function makeRequestWithRetry(requestId, model, messages, temperature, max
         duration: result.duration,
         error: result.error,
         errorType: result.errorType,
+        messages,
       });
 
       return {
@@ -239,6 +241,7 @@ async function makeRequestWithRetry(requestId, model, messages, temperature, max
     duration: 0,
     error: new Error('Max retries exceeded'),
     errorType: ErrorTypes.UNKNOWN,
+    messages,
   });
 
   return {
