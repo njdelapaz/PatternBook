@@ -23,7 +23,11 @@
       "updatedAt": 1723680000000,
       "pinned": true,
       "summary": "Reflecting on the decision to start journaling and committing to the practice for self-discovery.",
-      "aiSummary": "Reflecting on the decision to start journaling and committing to the practice for self-discovery."
+      "aiSummary": "Reflecting on the decision to start journaling and committing to the practice for self-discovery.",
+      "questions": [
+        "How can I make journaling a consistent habit?",
+        "What should I focus on when writing?"
+      ]
     },
     {
       "id": "1723766400000",
@@ -33,7 +37,11 @@
       "updatedAt": 1723766400000,
       "pinned": false,
       "summary": "A vivid dream exploring the malleability of memory and how recollections transform with each recall.",
-      "aiSummary": "A vivid dream exploring the malleability of memory and how recollections transform with each recall."
+      "aiSummary": "A vivid dream exploring the malleability of memory and how recollections transform with each recall.",
+      "questions": [
+        "What do you think this dream means?",
+        "Why do memories change when we recall them?"
+      ]
     },
     {
       "id": "1723852800000",
@@ -43,7 +51,11 @@
       "updatedAt": 1723852800000,
       "pinned": true,
       "summary": "Questioning the relationship between productivity and self-worth, emphasizing intentionality over busyness.",
-      "aiSummary": "Questioning the relationship between productivity and self-worth, emphasizing intentionality over busyness."
+      "aiSummary": "Questioning the relationship between productivity and self-worth, emphasizing intentionality over busyness.",
+      "questions": [
+        "How can I actually make this change?",
+        "What does intentional productivity look like?"
+      ]
     },
     {
       "id": "1723939200000",
@@ -53,7 +65,11 @@
       "updatedAt": 1723939200000,
       "pinned": false,
       "summary": "A quiet morning reflection on the simple pleasure of coffee and being present in small moments.",
-      "aiSummary": "A quiet morning reflection on the simple pleasure of coffee and being present in small moments."
+      "aiSummary": "A quiet morning reflection on the simple pleasure of coffee and being present in small moments.",
+      "questions": [
+        "Why are small moments important?",
+        "How can I be more present in daily routines?"
+      ]
     },
     {
       "id": "1724025600000",
@@ -63,7 +79,11 @@
       "updatedAt": 1724025600000,
       "pinned": false,
       "summary": "Discussing career transitions and the importance of aligning work with personal values.",
-      "aiSummary": "Discussing career transitions and the importance of aligning work with personal values."
+      "aiSummary": "Discussing career transitions and the importance of aligning work with personal values.",
+      "questions": [
+        "How do I know if I should change careers?",
+        "What steps should I take to transition?"
+      ]
     },
     {
       "id": "1724112000000",
@@ -73,7 +93,11 @@
       "updatedAt": 1724112000000,
       "pinned": false,
       "summary": "Reflecting on alternate life paths while reading 'The Midnight Library' and finding appreciation for the present.",
-      "aiSummary": "Reflecting on alternate life paths while reading 'The Midnight Library' and finding appreciation for the present."
+      "aiSummary": "Reflecting on alternate life paths while reading 'The Midnight Library' and finding appreciation for the present.",
+      "questions": [
+        "What's the main takeaway from this?",
+        "How does this relate to my life?"
+      ]
     },
     {
       "id": "1724198400000",
@@ -83,7 +107,11 @@
       "updatedAt": 1724198400000,
       "pinned": false,
       "summary": "Struggling with overwhelm and the difficulty of setting boundaries despite knowing it's necessary.",
-      "aiSummary": "Struggling with overwhelm and the difficulty of setting boundaries despite knowing it's necessary."
+      "aiSummary": "Struggling with overwhelm and the difficulty of setting boundaries despite knowing it's necessary.",
+      "questions": [
+        "How can I manage this better?",
+        "What boundaries should I set?"
+      ]
     },
     {
       "id": "1724284800000",
@@ -93,7 +121,11 @@
       "updatedAt": 1724284800000,
       "pinned": false,
       "summary": "Finding clarity and mental reset through nature hiking, recognizing the need for regular outdoor time.",
-      "aiSummary": "Finding clarity and mental reset through nature hiking, recognizing the need for regular outdoor time."
+      "aiSummary": "Finding clarity and mental reset through nature hiking, recognizing the need for regular outdoor time.",
+      "questions": [
+        "Why does nature help me feel clearer?",
+        "How can I incorporate this more regularly?"
+      ]
     },
     {
       "id": "1724371200000",
@@ -103,7 +135,11 @@
       "updatedAt": 1724371200000,
       "pinned": false,
       "summary": "Brainstorming a mood tracking app idea and questioning follow-through on creative projects.",
-      "aiSummary": "Brainstorming a mood tracking app idea and questioning follow-through on creative projects."
+      "aiSummary": "Brainstorming a mood tracking app idea and questioning follow-through on creative projects.",
+      "questions": [
+        "Should I pursue this idea?",
+        "How do I know if it's worth my time?"
+      ]
     },
     {
       "id": "1724457600000",
@@ -113,7 +149,11 @@
       "updatedAt": 1724457600000,
       "pinned": false,
       "summary": "Reflecting on generational differences in opportunities and pressures during a family dinner conversation.",
-      "aiSummary": "Reflecting on generational differences in opportunities and pressures during a family dinner conversation."
+      "aiSummary": "Reflecting on generational differences in opportunities and pressures during a family dinner conversation.",
+      "questions": [
+        "What did I learn from this conversation?",
+        "How can I apply this insight?"
+      ]
     },
     {
       "id": "1724544000000",
@@ -123,7 +163,11 @@
       "updatedAt": 1724544000000,
       "pinned": false,
       "summary": "Beginning a meditation practice and learning to accept distraction as part of the process.",
-      "aiSummary": "Beginning a meditation practice and learning to accept distraction as part of the process."
+      "aiSummary": "Beginning a meditation practice and learning to accept distraction as part of the process.",
+      "questions": [
+        "How do I get better at this?",
+        "What if my mind keeps wandering?"
+      ]
     },
     {
       "id": "1724630400000",
@@ -133,7 +177,11 @@
       "updatedAt": 1724630400000,
       "pinned": false,
       "summary": "A moment of gratitude for health, relationships, and meaningful work, recognizing its transformative power.",
-      "aiSummary": "A moment of gratitude for health, relationships, and meaningful work, recognizing its transformative power."
+      "aiSummary": "A moment of gratitude for health, relationships, and meaningful work, recognizing its transformative power.",
+      "questions": [
+        "How can I practice gratitude more?",
+        "Why does gratitude shift my perspective?"
+      ]
     },
     {
       "id": "1724716800000",
@@ -143,7 +191,11 @@
       "updatedAt": 1724716800000,
       "pinned": false,
       "summary": "Experiencing a motivation block and considering whether it's burnout requiring a genuine disconnect.",
-      "aiSummary": "Experiencing a motivation block and considering whether it's burnout requiring a genuine disconnect."
+      "aiSummary": "Experiencing a motivation block and considering whether it's burnout requiring a genuine disconnect.",
+      "questions": [
+        "How do I get unstuck?",
+        "Is this burnout or something else?"
+      ]
     },
     {
       "id": "1724803200000",
@@ -153,7 +205,11 @@
       "updatedAt": 1724803200000,
       "pinned": false,
       "summary": "Questioning checklist-based dating approaches in favor of connection and mutual growth.",
-      "aiSummary": "Questioning checklist-based dating approaches in favor of connection and mutual growth."
+      "aiSummary": "Questioning checklist-based dating approaches in favor of connection and mutual growth.",
+      "questions": [
+        "What did I learn from this conversation?",
+        "How can I apply this insight?"
+      ]
     },
     {
       "id": "1724889600000",
@@ -163,7 +219,11 @@
       "updatedAt": 1724889600000,
       "pinned": false,
       "summary": "Exploring cooking as a creative practice, embracing imperfection in the learning process.",
-      "aiSummary": "Exploring cooking as a creative practice, embracing imperfection in the learning process."
+      "aiSummary": "Exploring cooking as a creative practice, embracing imperfection in the learning process.",
+      "questions": [
+        "How do I stay motivated to learn?",
+        "Why is it okay to be bad at something?"
+      ]
     },
     {
       "id": "1724976000000",
@@ -173,7 +233,11 @@
       "updatedAt": 1724976000000,
       "pinned": false,
       "summary": "Managing presentation anxiety through worst-case thinking and questioning preparation strategies.",
-      "aiSummary": "Managing presentation anxiety through worst-case thinking and questioning preparation strategies."
+      "aiSummary": "Managing presentation anxiety through worst-case thinking and questioning preparation strategies.",
+      "questions": [
+        "How do I know if I should change careers?",
+        "What steps should I take to transition?"
+      ]
     },
     {
       "id": "1725062400000",
@@ -183,7 +247,11 @@
       "updatedAt": 1725062400000,
       "pinned": false,
       "summary": "A vivid flying dream that felt intensely real, leaving a sense of loss upon waking.",
-      "aiSummary": "A vivid flying dream that felt intensely real, leaving a sense of loss upon waking."
+      "aiSummary": "A vivid flying dream that felt intensely real, leaving a sense of loss upon waking.",
+      "questions": [
+        "What does this dream symbolize?",
+        "Why did I have this dream?"
+      ]
     },
     {
       "id": "1725148800000",
@@ -193,7 +261,11 @@
       "updatedAt": 1725148800000,
       "pinned": false,
       "summary": "Learning about habit formation from 'Atomic Habits' and considering a more incremental approach.",
-      "aiSummary": "Learning about habit formation from 'Atomic Habits' and considering a more incremental approach."
+      "aiSummary": "Learning about habit formation from 'Atomic Habits' and considering a more incremental approach.",
+      "questions": [
+        "What's the main takeaway from this?",
+        "How does this relate to my life?"
+      ]
     },
     {
       "id": "1725235200000",
@@ -203,7 +275,11 @@
       "updatedAt": 1725235200000,
       "pinned": false,
       "summary": "Noticing a sense of disconnection and operating on autopilot, seeking ways to become more present.",
-      "aiSummary": "Noticing a sense of disconnection and operating on autopilot, seeking ways to become more present."
+      "aiSummary": "Noticing a sense of disconnection and operating on autopilot, seeking ways to become more present.",
+      "questions": [
+        "How do I become more present?",
+        "What's causing this disconnection?"
+      ]
     },
     {
       "id": "1725321600000",
@@ -213,7 +289,11 @@
       "updatedAt": 1725321600000,
       "pinned": false,
       "summary": "Finding therapeutic value in physical decluttering and considering applying the same principle mentally.",
-      "aiSummary": "Finding therapeutic value in physical decluttering and considering applying the same principle mentally."
+      "aiSummary": "Finding therapeutic value in physical decluttering and considering applying the same principle mentally.",
+      "questions": [
+        "Should I pursue this idea?",
+        "How do I know if it's worth my time?"
+      ]
     },
     {
       "id": "1725408000000",
@@ -223,7 +303,11 @@
       "updatedAt": 1725408000000,
       "pinned": false,
       "summary": "Exploring questions of purpose and meaning, finding comfort in shared uncertainty.",
-      "aiSummary": "Exploring questions of purpose and meaning, finding comfort in shared uncertainty."
+      "aiSummary": "Exploring questions of purpose and meaning, finding comfort in shared uncertainty.",
+      "questions": [
+        "What did I learn from this conversation?",
+        "How can I apply this insight?"
+      ]
     },
     {
       "id": "1725494400000",
@@ -233,7 +317,11 @@
       "updatedAt": 1725494400000,
       "pinned": false,
       "summary": "A quiet morning reflection on a rainy day, finding permission to slow down and notice details.",
-      "aiSummary": "A quiet morning reflection on a rainy day, finding permission to slow down and notice details."
+      "aiSummary": "A quiet morning reflection on a rainy day, finding permission to slow down and notice details.",
+      "questions": [
+        "Why are small moments important?",
+        "How can I be more present in daily routines?"
+      ]
     },
     {
       "id": "1725580800000",
@@ -243,7 +331,11 @@
       "updatedAt": 1725580800000,
       "pinned": false,
       "summary": "Practicing conflict resolution at work through active listening and balanced communication.",
-      "aiSummary": "Practicing conflict resolution at work through active listening and balanced communication."
+      "aiSummary": "Practicing conflict resolution at work through active listening and balanced communication.",
+      "questions": [
+        "How do I know if I should change careers?",
+        "What steps should I take to transition?"
+      ]
     },
     {
       "id": "1725667200000",
@@ -253,7 +345,11 @@
       "updatedAt": 1725667200000,
       "pinned": false,
       "summary": "Recognizing being in a rut and feeling both the need for change and fear of it.",
-      "aiSummary": "Recognizing being in a rut and feeling both the need for change and fear of it."
+      "aiSummary": "Recognizing being in a rut and feeling both the need for change and fear of it.",
+      "questions": [
+        "How do I get unstuck?",
+        "Is this burnout or something else?"
+      ]
     },
     {
       "id": "1725753600000",
@@ -263,7 +359,11 @@
       "updatedAt": 1725753600000,
       "pinned": false,
       "summary": "A spontaneous coastal trip providing perspective on problems and the importance of self-care.",
-      "aiSummary": "A spontaneous coastal trip providing perspective on problems and the importance of self-care."
+      "aiSummary": "A spontaneous coastal trip providing perspective on problems and the importance of self-care.",
+      "questions": [
+        "Why do spontaneous trips feel freeing?",
+        "How can I incorporate more spontaneity?"
+      ]
     },
     {
       "id": "1725840000000",
@@ -273,7 +373,11 @@
       "updatedAt": 1725840000000,
       "pinned": false,
       "summary": "Beginning Spanish language learning with a small daily commitment, finding joy in the process.",
-      "aiSummary": "Beginning Spanish language learning with a small daily commitment, finding joy in the process."
+      "aiSummary": "Beginning Spanish language learning with a small daily commitment, finding joy in the process.",
+      "questions": [
+        "How do I stay motivated to learn?",
+        "Why is it okay to be bad at something?"
+      ]
     },
     {
       "id": "1725926400000",
@@ -283,7 +387,11 @@
       "updatedAt": 1725926400000,
       "pinned": false,
       "summary": "Reflecting on family role patterns and the challenge of evolving beyond childhood labels.",
-      "aiSummary": "Reflecting on family role patterns and the challenge of evolving beyond childhood labels."
+      "aiSummary": "Reflecting on family role patterns and the challenge of evolving beyond childhood labels.",
+      "questions": [
+        "What did I learn from this conversation?",
+        "How can I apply this insight?"
+      ]
     },
     {
       "id": "1726012800000",
@@ -293,7 +401,11 @@
       "updatedAt": 1726012800000,
       "pinned": false,
       "summary": "Celebrating a work success while reflecting on the balance between recognition and intrinsic value.",
-      "aiSummary": "Celebrating a work success while reflecting on the balance between recognition and intrinsic value."
+      "aiSummary": "Celebrating a work success while reflecting on the balance between recognition and intrinsic value.",
+      "questions": [
+        "How do I know if I should change careers?",
+        "What steps should I take to transition?"
+      ]
     },
     {
       "id": "1726099200000",
@@ -303,7 +415,11 @@
       "updatedAt": 1726099200000,
       "pinned": false,
       "summary": "A dream about a transformed childhood home, evoking a sense of searching for something elusive.",
-      "aiSummary": "A dream about a transformed childhood home, evoking a sense of searching for something elusive."
+      "aiSummary": "A dream about a transformed childhood home, evoking a sense of searching for something elusive.",
+      "questions": [
+        "What does this dream symbolize?",
+        "Why did I have this dream?"
+      ]
     },
     {
       "id": "1726185600000",
@@ -313,7 +429,11 @@
       "updatedAt": 1726185600000,
       "pinned": false,
       "summary": "Observing improved energy and attributing it to better sleep and a consistent morning routine.",
-      "aiSummary": "Observing improved energy and attributing it to better sleep and a consistent morning routine."
+      "aiSummary": "Observing improved energy and attributing it to better sleep and a consistent morning routine.",
+      "questions": [
+        "Why are small moments important?",
+        "How can I be more present in daily routines?"
+      ]
     },
     {
       "id": "1726272000000",
@@ -323,7 +443,11 @@
       "updatedAt": 1726272000000,
       "pinned": false,
       "summary": "Taking a social media break to observe its impact on mood and explore alternative ways to spend time.",
-      "aiSummary": "Taking a social media break to observe its impact on mood and explore alternative ways to spend time."
+      "aiSummary": "Taking a social media break to observe its impact on mood and explore alternative ways to spend time.",
+      "questions": [
+        "How does social media affect my mood?",
+        "What should I do with the extra time?"
+      ]
     },
     {
       "id": "1726358400000",
@@ -333,7 +457,11 @@
       "updatedAt": 1726358400000,
       "pinned": false,
       "summary": "Learning that creativity requires showing up consistently, not waiting for inspiration to strike.",
-      "aiSummary": "Learning that creativity requires showing up consistently, not waiting for inspiration to strike."
+      "aiSummary": "Learning that creativity requires showing up consistently, not waiting for inspiration to strike.",
+      "questions": [
+        "What did I learn from this conversation?",
+        "How can I apply this insight?"
+      ]
     },
     {
       "id": "1726444800000",
@@ -343,7 +471,11 @@
       "updatedAt": 1726444800000,
       "pinned": false,
       "summary": "Experiencing unexplained anxiety and practicing mindfulness to observe it without being consumed.",
-      "aiSummary": "Experiencing unexplained anxiety and practicing mindfulness to observe it without being consumed."
+      "aiSummary": "Experiencing unexplained anxiety and practicing mindfulness to observe it without being consumed.",
+      "questions": [
+        "How can I manage this anxiety?",
+        "What's causing this feeling?"
+      ]
     },
     {
       "id": "1726531200000",
@@ -353,7 +485,11 @@
       "updatedAt": 1726531200000,
       "pinned": false,
       "summary": "A failed sourdough attempt that taught lessons about patience, timing, and connecting to tradition.",
-      "aiSummary": "A failed sourdough attempt that taught lessons about patience, timing, and connecting to tradition."
+      "aiSummary": "A failed sourdough attempt that taught lessons about patience, timing, and connecting to tradition.",
+      "questions": [
+        "How do I stay motivated to learn?",
+        "Why is it okay to be bad at something?"
+      ]
     },
     {
       "id": "1726617600000",
@@ -363,7 +499,11 @@
       "updatedAt": 1726617600000,
       "pinned": false,
       "summary": "Questioning work-life balance in favor of integration while recognizing the need for boundaries.",
-      "aiSummary": "Questioning work-life balance in favor of integration while recognizing the need for boundaries."
+      "aiSummary": "Questioning work-life balance in favor of integration while recognizing the need for boundaries.",
+      "questions": [
+        "How do I know if I should change careers?",
+        "What steps should I take to transition?"
+      ]
     },
     {
       "id": "1726704000000",
@@ -373,7 +513,11 @@
       "updatedAt": 1726704000000,
       "pinned": false,
       "summary": "A disorienting dream about being lost, possibly reflecting uncertainty about life direction.",
-      "aiSummary": "A disorienting dream about being lost, possibly reflecting uncertainty about life direction."
+      "aiSummary": "A disorienting dream about being lost, possibly reflecting uncertainty about life direction.",
+      "questions": [
+        "What does this dream symbolize?",
+        "Why did I have this dream?"
+      ]
     },
     {
       "id": "1726790400000",
@@ -383,7 +527,11 @@
       "updatedAt": 1726790400000,
       "pinned": false,
       "summary": "Establishing a daily gratitude practice and noticing its positive impact on mood and perspective.",
-      "aiSummary": "Establishing a daily gratitude practice and noticing its positive impact on mood and perspective."
+      "aiSummary": "Establishing a daily gratitude practice and noticing its positive impact on mood and perspective.",
+      "questions": [
+        "How can I practice gratitude more?",
+        "Why does gratitude shift my perspective?"
+      ]
     },
     {
       "id": "1726876800000",
@@ -393,7 +541,11 @@
       "updatedAt": 1726876800000,
       "pinned": false,
       "summary": "Exploring present-moment awareness through 'The Power of Now' and its practical challenges.",
-      "aiSummary": "Exploring present-moment awareness through 'The Power of Now' and its practical challenges."
+      "aiSummary": "Exploring present-moment awareness through 'The Power of Now' and its practical challenges.",
+      "questions": [
+        "What's the main takeaway from this?",
+        "How does this relate to my life?"
+      ]
     },
     {
       "id": "1726963200000",
@@ -403,7 +555,11 @@
       "updatedAt": 1726963200000,
       "pinned": false,
       "summary": "Experiencing a rare feeling of contentment and choosing to simply notice it without analysis.",
-      "aiSummary": "Experiencing a rare feeling of contentment and choosing to simply notice it without analysis."
+      "aiSummary": "Experiencing a rare feeling of contentment and choosing to simply notice it without analysis.",
+      "questions": [
+        "How can I feel this way more often?",
+        "What creates this sense of peace?"
+      ]
     },
     {
       "id": "1727049600000",
@@ -413,7 +569,11 @@
       "updatedAt": 1727049600000,
       "pinned": false,
       "summary": "Reframing failure as data rather than judgment, reducing fear and encouraging experimentation.",
-      "aiSummary": "Reframing failure as data rather than judgment, reducing fear and encouraging experimentation."
+      "aiSummary": "Reframing failure as data rather than judgment, reducing fear and encouraging experimentation.",
+      "questions": [
+        "What did I learn from this conversation?",
+        "How can I apply this insight?"
+      ]
     },
     {
       "id": "1727136000000",
@@ -423,7 +583,11 @@
       "updatedAt": 1727136000000,
       "pinned": false,
       "summary": "Rediscovering the joy of painting through abstract expression, free from expectations.",
-      "aiSummary": "Rediscovering the joy of painting through abstract expression, free from expectations."
+      "aiSummary": "Rediscovering the joy of painting through abstract expression, free from expectations.",
+      "questions": [
+        "Should I pursue this idea?",
+        "How do I know if it's worth my time?"
+      ]
     },
     {
       "id": "1727222400000",
@@ -433,7 +597,11 @@
       "updatedAt": 1727222400000,
       "pinned": false,
       "summary": "Managing work stress and recognizing the need to set boundaries and communicate capacity limits.",
-      "aiSummary": "Managing work stress and recognizing the need to set boundaries and communicate capacity limits."
+      "aiSummary": "Managing work stress and recognizing the need to set boundaries and communicate capacity limits.",
+      "questions": [
+        "How do I know if I should change careers?",
+        "What steps should I take to transition?"
+      ]
     },
     {
       "id": "1727308800000",
@@ -443,7 +611,11 @@
       "updatedAt": 1727308800000,
       "pinned": false,
       "summary": "A peaceful underwater dream that felt restorative and otherworldly.",
-      "aiSummary": "A peaceful underwater dream that felt restorative and otherworldly."
+      "aiSummary": "A peaceful underwater dream that felt restorative and otherworldly.",
+      "questions": [
+        "What does this dream symbolize?",
+        "Why did I have this dream?"
+      ]
     },
     {
       "id": "1727395200000",
@@ -453,7 +625,11 @@
       "updatedAt": 1727395200000,
       "pinned": false,
       "summary": "Establishing a simple morning routine and recognizing its value in setting daily tone.",
-      "aiSummary": "Establishing a simple morning routine and recognizing its value in setting daily tone."
+      "aiSummary": "Establishing a simple morning routine and recognizing its value in setting daily tone.",
+      "questions": [
+        "Why are small moments important?",
+        "How can I be more present in daily routines?"
+      ]
     },
     {
       "id": "1727481600000",
@@ -463,7 +639,11 @@
       "updatedAt": 1727481600000,
       "pinned": false,
       "summary": "Recognizing a pattern of isolation and the importance of prioritizing social connection.",
-      "aiSummary": "Recognizing a pattern of isolation and the importance of prioritizing social connection."
+      "aiSummary": "Recognizing a pattern of isolation and the importance of prioritizing social connection.",
+      "questions": [
+        "Why is connection important?",
+        "How can I prioritize relationships more?"
+      ]
     },
     {
       "id": "1727568000000",
@@ -473,7 +653,11 @@
       "updatedAt": 1727568000000,
       "pinned": false,
       "summary": "Processing a work mistake by focusing on learning and forward action rather than self-criticism.",
-      "aiSummary": "Processing a work mistake by focusing on learning and forward action rather than self-criticism."
+      "aiSummary": "Processing a work mistake by focusing on learning and forward action rather than self-criticism.",
+      "questions": [
+        "How do I stay motivated to learn?",
+        "Why is it okay to be bad at something?"
+      ]
     },
     {
       "id": "1727654400000",
@@ -483,7 +667,11 @@
       "updatedAt": 1727654400000,
       "pinned": false,
       "summary": "Experiencing a surge of inspiration and attributing it to allowing space for idle thinking.",
-      "aiSummary": "Experiencing a surge of inspiration and attributing it to allowing space for idle thinking."
+      "aiSummary": "Experiencing a surge of inspiration and attributing it to allowing space for idle thinking.",
+      "questions": [
+        "How do I capture inspiration?",
+        "What blocks my creativity?"
+      ]
     },
     {
       "id": "1727740800000",
@@ -493,7 +681,11 @@
       "updatedAt": 1727740800000,
       "pinned": false,
       "summary": "Exploring the concept of shared fictions in 'Sapiens' and questioning personal narratives.",
-      "aiSummary": "Exploring the concept of shared fictions in 'Sapiens' and questioning personal narratives."
+      "aiSummary": "Exploring the concept of shared fictions in 'Sapiens' and questioning personal narratives.",
+      "questions": [
+        "What's the main takeaway from this?",
+        "How does this relate to my life?"
+      ]
     },
     {
       "id": "1727827200000",
@@ -503,7 +695,11 @@
       "updatedAt": 1727827200000,
       "pinned": false,
       "summary": "Establishing a weekly reflection practice to process experiences and extract learning.",
-      "aiSummary": "Establishing a weekly reflection practice to process experiences and extract learning."
+      "aiSummary": "Establishing a weekly reflection practice to process experiences and extract learning.",
+      "questions": [
+        "What patterns do I notice?",
+        "How have I grown?"
+      ]
     },
     {
       "id": "1727913600000",
@@ -513,7 +709,11 @@
       "updatedAt": 1727913600000,
       "pinned": false,
       "summary": "Revisiting overwhelm and recognizing the gap between knowing what to do and actually doing it.",
-      "aiSummary": "Revisiting overwhelm and recognizing the gap between knowing what to do and actually doing it."
+      "aiSummary": "Revisiting overwhelm and recognizing the gap between knowing what to do and actually doing it.",
+      "questions": [
+        "How can I manage this better?",
+        "What boundaries should I set?"
+      ]
     },
     {
       "id": "1728000000000",
@@ -523,7 +723,11 @@
       "updatedAt": 1728000000000,
       "pinned": false,
       "summary": "A dream about teaching without preparation, exploring themes of imposter syndrome and self-trust.",
-      "aiSummary": "A dream about teaching without preparation, exploring themes of imposter syndrome and self-trust."
+      "aiSummary": "A dream about teaching without preparation, exploring themes of imposter syndrome and self-trust.",
+      "questions": [
+        "What does this dream symbolize?",
+        "Why did I have this dream?"
+      ]
     },
     {
       "id": "1728086400000",
@@ -533,7 +737,11 @@
       "updatedAt": 1728086400000,
       "pinned": false,
       "summary": "Noticing seasonal change and feeling called to align with natural rhythms of rest and renewal.",
-      "aiSummary": "Noticing seasonal change and feeling called to align with natural rhythms of rest and renewal."
+      "aiSummary": "Noticing seasonal change and feeling called to align with natural rhythms of rest and renewal.",
+      "questions": [
+        "Why are small moments important?",
+        "How can I be more present in daily routines?"
+      ]
     },
     {
       "id": "1728172800000",
@@ -543,7 +751,11 @@
       "updatedAt": 1728172800000,
       "pinned": false,
       "summary": "Learning from a grandmother's perspective on aging as gaining wisdom rather than loss.",
-      "aiSummary": "Learning from a grandmother's perspective on aging as gaining wisdom rather than loss."
+      "aiSummary": "Learning from a grandmother's perspective on aging as gaining wisdom rather than loss.",
+      "questions": [
+        "What did I learn from this conversation?",
+        "How can I apply this insight?"
+      ]
     },
     {
       "id": "1728259200000",
@@ -553,7 +765,11 @@
       "updatedAt": 1728259200000,
       "pinned": false,
       "summary": "Completing a major work project and recognizing the need for genuine rest and recovery.",
-      "aiSummary": "Completing a major work project and recognizing the need for genuine rest and recovery."
+      "aiSummary": "Completing a major work project and recognizing the need for genuine rest and recovery.",
+      "questions": [
+        "How do I know if I should change careers?",
+        "What steps should I take to transition?"
+      ]
     },
     {
       "id": "1728345600000",
@@ -563,7 +779,11 @@
       "updatedAt": 1728345600000,
       "pinned": false,
       "summary": "Expressing gratitude for health and committing to better self-care practices.",
-      "aiSummary": "Expressing gratitude for health and committing to better self-care practices."
+      "aiSummary": "Expressing gratitude for health and committing to better self-care practices.",
+      "questions": [
+        "How can I practice gratitude more?",
+        "Why does gratitude shift my perspective?"
+      ]
     },
     {
       "id": "1728432000000",
@@ -573,7 +793,11 @@
       "updatedAt": 1728432000000,
       "pinned": false,
       "summary": "Rereading 'The Alchemist' and finding new meaning in the journey versus destination theme.",
-      "aiSummary": "Rereading 'The Alchemist' and finding new meaning in the journey versus destination theme."
+      "aiSummary": "Rereading 'The Alchemist' and finding new meaning in the journey versus destination theme.",
+      "questions": [
+        "What's the main takeaway from this?",
+        "How does this relate to my life?"
+      ]
     },
     {
       "id": "1728518400000",
@@ -583,7 +807,11 @@
       "updatedAt": 1728518400000,
       "pinned": false,
       "summary": "A fall hike providing perspective through nature's beauty and seasonal transformation.",
-      "aiSummary": "A fall hike providing perspective through nature's beauty and seasonal transformation."
+      "aiSummary": "A fall hike providing perspective through nature's beauty and seasonal transformation.",
+      "questions": [
+        "Why does nature help me feel clearer?",
+        "How can I incorporate this more regularly?"
+      ]
     },
     {
       "id": "1728604800000",
@@ -593,7 +821,11 @@
       "updatedAt": 1728604800000,
       "pinned": false,
       "summary": "Navigating uncertainty about major life decisions and accepting it as part of a life stage.",
-      "aiSummary": "Navigating uncertainty about major life decisions and accepting it as part of a life stage."
+      "aiSummary": "Navigating uncertainty about major life decisions and accepting it as part of a life stage.",
+      "questions": [
+        "How do I handle uncertainty?",
+        "What should I focus on right now?"
+      ]
     },
     {
       "id": "1728691200000",
@@ -603,7 +835,11 @@
       "updatedAt": 1728691200000,
       "pinned": false,
       "summary": "A nostalgic dream about childhood simplicity and the desire to reclaim playfulness.",
-      "aiSummary": "A nostalgic dream about childhood simplicity and the desire to reclaim playfulness."
+      "aiSummary": "A nostalgic dream about childhood simplicity and the desire to reclaim playfulness.",
+      "questions": [
+        "What does this dream symbolize?",
+        "Why did I have this dream?"
+      ]
     },
     {
       "id": "1728777600000",
@@ -613,7 +849,11 @@
       "updatedAt": 1728777600000,
       "pinned": false,
       "summary": "Evaluating routine consistency and adjusting expectations to be more realistic and achievable.",
-      "aiSummary": "Evaluating routine consistency and adjusting expectations to be more realistic and achievable."
+      "aiSummary": "Evaluating routine consistency and adjusting expectations to be more realistic and achievable.",
+      "questions": [
+        "Why are small moments important?",
+        "How can I be more present in daily routines?"
+      ]
     },
     {
       "id": "1728864000000",
@@ -623,7 +863,11 @@
       "updatedAt": 1728864000000,
       "pinned": false,
       "summary": "Exploring meaning as something created through choices and actions rather than discovered.",
-      "aiSummary": "Exploring meaning as something created through choices and actions rather than discovered."
+      "aiSummary": "Exploring meaning as something created through choices and actions rather than discovered.",
+      "questions": [
+        "What did I learn from this conversation?",
+        "How can I apply this insight?"
+      ]
     },
     {
       "id": "1728950400000",
@@ -633,7 +877,11 @@
       "updatedAt": 1728950400000,
       "pinned": false,
       "summary": "A successful presentation building confidence and encouraging greater self-trust and challenge-seeking.",
-      "aiSummary": "A successful presentation building confidence and encouraging greater self-trust and challenge-seeking."
+      "aiSummary": "A successful presentation building confidence and encouraging greater self-trust and challenge-seeking.",
+      "questions": [
+        "How do I know if I should change careers?",
+        "What steps should I take to transition?"
+      ]
     },
     {
       "id": "1729036800000",
@@ -643,7 +891,11 @@
       "updatedAt": 1729036800000,
       "pinned": false,
       "summary": "Recognizing repetitive life patterns and the difficulty of breaking familiar but unhelpful cycles.",
-      "aiSummary": "Recognizing repetitive life patterns and the difficulty of breaking familiar but unhelpful cycles."
+      "aiSummary": "Recognizing repetitive life patterns and the difficulty of breaking familiar but unhelpful cycles.",
+      "questions": [
+        "How do I get unstuck?",
+        "Is this burnout or something else?"
+      ]
     },
     {
       "id": "1729123200000",
@@ -653,7 +905,11 @@
       "updatedAt": 1729123200000,
       "pinned": false,
       "summary": "A successful sourdough bake teaching lessons about patience, attention, and trusting processes.",
-      "aiSummary": "A successful sourdough bake teaching lessons about patience, attention, and trusting processes."
+      "aiSummary": "A successful sourdough bake teaching lessons about patience, attention, and trusting processes.",
+      "questions": [
+        "How do I stay motivated to learn?",
+        "Why is it okay to be bad at something?"
+      ]
     },
     {
       "id": "1729209600000",
@@ -663,7 +919,11 @@
       "updatedAt": 1729209600000,
       "pinned": false,
       "summary": "Exploring Viktor Frankl's philosophy on finding meaning through response to circumstances.",
-      "aiSummary": "Exploring Viktor Frankl's philosophy on finding meaning through response to circumstances."
+      "aiSummary": "Exploring Viktor Frankl's philosophy on finding meaning through response to circumstances.",
+      "questions": [
+        "What's the main takeaway from this?",
+        "How does this relate to my life?"
+      ]
     },
     {
       "id": "1729296000000",
@@ -673,7 +933,11 @@
       "updatedAt": 1729296000000,
       "pinned": false,
       "summary": "Experiencing contentment and practicing non-attachment to the feeling.",
-      "aiSummary": "Experiencing contentment and practicing non-attachment to the feeling."
+      "aiSummary": "Experiencing contentment and practicing non-attachment to the feeling.",
+      "questions": [
+        "How can I feel this way more often?",
+        "What creates this sense of peace?"
+      ]
     },
     {
       "id": "1729382400000",
@@ -683,7 +947,11 @@
       "updatedAt": 1729382400000,
       "pinned": false,
       "summary": "Reflecting on time's acceleration and its relationship to fewer novel experiences with age.",
-      "aiSummary": "Reflecting on time's acceleration and its relationship to fewer novel experiences with age."
+      "aiSummary": "Reflecting on time's acceleration and its relationship to fewer novel experiences with age.",
+      "questions": [
+        "What did I learn from this conversation?",
+        "How can I apply this insight?"
+      ]
     },
     {
       "id": "1729468800000",
@@ -693,7 +961,11 @@
       "updatedAt": 1729468800000,
       "pinned": false,
       "summary": "Beginning a writing project focused on the process of creation rather than outcome quality.",
-      "aiSummary": "Beginning a writing project focused on the process of creation rather than outcome quality."
+      "aiSummary": "Beginning a writing project focused on the process of creation rather than outcome quality.",
+      "questions": [
+        "Should I pursue this idea?",
+        "How do I know if it's worth my time?"
+      ]
     },
     {
       "id": "1729555200000",
@@ -703,7 +975,11 @@
       "updatedAt": 1729555200000,
       "pinned": false,
       "summary": "Setting a work boundary and reframing it as capacity protection rather than rejection.",
-      "aiSummary": "Setting a work boundary and reframing it as capacity protection rather than rejection."
+      "aiSummary": "Setting a work boundary and reframing it as capacity protection rather than rejection.",
+      "questions": [
+        "How do I know if I should change careers?",
+        "What steps should I take to transition?"
+      ]
     },
     {
       "id": "1729641600000",
@@ -713,7 +989,11 @@
       "updatedAt": 1729641600000,
       "pinned": false,
       "summary": "A dream about ocean waves evoking feelings of awe and humility before natural forces.",
-      "aiSummary": "A dream about ocean waves evoking feelings of awe and humility before natural forces."
+      "aiSummary": "A dream about ocean waves evoking feelings of awe and humility before natural forces.",
+      "questions": [
+        "What does this dream symbolize?",
+        "Why did I have this dream?"
+      ]
     },
     {
       "id": "1729728000000",
@@ -723,7 +1003,11 @@
       "updatedAt": 1729728000000,
       "pinned": true,
       "summary": "Celebrating three months of journaling and recognizing its value even in inconsistency.",
-      "aiSummary": "Celebrating three months of journaling and recognizing its value even in inconsistency."
+      "aiSummary": "Celebrating three months of journaling and recognizing its value even in inconsistency.",
+      "questions": [
+        "Why are small moments important?",
+        "How can I be more present in daily routines?"
+      ]
     },
     {
       "id": "1729814400000",
@@ -733,7 +1017,11 @@
       "updatedAt": 1729814400000,
       "pinned": false,
       "summary": "Finding inspiration in an artist's dedication and questioning personal commitment to meaningful work.",
-      "aiSummary": "Finding inspiration in an artist's dedication and questioning personal commitment to meaningful work."
+      "aiSummary": "Finding inspiration in an artist's dedication and questioning personal commitment to meaningful work.",
+      "questions": [
+        "How do I capture inspiration?",
+        "What blocks my creativity?"
+      ]
     },
     {
       "id": "1729900800000",
@@ -743,7 +1031,11 @@
       "updatedAt": 1729900800000,
       "pinned": false,
       "summary": "Discussing the difficulty of change and reframing struggle as integral to growth.",
-      "aiSummary": "Discussing the difficulty of change and reframing struggle as integral to growth."
+      "aiSummary": "Discussing the difficulty of change and reframing struggle as integral to growth.",
+      "questions": [
+        "What did I learn from this conversation?",
+        "How can I apply this insight?"
+      ]
     },
     {
       "id": "1729987200000",
@@ -753,7 +1045,11 @@
       "updatedAt": 1729987200000,
       "pinned": false,
       "summary": "Receiving work recognition while maintaining focus on intrinsic motivation over external validation.",
-      "aiSummary": "Receiving work recognition while maintaining focus on intrinsic motivation over external validation."
+      "aiSummary": "Receiving work recognition while maintaining focus on intrinsic motivation over external validation.",
+      "questions": [
+        "How do I know if I should change careers?",
+        "What steps should I take to transition?"
+      ]
     },
     {
       "id": "1730073600000",
@@ -763,7 +1059,11 @@
       "updatedAt": 1730073600000,
       "pinned": false,
       "summary": "Managing future anxiety by practicing acceptance of uncertainty and lack of control.",
-      "aiSummary": "Managing future anxiety by practicing acceptance of uncertainty and lack of control."
+      "aiSummary": "Managing future anxiety by practicing acceptance of uncertainty and lack of control.",
+      "questions": [
+        "How can I manage this anxiety?",
+        "What's causing this feeling?"
+      ]
     },
     {
       "id": "1730160000000",
@@ -773,7 +1073,11 @@
       "updatedAt": 1730160000000,
       "pinned": false,
       "summary": "Acknowledging personal growth and the importance of patience and celebrating progress.",
-      "aiSummary": "Acknowledging personal growth and the importance of patience and celebrating progress."
+      "aiSummary": "Acknowledging personal growth and the importance of patience and celebrating progress.",
+      "questions": [
+        "What patterns do I notice?",
+        "How have I grown?"
+      ]
     },
     {
       "id": "1730246400000",
@@ -783,7 +1087,11 @@
       "updatedAt": 1730246400000,
       "pinned": false,
       "summary": "A dream about gardening as a metaphor for self-care and understanding personal needs.",
-      "aiSummary": "A dream about gardening as a metaphor for self-care and understanding personal needs."
+      "aiSummary": "A dream about gardening as a metaphor for self-care and understanding personal needs.",
+      "questions": [
+        "What does this dream symbolize?",
+        "Why did I have this dream?"
+      ]
     },
     {
       "id": "1730332800000",
@@ -793,7 +1101,11 @@
       "updatedAt": 1730332800000,
       "pinned": false,
       "summary": "A comprehensive gratitude list revealing abundance when attention is directed toward it.",
-      "aiSummary": "A comprehensive gratitude list revealing abundance when attention is directed toward it."
+      "aiSummary": "A comprehensive gratitude list revealing abundance when attention is directed toward it.",
+      "questions": [
+        "Why are small moments important?",
+        "How can I be more present in daily routines?"
+      ]
     },
     {
       "id": "1730419200000",
@@ -803,7 +1115,11 @@
       "updatedAt": 1730419200000,
       "pinned": false,
       "summary": "Exploring the distinction between awareness and thoughts through 'The Untethered Soul'.",
-      "aiSummary": "Exploring the distinction between awareness and thoughts through 'The Untethered Soul'."
+      "aiSummary": "Exploring the distinction between awareness and thoughts through 'The Untethered Soul'.",
+      "questions": [
+        "What's the main takeaway from this?",
+        "How does this relate to my life?"
+      ]
     },
     {
       "id": "1730505600000",
@@ -813,7 +1129,11 @@
       "updatedAt": 1730505600000,
       "pinned": false,
       "summary": "Experiencing a moment of deep presence and contentment, recognizing it as the fruit of practice.",
-      "aiSummary": "Experiencing a moment of deep presence and contentment, recognizing it as the fruit of practice."
+      "aiSummary": "Experiencing a moment of deep presence and contentment, recognizing it as the fruit of practice.",
+      "questions": [
+        "How can I feel this way more often?",
+        "What creates this sense of peace?"
+      ]
     },
     {
       "id": "1730592000000",
@@ -823,7 +1143,11 @@
       "updatedAt": 1730592000000,
       "pinned": false,
       "summary": "Reflecting on legacy as meaningful impact on close relationships rather than fame.",
-      "aiSummary": "Reflecting on legacy as meaningful impact on close relationships rather than fame."
+      "aiSummary": "Reflecting on legacy as meaningful impact on close relationships rather than fame.",
+      "questions": [
+        "What did I learn from this conversation?",
+        "How can I apply this insight?"
+      ]
     },
     {
       "id": "1730678400000",
@@ -833,7 +1157,11 @@
       "updatedAt": 1730678400000,
       "pinned": false,
       "summary": "Embracing a challenging work opportunity and reframing discomfort as growth.",
-      "aiSummary": "Embracing a challenging work opportunity and reframing discomfort as growth."
+      "aiSummary": "Embracing a challenging work opportunity and reframing discomfort as growth.",
+      "questions": [
+        "How do I know if I should change careers?",
+        "What steps should I take to transition?"
+      ]
     },
     {
       "id": "1730764800000",
@@ -843,7 +1171,11 @@
       "updatedAt": 1730764800000,
       "pinned": false,
       "summary": "Exploring photography as a practice of presence and noticing details in the world.",
-      "aiSummary": "Exploring photography as a practice of presence and noticing details in the world."
+      "aiSummary": "Exploring photography as a practice of presence and noticing details in the world.",
+      "questions": [
+        "Should I pursue this idea?",
+        "How do I know if it's worth my time?"
+      ]
     },
     {
       "id": "1730851200000",
@@ -853,7 +1185,11 @@
       "updatedAt": 1730851200000,
       "pinned": false,
       "summary": "Expressing gratitude for relationships and committing to nurturing meaningful connections.",
-      "aiSummary": "Expressing gratitude for relationships and committing to nurturing meaningful connections."
+      "aiSummary": "Expressing gratitude for relationships and committing to nurturing meaningful connections.",
+      "questions": [
+        "How can I practice gratitude more?",
+        "Why does gratitude shift my perspective?"
+      ]
     },
     {
       "id": "1730937600000",
@@ -863,7 +1199,11 @@
       "updatedAt": 1730937600000,
       "pinned": false,
       "summary": "A dream about creating music that feels both familiar and ephemeral, accepting its transience.",
-      "aiSummary": "A dream about creating music that feels both familiar and ephemeral, accepting its transience."
+      "aiSummary": "A dream about creating music that feels both familiar and ephemeral, accepting its transience.",
+      "questions": [
+        "What does this dream symbolize?",
+        "Why did I have this dream?"
+      ]
     },
     {
       "id": "1731024000000",
@@ -873,7 +1213,11 @@
       "updatedAt": 1731024000000,
       "pinned": true,
       "summary": "Celebrating four months of journaling and recognizing it as an integral part of identity.",
-      "aiSummary": "Celebrating four months of journaling and recognizing it as an integral part of identity."
+      "aiSummary": "Celebrating four months of journaling and recognizing it as an integral part of identity.",
+      "questions": [
+        "Why are small moments important?",
+        "How can I be more present in daily routines?"
+      ]
     },
     {
       "id": "1731110400000",
@@ -883,7 +1227,11 @@
       "updatedAt": 1731110400000,
       "pinned": false,
       "summary": "Reflecting on mortality and meaning through Kalanithi's memoir, recognizing life's preciousness.",
-      "aiSummary": "Reflecting on mortality and meaning through Kalanithi's memoir, recognizing life's preciousness."
+      "aiSummary": "Reflecting on mortality and meaning through Kalanithi's memoir, recognizing life's preciousness.",
+      "questions": [
+        "What's the main takeaway from this?",
+        "How does this relate to my life?"
+      ]
     },
     {
       "id": "1731196800000",
@@ -893,7 +1241,11 @@
       "updatedAt": 1731196800000,
       "pinned": false,
       "summary": "Experiencing a moment of balance and learning to recognize and return to this state.",
-      "aiSummary": "Experiencing a moment of balance and learning to recognize and return to this state."
+      "aiSummary": "Experiencing a moment of balance and learning to recognize and return to this state.",
+      "questions": [
+        "How do I set better boundaries?",
+        "What does work-life balance mean to me?"
+      ]
     },
     {
       "id": "1731283200000",
@@ -903,7 +1255,11 @@
       "updatedAt": 1731283200000,
       "pinned": false,
       "summary": "Reframing purpose as a direction and way of being rather than a destination to find.",
-      "aiSummary": "Reframing purpose as a direction and way of being rather than a destination to find."
+      "aiSummary": "Reframing purpose as a direction and way of being rather than a destination to find.",
+      "questions": [
+        "What did I learn from this conversation?",
+        "How can I apply this insight?"
+      ]
     },
     {
       "id": "1731369600000",
@@ -913,7 +1269,11 @@
       "updatedAt": 1731369600000,
       "pinned": false,
       "summary": "Experiencing the magic of collaborative creativity and idea-building.",
-      "aiSummary": "Experiencing the magic of collaborative creativity and idea-building."
+      "aiSummary": "Experiencing the magic of collaborative creativity and idea-building.",
+      "questions": [
+        "How do I know if I should change careers?",
+        "What steps should I take to transition?"
+      ]
     },
     {
       "id": "1731456000000",
@@ -923,7 +1283,11 @@
       "updatedAt": 1731456000000,
       "pinned": false,
       "summary": "Identifying recurring themes in journaling and recognizing deepening through repeated exploration.",
-      "aiSummary": "Identifying recurring themes in journaling and recognizing deepening through repeated exploration."
+      "aiSummary": "Identifying recurring themes in journaling and recognizing deepening through repeated exploration.",
+      "questions": [
+        "What patterns do I notice?",
+        "How have I grown?"
+      ]
     },
     {
       "id": "1731542400000",
@@ -933,7 +1297,11 @@
       "updatedAt": 1731542400000,
       "pinned": false,
       "summary": "A teaching dream showing increased confidence and the desire to share knowledge meaningfully.",
-      "aiSummary": "A teaching dream showing increased confidence and the desire to share knowledge meaningfully."
+      "aiSummary": "A teaching dream showing increased confidence and the desire to share knowledge meaningfully.",
+      "questions": [
+        "What does this dream symbolize?",
+        "Why did I have this dream?"
+      ]
     },
     {
       "id": "1731628800000",
@@ -943,7 +1311,11 @@
       "updatedAt": 1731628800000,
       "pinned": false,
       "summary": "Embracing winter as a season of introspection, reflection, and preparation.",
-      "aiSummary": "Embracing winter as a season of introspection, reflection, and preparation."
+      "aiSummary": "Embracing winter as a season of introspection, reflection, and preparation.",
+      "questions": [
+        "Why are small moments important?",
+        "How can I be more present in daily routines?"
+      ]
     },
     {
       "id": "1731715200000",
@@ -953,7 +1325,11 @@
       "updatedAt": 1731715200000,
       "pinned": false,
       "summary": "Expressing gratitude for personal growth in self-awareness and presence over the past months.",
-      "aiSummary": "Expressing gratitude for personal growth in self-awareness and presence over the past months."
+      "aiSummary": "Expressing gratitude for personal growth in self-awareness and presence over the past months.",
+      "questions": [
+        "How can I practice gratitude more?",
+        "Why does gratitude shift my perspective?"
+      ]
     },
     {
       "id": "1731801600000",
@@ -963,7 +1339,11 @@
       "updatedAt": 1731801600000,
       "pinned": false,
       "summary": "Exploring themes of identity and narrative construction through a compelling novel.",
-      "aiSummary": "Exploring themes of identity and narrative construction through a compelling novel."
+      "aiSummary": "Exploring themes of identity and narrative construction through a compelling novel.",
+      "questions": [
+        "What's the main takeaway from this?",
+        "How does this relate to my life?"
+      ]
     },
     {
       "id": "1731888000000",
@@ -973,7 +1353,11 @@
       "updatedAt": 1731888000000,
       "pinned": false,
       "summary": "Beginning guitar lessons and finding value in being a beginner and embracing imperfection.",
-      "aiSummary": "Beginning guitar lessons and finding value in being a beginner and embracing imperfection."
+      "aiSummary": "Beginning guitar lessons and finding value in being a beginner and embracing imperfection.",
+      "questions": [
+        "Should I pursue this idea?",
+        "How do I know if it's worth my time?"
+      ]
     },
     {
       "id": "1731974400000",
@@ -983,7 +1367,11 @@
       "updatedAt": 1731974400000,
       "pinned": false,
       "summary": "Celebrating a work milestone and learning to value progress and completion over perfection.",
-      "aiSummary": "Celebrating a work milestone and learning to value progress and completion over perfection."
+      "aiSummary": "Celebrating a work milestone and learning to value progress and completion over perfection.",
+      "questions": [
+        "How do I know if I should change careers?",
+        "What steps should I take to transition?"
+      ]
     },
     {
       "id": "1732060800000",
@@ -993,7 +1381,11 @@
       "updatedAt": 1732060800000,
       "pinned": true,
       "summary": "Expressing gratitude for the journaling practice and its role in personal growth and awareness.",
-      "aiSummary": "Expressing gratitude for the journaling practice and its role in personal growth and awareness."
+      "aiSummary": "Expressing gratitude for the journaling practice and its role in personal growth and awareness.",
+      "questions": [
+        "How can I practice gratitude more?",
+        "Why does gratitude shift my perspective?"
+      ]
     }
   ],
   "deletedNotes": [
@@ -1038,4 +1430,3 @@
     ]
   }
 }
-
