@@ -297,7 +297,8 @@ describe('LLMLogger', () => {
       await expect(logger.writeToFile(logEntry)).resolves.not.toThrow();
       
       expect(console.error).toHaveBeenCalledWith(
-        expect.stringContaining('Failed to write to log file')
+        expect.stringContaining('Failed to write to log file'),
+        'Write failed'
       );
     });
   });
@@ -372,7 +373,8 @@ describe('LLMLogger', () => {
       
       expect(logs).toEqual([]);
       expect(console.error).toHaveBeenCalledWith(
-        expect.stringContaining('Failed to read log file')
+        expect.stringContaining('Failed to read log file'),
+        'Read failed'
       );
     });
   });

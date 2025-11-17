@@ -1,11 +1,6 @@
 // Mock Expo modules
-jest.mock('expo-file-system/legacy', () => ({
-  readAsStringAsync: jest.fn(),
-  getInfoAsync: jest.fn(),
-  EncodingType: {
-    Base64: 'base64'
-  }
-}));
+// Note: expo-file-system/legacy is mocked via moduleNameMapper in jest.config.js
+// Do not mock it here to avoid conflicts with __mocks__/expo-file-system.js
 
 jest.mock('expo-av', () => ({
   Audio: {
@@ -41,6 +36,10 @@ jest.mock('react-native-safe-area-context', () => ({
   useSafeAreaInsets: () => ({ top: 0, bottom: 0, left: 0, right: 0 })
 }));
 
+jest.mock('expo-status-bar', () => ({
+  StatusBar: () => null
+}));
+
 // Setup console mock
 // Jest setup file
 // Mock console methods for cleaner test output
@@ -52,6 +51,7 @@ global.console = {
   info: jest.fn(),
 };
 
-// Mock timers
-jest.useFakeTimers();
+// Mock timers - REMOVED: Conflicts with async tests using waitFor()
+// If fake timers are needed for specific tests, use jest.useFakeTimers() in those tests only
+// jest.useFakeTimers();
 
