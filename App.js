@@ -401,6 +401,10 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
         const aiMessage = { role: 'assistant', content: result.data.content };
         setChatMessages(prev => [...prev, aiMessage]);
       } else {
+        // Handle API errors gracefully
+        const isQuotaError = result.error && result.error.type === 'QuotaExceededError';
+        const isAuthError = result.error && result.error.type === 'AuthError';
+        
         // Gracefully handle error - use fallback response in development, otherwise silently fail
         if (__DEV__ && CHAT_RESPONSES) {
           const isDreamNote = content.toLowerCase().includes('dream') || content.toLowerCase().includes('library');
@@ -419,6 +423,7 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
           }
         } else {
           // In production, silently remove the user message if API fails
+          // Errors are logged but not shown to users (as per requirements)
           setChatMessages(prev => prev.slice(0, -1));
         }
       }
