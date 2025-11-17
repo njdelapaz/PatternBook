@@ -9,6 +9,7 @@ import { Audio as AVAudio } from 'expo-av';
 
 // Import Screen Components
 import LoginScreen from './screens/LoginScreen';
+import EmailLoginScreen from './screens/EmailLoginScreen';
 import OnboardingScreen from './screens/OnboardingScreen';
 import MainScreen from './screens/MainScreen';
 import SettingsScreen from './screens/SettingsScreen';
@@ -759,6 +760,7 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
 // Main App Component
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [showEmailLogin, setShowEmailLogin] = useState(false);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
   const [notes, setNotes] = useState([]);
   const [deletedNotes, setDeletedNotes] = useState([]);
@@ -1037,17 +1039,44 @@ export default function App() {
   const handleLogin = () => {
     setIsLoggedIn(true);
     setHasCompletedOnboarding(true); // Skip onboarding for demo
+    setCurrentScreen('main');
+  };
+
+  const handleNavigateToEmail = () => {
+    setShowEmailLogin(true);
+  };
+
+  const handleBackFromEmail = () => {
+    setShowEmailLogin(false);
   };
 
   const handleCompleteOnboarding = () => {
     setHasCompletedOnboarding(true);
   };
 
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setShowEmailLogin(false);
+    setHasCompletedOnboarding(false);
+    setCurrentScreen('main');
+    setSelectedNoteId(null);
+  };
+
   // Show login screen if not logged in
   if (!isLoggedIn) {
     return (
       <SafeAreaProvider>
-        <LoginScreen onLogin={handleLogin} />
+        {showEmailLogin ? (
+          <EmailLoginScreen
+            onBack={handleBackFromEmail}
+            onLogin={handleLogin}
+          />
+        ) : (
+          <LoginScreen
+            onLogin={handleLogin}
+            onNavigateToEmail={handleNavigateToEmail}
+          />
+        )}
       </SafeAreaProvider>
     );
   }
@@ -1111,6 +1140,7 @@ export default function App() {
           isDarkMode={isDarkMode}
           onBack={handleNavigateBack}
           onClearAllData={handleClearAllData}
+          onLogout={handleLogout}
         />
       ) : currentScreen === 'recently-deleted' ? (
         <RecentlyDeletedScreen

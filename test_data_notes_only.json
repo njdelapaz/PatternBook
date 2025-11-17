@@ -1,0 +1,982 @@
+[
+  {
+    "id": "1723680000000",
+    "title": "First thoughts on starting this journal",
+    "content": "I've been thinking about starting a journal for months. Something about the idea of having a space to just dump my thoughts without judgment feels freeing. I'm not sure what I'll write about or how often, but I'm committing to trying this for at least a month. Maybe it'll help me understand my own patterns better.",
+    "createdAt": 1723680000000,
+    "updatedAt": 1723680000000,
+    "pinned": true,
+    "summary": "Reflecting on the decision to start journaling and committing to the practice for self-discovery.",
+    "aiSummary": "Reflecting on the decision to start journaling and committing to the practice for self-discovery."
+  },
+  {
+    "id": "1723766400000",
+    "title": "Dream about an endless library",
+    "content": "I had the most interesting dream last night about wandering through an endless library. Each book seemed to contain memories from my life, but they were slightly altered each time I opened them. The librarian told me that memories aren't fixed—they change every time we recall them. It made me think about how much of my past is actually real versus how I've reconstructed it.",
+    "createdAt": 1723766400000,
+    "updatedAt": 1723766400000,
+    "pinned": false,
+    "summary": "A vivid dream exploring the malleability of memory and how recollections transform with each recall.",
+    "aiSummary": "A vivid dream exploring the malleability of memory and how recollections transform with each recall."
+  },
+  {
+    "id": "1723852800000",
+    "title": "Rethinking productivity and worth",
+    "content": "I've been measuring my worth by how much I accomplish, but that's not sustainable. Maybe the goal isn't to do more, but to be more intentional about what I choose to do. Quality over quantity. I think I've been confusing being busy with being productive.",
+    "createdAt": 1723852800000,
+    "updatedAt": 1723852800000,
+    "pinned": true,
+    "summary": "Questioning the relationship between productivity and self-worth, emphasizing intentionality over busyness.",
+    "aiSummary": "Questioning the relationship between productivity and self-worth, emphasizing intentionality over busyness."
+  },
+  {
+    "id": "1723939200000",
+    "title": "Morning pages - coffee thoughts",
+    "content": "Sitting here with my morning coffee, watching the steam rise. There's something meditative about this ritual. The way the light hits the cup, the warmth in my hands. I don't have anything profound to say today, just noticing the small moments. Maybe that's enough.",
+    "createdAt": 1723939200000,
+    "updatedAt": 1723939200000,
+    "pinned": false,
+    "summary": "A quiet morning reflection on the simple pleasure of coffee and being present in small moments.",
+    "aiSummary": "A quiet morning reflection on the simple pleasure of coffee and being present in small moments."
+  },
+  {
+    "id": "1724025600000",
+    "title": "Conversation with Sarah about career",
+    "content": "Had a long conversation with Sarah today about where we want our careers to go. She's thinking about switching to a more creative field, and I realized I've been feeling the same restlessness. We both agreed that life's too short to stay in jobs that don't align with our values. Maybe it's time to start planning a transition.",
+    "createdAt": 1724025600000,
+    "updatedAt": 1724025600000,
+    "pinned": false,
+    "summary": "Discussing career transitions and the importance of aligning work with personal values.",
+    "aiSummary": "Discussing career transitions and the importance of aligning work with personal values."
+  },
+  {
+    "id": "1724112000000",
+    "title": "Reading 'The Midnight Library'",
+    "content": "Started reading 'The Midnight Library' and it's hitting me in ways I didn't expect. The idea of exploring different versions of your life—what if I had made different choices? But I'm realizing that maybe the point isn't to find the 'perfect' life, but to appreciate the one I'm actually living. Every choice led me here, for better or worse.",
+    "createdAt": 1724112000000,
+    "updatedAt": 1724112000000,
+    "pinned": false,
+    "summary": "Reflecting on alternate life paths while reading 'The Midnight Library' and finding appreciation for the present.",
+    "aiSummary": "Reflecting on alternate life paths while reading 'The Midnight Library' and finding appreciation for the present."
+  },
+  {
+    "id": "1724198400000",
+    "title": "Feeling overwhelmed",
+    "content": "Today I'm feeling overwhelmed. Too many things on my plate, too many expectations. I know I should say no more often, but it's hard. I keep thinking about that note I wrote about productivity—maybe I need to actually practice what I'm learning. Easier said than done though.",
+    "createdAt": 1724198400000,
+    "updatedAt": 1724198400000,
+    "pinned": false,
+    "summary": "Struggling with overwhelm and the difficulty of setting boundaries despite knowing it's necessary.",
+    "aiSummary": "Struggling with overwhelm and the difficulty of setting boundaries despite knowing it's necessary."
+  },
+  {
+    "id": "1724284800000",
+    "title": "Weekend hike reflection",
+    "content": "Went for a hike this weekend and it reminded me why I love being in nature. There's something about the quiet, the way your mind can just wander without pressure. I came back feeling clearer, like I had reset something. I need to do this more often—not just when I'm stressed, but as a regular practice.",
+    "createdAt": 1724284800000,
+    "updatedAt": 1724284800000,
+    "pinned": false,
+    "summary": "Finding clarity and mental reset through nature hiking, recognizing the need for regular outdoor time.",
+    "aiSummary": "Finding clarity and mental reset through nature hiking, recognizing the need for regular outdoor time."
+  },
+  {
+    "id": "1724371200000",
+    "title": "Idea for a side project",
+    "content": "Had an idea for a side project today—a simple app that helps people track their mood and energy levels throughout the day. Nothing fancy, just a way to notice patterns. I wonder if I'm actually going to build it or if it's just another idea that will fade. Maybe I should commit to at least sketching it out this week.",
+    "createdAt": 1724371200000,
+    "updatedAt": 1724371200000,
+    "pinned": false,
+    "summary": "Brainstorming a mood tracking app idea and questioning follow-through on creative projects.",
+    "aiSummary": "Brainstorming a mood tracking app idea and questioning follow-through on creative projects."
+  },
+  {
+    "id": "1724457600000",
+    "title": "Family dinner conversation",
+    "content": "Had dinner with my parents last night and we got into a conversation about their generation versus mine. They were talking about how we have so many more opportunities, but I was thinking about how we also have so much more pressure. Different challenges, I guess. It's interesting how each generation thinks the other had it easier.",
+    "createdAt": 1724457600000,
+    "updatedAt": 1724457600000,
+    "pinned": false,
+    "summary": "Reflecting on generational differences in opportunities and pressures during a family dinner conversation.",
+    "aiSummary": "Reflecting on generational differences in opportunities and pressures during a family dinner conversation."
+  },
+  {
+    "id": "1724544000000",
+    "title": "Meditation practice",
+    "content": "Tried meditating for 10 minutes this morning. My mind was all over the place—thinking about work, what I need to do today, random memories. But I'm trying to remember that the point isn't to have a clear mind, it's to notice when you're distracted and gently come back. It's harder than I thought it would be.",
+    "createdAt": 1724544000000,
+    "updatedAt": 1724544000000,
+    "pinned": false,
+    "summary": "Beginning a meditation practice and learning to accept distraction as part of the process.",
+    "aiSummary": "Beginning a meditation practice and learning to accept distraction as part of the process."
+  },
+  {
+    "id": "1724630400000",
+    "title": "Feeling grateful",
+    "content": "Today I'm feeling grateful. For my health, my friends, having a place to live, work that challenges me even when it's hard. I don't always remember to feel this way, but when I do, it shifts everything. Maybe I should write about gratitude more often.",
+    "createdAt": 1724630400000,
+    "updatedAt": 1724630400000,
+    "pinned": false,
+    "summary": "A moment of gratitude for health, relationships, and meaningful work, recognizing its transformative power.",
+    "aiSummary": "A moment of gratitude for health, relationships, and meaningful work, recognizing its transformative power."
+  },
+  {
+    "id": "1724716800000",
+    "title": "Struggling with motivation",
+    "content": "I've been struggling with motivation lately. I know what I need to do, but I just can't seem to get started. It's like there's a wall between me and action. I wonder if this is burnout or just a phase. Maybe I need to take a real break, not just a weekend, but actually disconnect for a few days.",
+    "createdAt": 1724716800000,
+    "updatedAt": 1724716800000,
+    "pinned": false,
+    "summary": "Experiencing a motivation block and considering whether it's burnout requiring a genuine disconnect.",
+    "aiSummary": "Experiencing a motivation block and considering whether it's burnout requiring a genuine disconnect."
+  },
+  {
+    "id": "1724803200000",
+    "title": "Conversation about relationships",
+    "content": "Had a deep conversation with a friend about relationships and what we're looking for. We both realized we've been approaching dating with a checklist mentality—does this person check all the boxes? But maybe that's the wrong approach. Maybe it's more about connection and growth together. I don't know, I'm still figuring this out.",
+    "createdAt": 1724803200000,
+    "updatedAt": 1724803200000,
+    "pinned": false,
+    "summary": "Questioning checklist-based dating approaches in favor of connection and mutual growth.",
+    "aiSummary": "Questioning checklist-based dating approaches in favor of connection and mutual growth."
+  },
+  {
+    "id": "1724889600000",
+    "title": "Learning to cook",
+    "content": "Started learning to cook more seriously. There's something satisfying about creating something with your hands, about the process of turning ingredients into a meal. I made pasta from scratch today and it was terrible, but I'm proud I tried. Progress over perfection, right?",
+    "createdAt": 1724889600000,
+    "updatedAt": 1724889600000,
+    "pinned": false,
+    "summary": "Exploring cooking as a creative practice, embracing imperfection in the learning process.",
+    "aiSummary": "Exploring cooking as a creative practice, embracing imperfection in the learning process."
+  },
+  {
+    "id": "1724976000000",
+    "title": "Work presentation anxiety",
+    "content": "I have a big presentation at work next week and I'm already anxious about it. I keep replaying worst-case scenarios in my head. What if I forget what to say? What if they ask questions I can't answer? I know this anxiety isn't helpful, but it's hard to turn it off. Maybe I should prepare more, or maybe I should prepare less and trust myself.",
+    "createdAt": 1724976000000,
+    "updatedAt": 1724976000000,
+    "pinned": false,
+    "summary": "Managing presentation anxiety through worst-case thinking and questioning preparation strategies.",
+    "aiSummary": "Managing presentation anxiety through worst-case thinking and questioning preparation strategies."
+  },
+  {
+    "id": "1725062400000",
+    "title": "Dream about flying",
+    "content": "Had a dream I could fly last night. Not like Superman, but more like swimming through the air. It felt so real, the sensation of weightlessness, looking down at the world below. When I woke up, I felt disappointed that it wasn't real. Dreams can be so vivid sometimes, it's hard to let them go.",
+    "createdAt": 1725062400000,
+    "updatedAt": 1725062400000,
+    "pinned": false,
+    "summary": "A vivid flying dream that felt intensely real, leaving a sense of loss upon waking.",
+    "aiSummary": "A vivid flying dream that felt intensely real, leaving a sense of loss upon waking."
+  },
+  {
+    "id": "1725148800000",
+    "title": "Reading 'Atomic Habits'",
+    "content": "Reading 'Atomic Habits' and it's making me think about my own habits. I've been trying to build good ones for years, but I keep falling off. The book says to start small, make it obvious, make it attractive. Maybe I've been trying to change too much at once. What if I just focused on one tiny habit for a month?",
+    "createdAt": 1725148800000,
+    "updatedAt": 1725148800000,
+    "pinned": false,
+    "summary": "Learning about habit formation from 'Atomic Habits' and considering a more incremental approach.",
+    "aiSummary": "Learning about habit formation from 'Atomic Habits' and considering a more incremental approach."
+  },
+  {
+    "id": "1725235200000",
+    "title": "Feeling disconnected",
+    "content": "I've been feeling disconnected lately. Like I'm going through the motions but not really present. Work, social events, even conversations—I'm there but not really there. I wonder if this is what people mean by autopilot. How do you wake yourself up?",
+    "createdAt": 1725235200000,
+    "updatedAt": 1725235200000,
+    "pinned": false,
+    "summary": "Noticing a sense of disconnection and operating on autopilot, seeking ways to become more present.",
+    "aiSummary": "Noticing a sense of disconnection and operating on autopilot, seeking ways to become more present."
+  },
+  {
+    "id": "1725321600000",
+    "title": "Weekend project - reorganizing",
+    "content": "Spent the weekend reorganizing my apartment. There's something therapeutic about decluttering, about creating order from chaos. I got rid of a lot of things I've been holding onto 'just in case.' It feels lighter in here now, both literally and metaphorically. Maybe I should do the same with my mental space.",
+    "createdAt": 1725321600000,
+    "updatedAt": 1725321600000,
+    "pinned": false,
+    "summary": "Finding therapeutic value in physical decluttering and considering applying the same principle mentally.",
+    "aiSummary": "Finding therapeutic value in physical decluttering and considering applying the same principle mentally."
+  },
+  {
+    "id": "1725408000000",
+    "title": "Conversation about purpose",
+    "content": "Had a late-night conversation with a friend about purpose and meaning. We were both questioning whether we're on the right path, whether what we're doing matters. It's a heavy conversation, but also comforting to know I'm not alone in these questions. Maybe the purpose is in the questioning itself, not in finding an answer.",
+    "createdAt": 1725408000000,
+    "updatedAt": 1725408000000,
+    "pinned": false,
+    "summary": "Exploring questions of purpose and meaning, finding comfort in shared uncertainty.",
+    "aiSummary": "Exploring questions of purpose and meaning, finding comfort in shared uncertainty."
+  },
+  {
+    "id": "1725494400000",
+    "title": "Morning pages - rainy day",
+    "content": "It's raining today and I'm sitting by the window with my journal. There's something cozy about rainy days, like the world is giving you permission to slow down. I can hear the drops hitting the glass, see the way the water runs down. Simple moments like this remind me to pay attention.",
+    "createdAt": 1725494400000,
+    "updatedAt": 1725494400000,
+    "pinned": false,
+    "summary": "A quiet morning reflection on a rainy day, finding permission to slow down and notice details.",
+    "aiSummary": "A quiet morning reflection on a rainy day, finding permission to slow down and notice details."
+  },
+  {
+    "id": "1725580800000",
+    "title": "Work conflict resolution",
+    "content": "Had to navigate a conflict at work today. It was uncomfortable, but I'm learning that avoiding conflict usually makes things worse. I tried to listen first, understand their perspective, then share mine. It didn't solve everything, but we made progress. I'm proud of myself for not just backing down or getting defensive.",
+    "createdAt": 1725580800000,
+    "updatedAt": 1725580800000,
+    "pinned": false,
+    "summary": "Practicing conflict resolution at work through active listening and balanced communication.",
+    "aiSummary": "Practicing conflict resolution at work through active listening and balanced communication."
+  },
+  {
+    "id": "1725667200000",
+    "title": "Feeling stuck",
+    "content": "I'm feeling stuck. Like I'm in a rut and can't see a way out. Same routines, same patterns, same thoughts. I know I need to change something, but I don't know what. Maybe it's time to shake things up—take a class, travel somewhere new, meet new people. But change is scary, even when you know you need it.",
+    "createdAt": 1725667200000,
+    "updatedAt": 1725667200000,
+    "pinned": false,
+    "summary": "Recognizing being in a rut and feeling both the need for change and fear of it.",
+    "aiSummary": "Recognizing being in a rut and feeling both the need for change and fear of it."
+  },
+  {
+    "id": "1725753600000",
+    "title": "Weekend trip to the coast",
+    "content": "Took a spontaneous trip to the coast this weekend. Just got in the car and drove. There's something freeing about not having a plan, about letting the day unfold. I sat on the beach for hours, just watching the waves. It reminded me how small my problems are in the grand scheme of things, but also how important it is to take time for yourself.",
+    "createdAt": 1725753600000,
+    "updatedAt": 1725753600000,
+    "pinned": false,
+    "summary": "A spontaneous coastal trip providing perspective on problems and the importance of self-care.",
+    "aiSummary": "A spontaneous coastal trip providing perspective on problems and the importance of self-care."
+  },
+  {
+    "id": "1725840000000",
+    "title": "Learning Spanish",
+    "content": "Started learning Spanish on Duolingo. I've been meaning to do this for years, but always found excuses. Today I just started. Five minutes a day, that's my commitment. It's slow going, but I'm enjoying the process. There's something satisfying about learning something new, about your brain working in a different way.",
+    "createdAt": 1725840000000,
+    "updatedAt": 1725840000000,
+    "pinned": false,
+    "summary": "Beginning Spanish language learning with a small daily commitment, finding joy in the process.",
+    "aiSummary": "Beginning Spanish language learning with a small daily commitment, finding joy in the process."
+  },
+  {
+    "id": "1725926400000",
+    "title": "Family dynamics",
+    "content": "Had a conversation with my sister about our family dynamics. We both noticed how we fall into old patterns when we're all together—the roles we played as kids. I'm the 'responsible one,' she's the 'creative one.' But we're not those people anymore, or at least not only those people. It's hard to break out of those boxes.",
+    "createdAt": 1725926400000,
+    "updatedAt": 1725926400000,
+    "pinned": false,
+    "summary": "Reflecting on family role patterns and the challenge of evolving beyond childhood labels.",
+    "aiSummary": "Reflecting on family role patterns and the challenge of evolving beyond childhood labels."
+  },
+  {
+    "id": "1726012800000",
+    "title": "Work success",
+    "content": "Had a win at work today. A project I've been working on for months finally came together, and people noticed. It feels good to be recognized, but I'm also trying not to tie my self-worth to external validation. I did good work, and that should be enough. But it's nice to hear it sometimes.",
+    "createdAt": 1726012800000,
+    "updatedAt": 1726012800000,
+    "pinned": false,
+    "summary": "Celebrating a work success while reflecting on the balance between recognition and intrinsic value.",
+    "aiSummary": "Celebrating a work success while reflecting on the balance between recognition and intrinsic value."
+  },
+  {
+    "id": "1726099200000",
+    "title": "Dream about childhood home",
+    "content": "Dreamed about my childhood home last night. It looked the same but different, like my memory had shifted it slightly. I was looking for something but couldn't remember what. The feeling of searching, of knowing something important is just out of reach. I woke up with that feeling still lingering.",
+    "createdAt": 1726099200000,
+    "updatedAt": 1726099200000,
+    "pinned": false,
+    "summary": "A dream about a transformed childhood home, evoking a sense of searching for something elusive.",
+    "aiSummary": "A dream about a transformed childhood home, evoking a sense of searching for something elusive."
+  },
+  {
+    "id": "1726185600000",
+    "title": "Morning pages - energy levels",
+    "content": "Noticing my energy levels this morning. I feel more alert, more present. I wonder if it's because I've been sleeping better, or maybe it's the morning routine I've been building. Coffee, journaling, a few minutes of stretching. Small things, but they seem to be adding up. I'm curious to see if this continues.",
+    "createdAt": 1726185600000,
+    "updatedAt": 1726185600000,
+    "pinned": false,
+    "summary": "Observing improved energy and attributing it to better sleep and a consistent morning routine.",
+    "aiSummary": "Observing improved energy and attributing it to better sleep and a consistent morning routine."
+  },
+  {
+    "id": "1726272000000",
+    "title": "Social media break",
+    "content": "Decided to take a break from social media. I've been noticing how much time I spend scrolling, how it affects my mood. I'm not sure how long I'll do this, but I want to see what it's like to not have that constant input. Maybe I'll read more, or just be bored. Boredom can be productive, right?",
+    "createdAt": 1726272000000,
+    "updatedAt": 1726272000000,
+    "pinned": false,
+    "summary": "Taking a social media break to observe its impact on mood and explore alternative ways to spend time.",
+    "aiSummary": "Taking a social media break to observe its impact on mood and explore alternative ways to spend time."
+  },
+  {
+    "id": "1726358400000",
+    "title": "Conversation about creativity",
+    "content": "Had a conversation with a friend who's an artist about creativity and inspiration. They said inspiration isn't something you wait for—it's something you show up for. You have to do the work even when you don't feel like it. That resonated with me. Maybe I've been waiting for motivation instead of creating it.",
+    "createdAt": 1726358400000,
+    "updatedAt": 1726358400000,
+    "pinned": false,
+    "summary": "Learning that creativity requires showing up consistently, not waiting for inspiration to strike.",
+    "aiSummary": "Learning that creativity requires showing up consistently, not waiting for inspiration to strike."
+  },
+  {
+    "id": "1726444800000",
+    "title": "Feeling anxious",
+    "content": "I'm feeling anxious today and I'm not sure why. There's this underlying tension, like something's wrong but I can't identify what. I've been trying to breathe through it, to notice it without getting caught up in it. It's hard though. Sometimes anxiety just is, and you have to sit with it.",
+    "createdAt": 1726444800000,
+    "updatedAt": 1726444800000,
+    "pinned": false,
+    "summary": "Experiencing unexplained anxiety and practicing mindfulness to observe it without being consumed.",
+    "aiSummary": "Experiencing unexplained anxiety and practicing mindfulness to observe it without being consumed."
+  },
+  {
+    "id": "1726531200000",
+    "title": "Weekend cooking experiment",
+    "content": "Tried making sourdough bread this weekend. It was a disaster—too dense, didn't rise properly. But I learned a lot about the process, about patience and timing. I'm going to try again next week. There's something about the ritual of it, the way it connects you to something ancient and simple.",
+    "createdAt": 1726531200000,
+    "updatedAt": 1726531200000,
+    "pinned": false,
+    "summary": "A failed sourdough attempt that taught lessons about patience, timing, and connecting to tradition.",
+    "aiSummary": "A failed sourdough attempt that taught lessons about patience, timing, and connecting to tradition."
+  },
+  {
+    "id": "1726617600000",
+    "title": "Work-life balance thoughts",
+    "content": "Been thinking about work-life balance. I'm not sure that's even the right term—maybe it's more about integration, about finding ways to bring your whole self to everything you do. But I also know I need boundaries. It's a constant negotiation, and I'm still figuring out what works for me.",
+    "createdAt": 1726617600000,
+    "updatedAt": 1726617600000,
+    "pinned": false,
+    "summary": "Questioning work-life balance in favor of integration while recognizing the need for boundaries.",
+    "aiSummary": "Questioning work-life balance in favor of integration while recognizing the need for boundaries."
+  },
+  {
+    "id": "1726704000000",
+    "title": "Dream about being lost",
+    "content": "Dreamed I was lost in a city I didn't recognize. I kept asking for directions but no one could help me, or they'd give me directions that didn't make sense. I woke up feeling disoriented. I wonder if this is about feeling lost in my actual life, not knowing which direction to go.",
+    "createdAt": 1726704000000,
+    "updatedAt": 1726704000000,
+    "pinned": false,
+    "summary": "A disorienting dream about being lost, possibly reflecting uncertainty about life direction.",
+    "aiSummary": "A disorienting dream about being lost, possibly reflecting uncertainty about life direction."
+  },
+  {
+    "id": "1726790400000",
+    "title": "Gratitude practice",
+    "content": "Trying to make gratitude a daily practice. Today I'm grateful for: the way the light comes through my window in the morning, having a job that challenges me, friends who check in, my health, the ability to learn and grow. It's simple, but it shifts something. I feel lighter when I do this.",
+    "createdAt": 1726790400000,
+    "updatedAt": 1726790400000,
+    "pinned": false,
+    "summary": "Establishing a daily gratitude practice and noticing its positive impact on mood and perspective.",
+    "aiSummary": "Establishing a daily gratitude practice and noticing its positive impact on mood and perspective."
+  },
+  {
+    "id": "1726876800000",
+    "title": "Reading 'The Power of Now'",
+    "content": "Reading 'The Power of Now' and it's challenging me. The idea of being present, of not getting caught up in past regrets or future worries. It sounds simple but it's so hard in practice. My mind wants to plan, to analyze, to worry. But maybe there's something to just being here, now.",
+    "createdAt": 1726876800000,
+    "updatedAt": 1726876800000,
+    "pinned": false,
+    "summary": "Exploring present-moment awareness through 'The Power of Now' and its practical challenges.",
+    "aiSummary": "Exploring present-moment awareness through 'The Power of Now' and its practical challenges."
+  },
+  {
+    "id": "1726963200000",
+    "title": "Feeling content",
+    "content": "Today I'm feeling content. Not ecstatic, not anxious, just... content. It's a nice feeling, one I don't experience often. I'm trying to notice it, to appreciate it without analyzing why it's happening. Maybe some things don't need explanation, just acknowledgment.",
+    "createdAt": 1726963200000,
+    "updatedAt": 1726963200000,
+    "pinned": false,
+    "summary": "Experiencing a rare feeling of contentment and choosing to simply notice it without analysis.",
+    "aiSummary": "Experiencing a rare feeling of contentment and choosing to simply notice it without analysis."
+  },
+  {
+    "id": "1727049600000",
+    "title": "Conversation about failure",
+    "content": "Had a conversation with a mentor about failure. They said failure is just data, information about what doesn't work. It's not a judgment on your worth or ability. I've been so afraid of failing that I've avoided trying things. But maybe failure is just part of the process, not the end of it.",
+    "createdAt": 1727049600000,
+    "updatedAt": 1727049600000,
+    "pinned": false,
+    "summary": "Reframing failure as data rather than judgment, reducing fear and encouraging experimentation.",
+    "aiSummary": "Reframing failure as data rather than judgment, reducing fear and encouraging experimentation."
+  },
+  {
+    "id": "1727136000000",
+    "title": "Weekend project - painting",
+    "content": "Tried painting for the first time in years. I'm terrible at it, but I had fun. There's something freeing about doing something you're bad at, about not having expectations. I painted abstract shapes, just colors and movement. It doesn't look like anything, but it felt good to create.",
+    "createdAt": 1727136000000,
+    "updatedAt": 1727136000000,
+    "pinned": false,
+    "summary": "Rediscovering the joy of painting through abstract expression, free from expectations.",
+    "aiSummary": "Rediscovering the joy of painting through abstract expression, free from expectations."
+  },
+  {
+    "id": "1727222400000",
+    "title": "Work stress",
+    "content": "Work has been really stressful lately. Deadlines, expectations, competing priorities. I'm trying to manage it, but I feel like I'm constantly behind. I know I need to communicate better about capacity, but it's hard to say no. I keep thinking about that note I wrote about productivity—maybe I need to revisit it.",
+    "createdAt": 1727222400000,
+    "updatedAt": 1727222400000,
+    "pinned": false,
+    "summary": "Managing work stress and recognizing the need to set boundaries and communicate capacity limits.",
+    "aiSummary": "Managing work stress and recognizing the need to set boundaries and communicate capacity limits."
+  },
+  {
+    "id": "1727308800000",
+    "title": "Dream about water",
+    "content": "Had a dream about being underwater, but I could breathe. I was swimming through a coral reef, seeing all these beautiful fish and plants. It was peaceful, like I was in a different world. When I woke up, I felt refreshed, like I had actually been somewhere else.",
+    "createdAt": 1727308800000,
+    "updatedAt": 1727308800000,
+    "pinned": false,
+    "summary": "A peaceful underwater dream that felt restorative and otherworldly.",
+    "aiSummary": "A peaceful underwater dream that felt restorative and otherworldly."
+  },
+  {
+    "id": "1727395200000",
+    "title": "Morning pages - routine",
+    "content": "My morning routine is becoming a real thing. Coffee, journal, stretch, maybe a short walk. It's not fancy, but it's mine. I'm noticing how it sets the tone for my day, how it gives me a moment of calm before everything starts. I want to protect this time, to make it non-negotiable.",
+    "createdAt": 1727395200000,
+    "updatedAt": 1727395200000,
+    "pinned": false,
+    "summary": "Establishing a simple morning routine and recognizing its value in setting daily tone.",
+    "aiSummary": "Establishing a simple morning routine and recognizing its value in setting daily tone."
+  },
+  {
+    "id": "1727481600000",
+    "title": "Social connection",
+    "content": "Went to a friend's gathering this weekend and realized how much I've been isolating. It felt good to be around people, to have conversations, to laugh. I think I've been using busyness as an excuse to avoid connection. But connection is important, maybe even necessary. I need to prioritize it more.",
+    "createdAt": 1727481600000,
+    "updatedAt": 1727481600000,
+    "pinned": false,
+    "summary": "Recognizing a pattern of isolation and the importance of prioritizing social connection.",
+    "aiSummary": "Recognizing a pattern of isolation and the importance of prioritizing social connection."
+  },
+  {
+    "id": "1727568000000",
+    "title": "Learning from mistakes",
+    "content": "Made a mistake at work today. Not a huge one, but it was embarrassing. I spent the afternoon beating myself up about it, but then I realized—I can't change what happened, only what I do next. I apologized, fixed what I could, and learned something. That's progress, right?",
+    "createdAt": 1727568000000,
+    "updatedAt": 1727568000000,
+    "pinned": false,
+    "summary": "Processing a work mistake by focusing on learning and forward action rather than self-criticism.",
+    "aiSummary": "Processing a work mistake by focusing on learning and forward action rather than self-criticism."
+  },
+  {
+    "id": "1727654400000",
+    "title": "Feeling inspired",
+    "content": "I'm feeling inspired today. Not sure why, but I have all these ideas bubbling up. Maybe it's because I've been giving myself space to think, to not be constantly productive. There's something about idle time that lets creativity in. I want to capture these ideas before they fade.",
+    "createdAt": 1727654400000,
+    "updatedAt": 1727654400000,
+    "pinned": false,
+    "summary": "Experiencing a surge of inspiration and attributing it to allowing space for idle thinking.",
+    "aiSummary": "Experiencing a surge of inspiration and attributing it to allowing space for idle thinking."
+  },
+  {
+    "id": "1727740800000",
+    "title": "Reading 'Sapiens'",
+    "content": "Reading 'Sapiens' and it's blowing my mind. The way Harari explains how humans created shared fictions—money, nations, corporations—and how those fictions shape reality. It's making me think about the stories I tell myself, the fictions I live by. What's real and what's just a useful narrative?",
+    "createdAt": 1727740800000,
+    "updatedAt": 1727740800000,
+    "pinned": false,
+    "summary": "Exploring the concept of shared fictions in 'Sapiens' and questioning personal narratives.",
+    "aiSummary": "Exploring the concept of shared fictions in 'Sapiens' and questioning personal narratives."
+  },
+  {
+    "id": "1727827200000",
+    "title": "Weekend reflection",
+    "content": "Taking time to reflect on the week. What went well? What didn't? What did I learn? I'm trying to make this a regular practice, to not just move from one thing to the next without processing. Reflection feels like a lost art, but it's so valuable.",
+    "createdAt": 1727827200000,
+    "updatedAt": 1727827200000,
+    "pinned": false,
+    "summary": "Establishing a weekly reflection practice to process experiences and extract learning.",
+    "aiSummary": "Establishing a weekly reflection practice to process experiences and extract learning."
+  },
+  {
+    "id": "1727913600000",
+    "title": "Feeling overwhelmed again",
+    "content": "I'm feeling overwhelmed again. I thought I had this figured out, but here I am. Too many things, not enough time, too much pressure. I know I need to simplify, to say no, to prioritize. But knowing and doing are different things. Maybe I need to actually write down what matters most and let go of the rest.",
+    "createdAt": 1727913600000,
+    "updatedAt": 1727913600000,
+    "pinned": false,
+    "summary": "Revisiting overwhelm and recognizing the gap between knowing what to do and actually doing it.",
+    "aiSummary": "Revisiting overwhelm and recognizing the gap between knowing what to do and actually doing it."
+  },
+  {
+    "id": "1728000000000",
+    "title": "Dream about teaching",
+    "content": "Dreamed I was teaching a class, but I didn't know the subject. The students were asking questions and I was trying to answer, but I was making things up as I went. It was stressful but also kind of freeing—I had to trust myself, to be creative. Maybe this is about feeling like an imposter, but also about finding my voice.",
+    "createdAt": 1728000000000,
+    "updatedAt": 1728000000000,
+    "pinned": false,
+    "summary": "A dream about teaching without preparation, exploring themes of imposter syndrome and self-trust.",
+    "aiSummary": "A dream about teaching without preparation, exploring themes of imposter syndrome and self-trust."
+  },
+  {
+    "id": "1728086400000",
+    "title": "Morning pages - seasons",
+    "content": "The seasons are changing. I can feel it in the air, see it in the light. There's something about autumn that makes me reflective, that makes me want to slow down. Maybe it's the way everything is preparing for rest, for renewal. I want to honor that rhythm, to not fight against it.",
+    "createdAt": 1728086400000,
+    "updatedAt": 1728086400000,
+    "pinned": false,
+    "summary": "Noticing seasonal change and feeling called to align with natural rhythms of rest and renewal.",
+    "aiSummary": "Noticing seasonal change and feeling called to align with natural rhythms of rest and renewal."
+  },
+  {
+    "id": "1728172800000",
+    "title": "Conversation about aging",
+    "content": "Had a conversation with my grandmother about aging. She said getting older isn't about losing things, it's about gaining perspective. You care less about what people think, you know what matters. I hope I can approach aging with that kind of wisdom, that kind of grace.",
+    "createdAt": 1728172800000,
+    "updatedAt": 1728172800000,
+    "pinned": false,
+    "summary": "Learning from a grandmother's perspective on aging as gaining wisdom rather than loss.",
+    "aiSummary": "Learning from a grandmother's perspective on aging as gaining wisdom rather than loss."
+  },
+  {
+    "id": "1728259200000",
+    "title": "Work project completion",
+    "content": "Finished a big project at work today. It took months, and there were times I didn't think I'd make it. But here I am, on the other side. I'm proud of the work, but I'm also exhausted. I need to take a real break, not just a weekend, but actually rest. Recovery is part of the process.",
+    "createdAt": 1728259200000,
+    "updatedAt": 1728259200000,
+    "pinned": false,
+    "summary": "Completing a major work project and recognizing the need for genuine rest and recovery.",
+    "aiSummary": "Completing a major work project and recognizing the need for genuine rest and recovery."
+  },
+  {
+    "id": "1728345600000",
+    "title": "Feeling grateful - health",
+    "content": "I'm feeling grateful for my health today. I woke up without pain, I can move my body, I have energy. I don't always appreciate this, but I should. Health isn't guaranteed, and I'm lucky to have it. I want to take better care of myself, to not take this for granted.",
+    "createdAt": 1728345600000,
+    "updatedAt": 1728345600000,
+    "pinned": false,
+    "summary": "Expressing gratitude for health and committing to better self-care practices.",
+    "aiSummary": "Expressing gratitude for health and committing to better self-care practices."
+  },
+  {
+    "id": "1728432000000",
+    "title": "Reading 'The Alchemist'",
+    "content": "Rereading 'The Alchemist' and it hits differently this time. The idea of following your personal legend, of listening to omens, of the journey being the destination. I think I've been so focused on the destination that I've missed the journey. Maybe the treasure is in the traveling itself.",
+    "createdAt": 1728432000000,
+    "updatedAt": 1728432000000,
+    "pinned": false,
+    "summary": "Rereading 'The Alchemist' and finding new meaning in the journey versus destination theme.",
+    "aiSummary": "Rereading 'The Alchemist' and finding new meaning in the journey versus destination theme."
+  },
+  {
+    "id": "1728518400000",
+    "title": "Weekend hike - fall colors",
+    "content": "Went for a hike to see the fall colors. The trees are incredible—reds, oranges, yellows, all mixed together. I sat on a rock for a long time, just watching. There's something about nature that puts things in perspective. My problems feel smaller, my gratitude feels bigger. I need to do this more often.",
+    "createdAt": 1728518400000,
+    "updatedAt": 1728518400000,
+    "pinned": false,
+    "summary": "A fall hike providing perspective through nature's beauty and seasonal transformation.",
+    "aiSummary": "A fall hike providing perspective through nature's beauty and seasonal transformation."
+  },
+  {
+    "id": "1728604800000",
+    "title": "Feeling uncertain",
+    "content": "I'm feeling uncertain about a lot of things right now. Career direction, relationships, where I want to live, what I want my life to look like. There are so many possibilities, but that's also overwhelming. I wish I had more clarity, but maybe uncertainty is just part of being in your thirties.",
+    "createdAt": 1728604800000,
+    "updatedAt": 1728604800000,
+    "pinned": false,
+    "summary": "Navigating uncertainty about major life decisions and accepting it as part of a life stage.",
+    "aiSummary": "Navigating uncertainty about major life decisions and accepting it as part of a life stage."
+  },
+  {
+    "id": "1728691200000",
+    "title": "Dream about childhood",
+    "content": "Dreamed about being a kid again, playing in the backyard with my siblings. Everything felt simpler, more carefree. I woke up missing that feeling, that freedom from responsibility. But I also know I can't go back, and maybe I don't want to. I just want to find that lightness again, that playfulness.",
+    "createdAt": 1728691200000,
+    "updatedAt": 1728691200000,
+    "pinned": false,
+    "summary": "A nostalgic dream about childhood simplicity and the desire to reclaim playfulness.",
+    "aiSummary": "A nostalgic dream about childhood simplicity and the desire to reclaim playfulness."
+  },
+  {
+    "id": "1728777600000",
+    "title": "Morning pages - routine check",
+    "content": "Checking in on my routines. Some are sticking, others aren't. Meditation is hit or miss, but journaling is consistent. Exercise comes and goes. I'm trying not to judge myself, just notice what's working and what isn't. Maybe I need to adjust my expectations, to make things smaller, more achievable.",
+    "createdAt": 1728777600000,
+    "updatedAt": 1728777600000,
+    "pinned": false,
+    "summary": "Evaluating routine consistency and adjusting expectations to be more realistic and achievable.",
+    "aiSummary": "Evaluating routine consistency and adjusting expectations to be more realistic and achievable."
+  },
+  {
+    "id": "1728864000000",
+    "title": "Conversation about meaning",
+    "content": "Had another late-night conversation about meaning and purpose. We keep coming back to this, like it's a puzzle we're trying to solve. But maybe meaning isn't something you find, it's something you create. Through your choices, your relationships, how you show up in the world. Maybe that's enough.",
+    "createdAt": 1728864000000,
+    "updatedAt": 1728864000000,
+    "pinned": false,
+    "summary": "Exploring meaning as something created through choices and actions rather than discovered.",
+    "aiSummary": "Exploring meaning as something created through choices and actions rather than discovered."
+  },
+  {
+    "id": "1728950400000",
+    "title": "Work presentation - it went well",
+    "content": "The presentation went well! I was nervous, but once I started, I found my flow. People asked good questions, and I actually enjoyed the discussion. I'm realizing that I'm more capable than I give myself credit for. Maybe I should trust myself more, take on more challenges.",
+    "createdAt": 1728950400000,
+    "updatedAt": 1728950400000,
+    "pinned": false,
+    "summary": "A successful presentation building confidence and encouraging greater self-trust and challenge-seeking.",
+    "aiSummary": "A successful presentation building confidence and encouraging greater self-trust and challenge-seeking."
+  },
+  {
+    "id": "1729036800000",
+    "title": "Feeling stuck in patterns",
+    "content": "I'm noticing patterns in my life—the same conflicts, the same struggles, the same ways I respond. I know I need to change something, but change is hard. It's easier to stay in what's familiar, even when it's not working. But I also know that if I want different results, I need different actions.",
+    "createdAt": 1729036800000,
+    "updatedAt": 1729036800000,
+    "pinned": false,
+    "summary": "Recognizing repetitive life patterns and the difficulty of breaking familiar but unhelpful cycles.",
+    "aiSummary": "Recognizing repetitive life patterns and the difficulty of breaking familiar but unhelpful cycles."
+  },
+  {
+    "id": "1729123200000",
+    "title": "Weekend cooking - success",
+    "content": "Made sourdough again and it actually worked this time! The crust was crispy, the inside was airy, it had that tangy flavor. I'm so proud. It took patience, attention to detail, trusting the process. Maybe there's a lesson here about other things in my life—patience, attention, trust.",
+    "createdAt": 1729123200000,
+    "updatedAt": 1729123200000,
+    "pinned": false,
+    "summary": "A successful sourdough bake teaching lessons about patience, attention, and trusting processes.",
+    "aiSummary": "A successful sourdough bake teaching lessons about patience, attention, and trusting processes."
+  },
+  {
+    "id": "1729209600000",
+    "title": "Reading 'Man's Search for Meaning'",
+    "content": "Reading 'Man's Search for Meaning' and it's profound. Frankl's idea that we can't control what happens to us, but we can control how we respond. That meaning can be found even in suffering. It's a heavy book, but also hopeful. I'm thinking about how I respond to challenges, whether I'm finding meaning or just surviving.",
+    "createdAt": 1729209600000,
+    "updatedAt": 1729209600000,
+    "pinned": false,
+    "summary": "Exploring Viktor Frankl's philosophy on finding meaning through response to circumstances.",
+    "aiSummary": "Exploring Viktor Frankl's philosophy on finding meaning through response to circumstances."
+  },
+  {
+    "id": "1729296000000",
+    "title": "Feeling content again",
+    "content": "I'm feeling content again today. It's interesting how it comes and goes, this feeling. I'm trying not to grasp at it, not to analyze why it's here. Just to notice it, to appreciate it, to let it be. Maybe that's the key—not trying to control it, just experiencing it.",
+    "createdAt": 1729296000000,
+    "updatedAt": 1729296000000,
+    "pinned": false,
+    "summary": "Experiencing contentment and practicing non-attachment to the feeling.",
+    "aiSummary": "Experiencing contentment and practicing non-attachment to the feeling."
+  },
+  {
+    "id": "1729382400000",
+    "title": "Conversation about time",
+    "content": "Had a conversation about time and how it feels like it's moving faster as I get older. A friend said maybe it's because we have fewer 'firsts'—first day of school, first kiss, first job. As we age, more experiences are familiar, so time feels compressed. That makes sense, but it's also a little sad.",
+    "createdAt": 1729382400000,
+    "updatedAt": 1729382400000,
+    "pinned": false,
+    "summary": "Reflecting on time's acceleration and its relationship to fewer novel experiences with age.",
+    "aiSummary": "Reflecting on time's acceleration and its relationship to fewer novel experiences with age."
+  },
+  {
+    "id": "1729468800000",
+    "title": "Weekend project - writing",
+    "content": "Started working on a writing project I've been putting off. Just a short story, nothing major, but it's something I've wanted to do. I'm not sure if it's any good, but that's not the point right now. The point is to create, to express, to see what comes out. I'm curious to see where it goes.",
+    "createdAt": 1729468800000,
+    "updatedAt": 1729468800000,
+    "pinned": false,
+    "summary": "Beginning a writing project focused on the process of creation rather than outcome quality.",
+    "aiSummary": "Beginning a writing project focused on the process of creation rather than outcome quality."
+  },
+  {
+    "id": "1729555200000",
+    "title": "Work stress - boundaries",
+    "content": "I said no to something at work today. It was hard, and I felt guilty, but I also felt relieved. I'm learning that boundaries aren't about being mean, they're about protecting your capacity. I can't help anyone if I'm burned out. This is progress, even if it feels uncomfortable.",
+    "createdAt": 1729555200000,
+    "updatedAt": 1729555200000,
+    "pinned": false,
+    "summary": "Setting a work boundary and reframing it as capacity protection rather than rejection.",
+    "aiSummary": "Setting a work boundary and reframing it as capacity protection rather than rejection."
+  },
+  {
+    "id": "1729641600000",
+    "title": "Dream about the ocean",
+    "content": "Dreamed about the ocean again, but this time I was on the shore, watching huge waves crash. They were powerful, beautiful, a little scary. I woke up thinking about the power of nature, about forces bigger than myself. There's something humbling about that, but also inspiring.",
+    "createdAt": 1729641600000,
+    "updatedAt": 1729641600000,
+    "pinned": false,
+    "summary": "A dream about ocean waves evoking feelings of awe and humility before natural forces.",
+    "aiSummary": "A dream about ocean waves evoking feelings of awe and humility before natural forces."
+  },
+  {
+    "id": "1729728000000",
+    "title": "Morning pages - three months",
+    "content": "It's been three months since I started this journal. I can't believe it. Some days I've written a lot, other days just a sentence. But I've shown up, and that's something. I'm starting to see patterns, to understand myself better. This practice is working, even when it doesn't feel like it.",
+    "createdAt": 1729728000000,
+    "updatedAt": 1729728000000,
+    "pinned": true,
+    "summary": "Celebrating three months of journaling and recognizing its value even in inconsistency.",
+    "aiSummary": "Celebrating three months of journaling and recognizing its value even in inconsistency."
+  },
+  {
+    "id": "1729814400000",
+    "title": "Feeling inspired by others",
+    "content": "Watched a documentary about an artist today and felt so inspired. The way they dedicated their life to their craft, the way they kept creating even when no one was watching. It made me think about what I'm dedicated to, what I'm building. Am I creating something meaningful, or just going through motions?",
+    "createdAt": 1729814400000,
+    "updatedAt": 1729814400000,
+    "pinned": false,
+    "summary": "Finding inspiration in an artist's dedication and questioning personal commitment to meaningful work.",
+    "aiSummary": "Finding inspiration in an artist's dedication and questioning personal commitment to meaningful work."
+  },
+  {
+    "id": "1729900800000",
+    "title": "Conversation about change",
+    "content": "Had a conversation about change and how hard it is. We both want to change things in our lives, but we keep falling back into old patterns. Change requires so much energy, so much awareness. But maybe that's the point—maybe change isn't supposed to be easy. Maybe the struggle is part of the growth.",
+    "createdAt": 1729900800000,
+    "updatedAt": 1729900800000,
+    "pinned": false,
+    "summary": "Discussing the difficulty of change and reframing struggle as integral to growth.",
+    "aiSummary": "Discussing the difficulty of change and reframing struggle as integral to growth."
+  },
+  {
+    "id": "1729987200000",
+    "title": "Work recognition",
+    "content": "Got recognized at work for a project I led. It feels good, but I'm also trying to stay grounded. Recognition is nice, but it's not why I do the work. I do it because I care about it, because it matters to me. External validation is a bonus, not the goal.",
+    "createdAt": 1729987200000,
+    "updatedAt": 1729987200000,
+    "pinned": false,
+    "summary": "Receiving work recognition while maintaining focus on intrinsic motivation over external validation.",
+    "aiSummary": "Receiving work recognition while maintaining focus on intrinsic motivation over external validation."
+  },
+  {
+    "id": "1730073600000",
+    "title": "Feeling anxious about future",
+    "content": "I'm feeling anxious about the future. There are so many unknowns, so many things I can't control. I keep trying to plan, to prepare, but the truth is I don't know what's coming. Maybe I need to practice being okay with uncertainty, with not having all the answers.",
+    "createdAt": 1730073600000,
+    "updatedAt": 1730073600000,
+    "pinned": false,
+    "summary": "Managing future anxiety by practicing acceptance of uncertainty and lack of control.",
+    "aiSummary": "Managing future anxiety by practicing acceptance of uncertainty and lack of control."
+  },
+  {
+    "id": "1730160000000",
+    "title": "Weekend reflection - growth",
+    "content": "Reflecting on how much I've grown in the past few months. I'm more aware of my patterns, more intentional about my choices, more present in my life. It's not perfect, but it's progress. I'm learning to be patient with myself, to celebrate small wins, to keep showing up even when it's hard.",
+    "createdAt": 1730160000000,
+    "updatedAt": 1730160000000,
+    "pinned": false,
+    "summary": "Acknowledging personal growth and the importance of patience and celebrating progress.",
+    "aiSummary": "Acknowledging personal growth and the importance of patience and celebrating progress."
+  },
+  {
+    "id": "1730246400000",
+    "title": "Dream about a garden",
+    "content": "Dreamed about a garden I was tending. It was full of different plants, some thriving, some struggling. I was learning what each one needed—more water, less sun, different soil. It felt like a metaphor for life, for tending to different parts of myself, learning what each needs to grow.",
+    "createdAt": 1730246400000,
+    "updatedAt": 1730246400000,
+    "pinned": false,
+    "summary": "A dream about gardening as a metaphor for self-care and understanding personal needs.",
+    "aiSummary": "A dream about gardening as a metaphor for self-care and understanding personal needs."
+  },
+  {
+    "id": "1730332800000",
+    "title": "Morning pages - gratitude list",
+    "content": "Making a gratitude list: my health, my family, my friends, having a job I care about, the ability to learn and grow, this journal practice, moments of peace, good coffee, books that challenge me, the changing seasons, music that moves me, the ability to create. There's so much when I actually look.",
+    "createdAt": 1730332800000,
+    "updatedAt": 1730332800000,
+    "pinned": false,
+    "summary": "A comprehensive gratitude list revealing abundance when attention is directed toward it.",
+    "aiSummary": "A comprehensive gratitude list revealing abundance when attention is directed toward it."
+  },
+  {
+    "id": "1730419200000",
+    "title": "Reading 'The Untethered Soul'",
+    "content": "Reading 'The Untethered Soul' and it's challenging everything I think I know about myself. The idea that I'm not my thoughts, not my emotions, but the awareness behind them. It's a radical shift in perspective. If I'm not my thoughts, then I don't have to be controlled by them. That's powerful.",
+    "createdAt": 1730419200000,
+    "updatedAt": 1730419200000,
+    "pinned": false,
+    "summary": "Exploring the distinction between awareness and thoughts through 'The Untethered Soul'.",
+    "aiSummary": "Exploring the distinction between awareness and thoughts through 'The Untethered Soul'."
+  },
+  {
+    "id": "1730505600000",
+    "title": "Feeling content and present",
+    "content": "I'm feeling content and present today. Not trying to be anywhere else, not wishing things were different. Just here, now. It's a rare feeling, and I'm trying to savor it. Maybe this is what all the practice is for—these moments of peace, of presence, of just being.",
+    "createdAt": 1730505600000,
+    "updatedAt": 1730505600000,
+    "pinned": false,
+    "summary": "Experiencing a moment of deep presence and contentment, recognizing it as the fruit of practice.",
+    "aiSummary": "Experiencing a moment of deep presence and contentment, recognizing it as the fruit of practice."
+  },
+  {
+    "id": "1730592000000",
+    "title": "Conversation about legacy",
+    "content": "Had a conversation about legacy and what we want to leave behind. Not in a grandiose way, but in a simple one. How do we want to be remembered? What impact do we want to have? It's not about being famous, it's about being meaningful to the people in our lives. That feels more achievable, more real.",
+    "createdAt": 1730592000000,
+    "updatedAt": 1730592000000,
+    "pinned": false,
+    "summary": "Reflecting on legacy as meaningful impact on close relationships rather than fame.",
+    "aiSummary": "Reflecting on legacy as meaningful impact on close relationships rather than fame."
+  },
+  {
+    "id": "1730678400000",
+    "title": "Work challenge - learning",
+    "content": "Took on a new challenge at work that's outside my comfort zone. I'm learning a lot, making mistakes, feeling uncertain. But I'm also growing, which is the point. I'm trying to embrace the discomfort, to see it as a sign that I'm expanding. Growth happens at the edges, not in the center.",
+    "createdAt": 1730678400000,
+    "updatedAt": 1730678400000,
+    "pinned": false,
+    "summary": "Embracing a challenging work opportunity and reframing discomfort as growth.",
+    "aiSummary": "Embracing a challenging work opportunity and reframing discomfort as growth."
+  },
+  {
+    "id": "1730764800000",
+    "title": "Weekend project - photography",
+    "content": "Took my camera out this weekend and just walked around, taking photos of whatever caught my eye. A leaf on the ground, light through a window, a person reading on a bench. There's something about seeing the world through a lens that makes me notice more, that makes me present. I want to do this more.",
+    "createdAt": 1730764800000,
+    "updatedAt": 1730764800000,
+    "pinned": false,
+    "summary": "Exploring photography as a practice of presence and noticing details in the world.",
+    "aiSummary": "Exploring photography as a practice of presence and noticing details in the world."
+  },
+  {
+    "id": "1730851200000",
+    "title": "Feeling grateful - relationships",
+    "content": "I'm feeling grateful for the relationships in my life. Friends who check in, family who supports, colleagues who challenge me. These connections are what make life meaningful. I want to nurture them, to show up for them, to be present when I'm with them. Relationships take work, but they're worth it.",
+    "createdAt": 1730851200000,
+    "updatedAt": 1730851200000,
+    "pinned": false,
+    "summary": "Expressing gratitude for relationships and committing to nurturing meaningful connections.",
+    "aiSummary": "Expressing gratitude for relationships and committing to nurturing meaningful connections."
+  },
+  {
+    "id": "1730937600000",
+    "title": "Dream about music",
+    "content": "Dreamed I was playing piano, a song I've never heard before but that felt familiar. The music was beautiful, complex, flowing. When I woke up, I could still hear fragments of it. I wish I could capture it, but it's already fading. Maybe some things are just meant to be experienced, not preserved.",
+    "createdAt": 1730937600000,
+    "updatedAt": 1730937600000,
+    "pinned": false,
+    "summary": "A dream about creating music that feels both familiar and ephemeral, accepting its transience.",
+    "aiSummary": "A dream about creating music that feels both familiar and ephemeral, accepting its transience."
+  },
+  {
+    "id": "1731024000000",
+    "title": "Morning pages - four months",
+    "content": "Four months of journaling. I can't believe how much has changed, how much I've learned about myself. This practice has become essential, like brushing my teeth or drinking water. It's just part of who I am now. I'm curious to see where this takes me, what patterns will emerge over time.",
+    "createdAt": 1731024000000,
+    "updatedAt": 1731024000000,
+    "pinned": true,
+    "summary": "Celebrating four months of journaling and recognizing it as an integral part of identity.",
+    "aiSummary": "Celebrating four months of journaling and recognizing it as an integral part of identity."
+  },
+  {
+    "id": "1731110400000",
+    "title": "Reading 'When Breath Becomes Air'",
+    "content": "Reading 'When Breath Becomes Air' and it's devastating and beautiful. Kalanithi's reflections on life, death, meaning, love. It's making me think about what matters, about how I want to spend my time, about the relationships I'm building. Life is finite, and that's what makes it precious.",
+    "createdAt": 1731110400000,
+    "updatedAt": 1731110400000,
+    "pinned": false,
+    "summary": "Reflecting on mortality and meaning through Kalanithi's memoir, recognizing life's preciousness.",
+    "aiSummary": "Reflecting on mortality and meaning through Kalanithi's memoir, recognizing life's preciousness."
+  },
+  {
+    "id": "1731196800000",
+    "title": "Feeling balanced",
+    "content": "I'm feeling balanced today. Work, rest, connection, solitude—all in proportion. I know this won't last, that balance is always shifting. But I'm trying to appreciate it when it's here, to learn from it, to remember what it feels like so I can return to it when things get out of whack.",
+    "createdAt": 1731196800000,
+    "updatedAt": 1731196800000,
+    "pinned": false,
+    "summary": "Experiencing a moment of balance and learning to recognize and return to this state.",
+    "aiSummary": "Experiencing a moment of balance and learning to recognize and return to this state."
+  },
+  {
+    "id": "1731283200000",
+    "title": "Conversation about purpose",
+    "content": "Had another conversation about purpose, but this time it felt different. Less about finding the one true purpose, more about creating meaning through daily choices. Maybe purpose isn't a destination, it's a direction. A way of moving through the world, of showing up, of being.",
+    "createdAt": 1731283200000,
+    "updatedAt": 1731283200000,
+    "pinned": false,
+    "summary": "Reframing purpose as a direction and way of being rather than a destination to find.",
+    "aiSummary": "Reframing purpose as a direction and way of being rather than a destination to find."
+  },
+  {
+    "id": "1731369600000",
+    "title": "Work collaboration",
+    "content": "Had a great collaboration session at work today. We were brainstorming, building on each other's ideas, creating something together that none of us could have made alone. There's something magical about that kind of collaboration, about the way ideas compound when people connect.",
+    "createdAt": 1731369600000,
+    "updatedAt": 1731369600000,
+    "pinned": false,
+    "summary": "Experiencing the magic of collaborative creativity and idea-building.",
+    "aiSummary": "Experiencing the magic of collaborative creativity and idea-building."
+  },
+  {
+    "id": "1731456000000",
+    "title": "Weekend reflection - patterns",
+    "content": "Noticing patterns in my journal entries. Themes that keep coming up: productivity, meaning, relationships, presence, growth. It's like I'm circling around the same questions, but each time from a slightly different angle. Maybe that's how understanding deepens—not through sudden insight, but through repeated exploration.",
+    "createdAt": 1731456000000,
+    "updatedAt": 1731456000000,
+    "pinned": false,
+    "summary": "Identifying recurring themes in journaling and recognizing deepening through repeated exploration.",
+    "aiSummary": "Identifying recurring themes in journaling and recognizing deepening through repeated exploration."
+  },
+  {
+    "id": "1731542400000",
+    "title": "Dream about teaching again",
+    "content": "Dreamed about teaching again, but this time I felt more confident. I was helping students understand something complex, breaking it down, finding different ways to explain it. They were getting it, and I felt useful, like I was contributing something. Maybe this is about finding my voice, about sharing what I know.",
+    "createdAt": 1731542400000,
+    "updatedAt": 1731542400000,
+    "pinned": false,
+    "summary": "A teaching dream showing increased confidence and the desire to share knowledge meaningfully.",
+    "aiSummary": "A teaching dream showing increased confidence and the desire to share knowledge meaningfully."
+  },
+  {
+    "id": "1731628800000",
+    "title": "Morning pages - winter",
+    "content": "Winter is here. The days are shorter, the light is different, everything feels quieter. There's something about winter that invites introspection, that makes me want to turn inward. Maybe that's its purpose—not just a season, but a time for reflection, for rest, for preparing for what comes next.",
+    "createdAt": 1731628800000,
+    "updatedAt": 1731628800000,
+    "pinned": false,
+    "summary": "Embracing winter as a season of introspection, reflection, and preparation.",
+    "aiSummary": "Embracing winter as a season of introspection, reflection, and preparation."
+  },
+  {
+    "id": "1731715200000",
+    "title": "Feeling grateful - growth",
+    "content": "I'm feeling grateful for the growth I've experienced. Not just in skills or knowledge, but in self-awareness, in emotional intelligence, in my ability to be present. I'm not the same person I was four months ago, and that's a good thing. Growth isn't always comfortable, but it's always valuable.",
+    "createdAt": 1731715200000,
+    "updatedAt": 1731715200000,
+    "pinned": false,
+    "summary": "Expressing gratitude for personal growth in self-awareness and presence over the past months.",
+    "aiSummary": "Expressing gratitude for personal growth in self-awareness and presence over the past months."
+  },
+  {
+    "id": "1731801600000",
+    "title": "Reading 'The Seven Husbands of Evelyn Hugo'",
+    "content": "Reading 'The Seven Husbands of Evelyn Hugo' and it's completely absorbing me. The way it explores identity, love, ambition, the stories we tell about ourselves. It's making me think about my own story, about what I'm choosing to emphasize, what I'm leaving out, how I'm framing my narrative.",
+    "createdAt": 1731801600000,
+    "updatedAt": 1731801600000,
+    "pinned": false,
+    "summary": "Exploring themes of identity and narrative construction through a compelling novel.",
+    "aiSummary": "Exploring themes of identity and narrative construction through a compelling novel."
+  },
+  {
+    "id": "1731888000000",
+    "title": "Weekend project - learning guitar",
+    "content": "Started learning guitar. My fingers hurt, I can't make the chords sound right, but I'm having fun. There's something about learning something completely new, about being a beginner again, that's refreshing. I'm terrible at it, and that's okay. Maybe that's the point—to do things you're bad at, to embrace being a beginner.",
+    "createdAt": 1731888000000,
+    "updatedAt": 1731888000000,
+    "pinned": false,
+    "summary": "Beginning guitar lessons and finding value in being a beginner and embracing imperfection.",
+    "aiSummary": "Beginning guitar lessons and finding value in being a beginner and embracing imperfection."
+  },
+  {
+    "id": "1731974400000",
+    "title": "Work milestone",
+    "content": "Reached a milestone at work today. It's been a long journey, with ups and downs, but we made it. I'm proud of the team, of what we built together. It's not perfect, but it's meaningful, and that matters more. I'm learning that done is better than perfect, that progress is more important than perfection.",
+    "createdAt": 1731974400000,
+    "updatedAt": 1731974400000,
+    "pinned": false,
+    "summary": "Celebrating a work milestone and learning to value progress and completion over perfection.",
+    "aiSummary": "Celebrating a work milestone and learning to value progress and completion over perfection."
+  },
+  {
+    "id": "1732060800000",
+    "title": "Feeling present and grateful",
+    "content": "I'm feeling present and grateful today. For this practice, for the growth, for the awareness, for the ability to notice and reflect. This journal has become such an important part of my life, a space to process, to understand, to grow. I'm curious to see where this journey takes me next.",
+    "createdAt": 1732060800000,
+    "updatedAt": 1732060800000,
+    "pinned": true,
+    "summary": "Expressing gratitude for the journaling practice and its role in personal growth and awareness.",
+    "aiSummary": "Expressing gratitude for the journaling practice and its role in personal growth and awareness."
+  }
+]
