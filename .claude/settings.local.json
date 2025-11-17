@@ -5,7 +5,8 @@
       "Bash(timeout /t 3)",
       "Bash(npm install react-native-safe-area-context)",
       "Bash(npm install --save-dev react-native-svg-transformer)",
-      "Bash(npm install --save-dev metro-react-native-babel-transformer)"
+      "Bash(npm install --save-dev metro-react-native-babel-transformer)",
+      "Bash(timeout /t 5)"
     ],
     "deny": [],
     "ask": []

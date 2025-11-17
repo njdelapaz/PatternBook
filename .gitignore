@@ -44,5 +44,5 @@ coverage/
 /ios
 /android
 
-# test coverage
-coverage/
+
+/.claude/

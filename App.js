@@ -22,6 +22,12 @@ import { loadNotes, saveNotes } from './utils/storage';
 import { darkTheme, lightTheme } from './utils/constants';
 import { transcribeAudioWithDeepgram, isDeepgramConfigured } from './utils/deepgram';
 import { MarkdownText, formatTimestamp } from './utils/components';
+import { buildChatMessages, getDefaultChatModel, getDefaultMaxTokens, getDefaultTemperature } from './utils/chat';
+import { buildSecurePrompt, sanitizeInput, MAX_INPUT_LENGTHS } from './utils/llmGuardrails';
+import { generateTextSummary } from './utils/textSummarization';
+
+// Import LLM Service
+import { callLLM } from './services/llmService';
 
 // Import Carbon icons (for remaining components)
 import KeyboardIcon from './assets/carbon-icons/carbon--keyboard.svg';
@@ -33,8 +39,8 @@ import ChatIcon from './assets/carbon-icons/carbon--chat.svg';
 // OpenAI API Configuration
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
-// Demo user messages that auto-fill for easy presentation
-const DEMO_USER_MESSAGES = {
+// Demo user messages that auto-fill for easy presentation (development only)
+const DEMO_USER_MESSAGES = __DEV__ ? {
   dream: [
     "What do you think this dream means?",
     "I'm not sure, maybe I've been thinking about nostalgia lately",
@@ -45,10 +51,11 @@ const DEMO_USER_MESSAGES = {
     "Maybe I should focus on one thing at a time",
     "I think it means choosing projects that align with my values"
   ]
-};
+} : null;
 
-// Canned chat responses for demo - organized by note content
-const CHAT_RESPONSES = {
+// Canned chat responses for demo - organized by note content (development only)
+// Note: These are only used as fallback if API fails
+const CHAT_RESPONSES = __DEV__ ? {
   // For the "dream library" note (first voice recording)
   dream: [
     "That's a fascinating dream! The library of altered memories sounds like your subconscious exploring the malleability of memory. What do you think triggered this dream?",
@@ -61,7 +68,7 @@ const CHAT_RESPONSES = {
     "It sounds like you're recognizing the difference between being busy and being purposeful. Have you thought about what 'intentional' looks like for you specifically?",
     "This is such an important realization. Measuring worth by accomplishments can be exhausting. What would it look like to measure your worth differently?"
   ]
-};
+} : null;
 
 // Generate title based on content (hard-coded for demo)
 function generateTitleFromContent(content) {
@@ -81,50 +88,77 @@ function generateTitleFromContent(content) {
   return content.split(' ').slice(0, 5).join(' ') || 'Untitled Note';
 }
 
+// Summary prompt template
+const SUMMARY_TEMPLATE = `You are a helpful assistant that creates concise, clear summaries. Keep summaries under 50 words and capture the main point.
+
+Please summarize this note in 1-2 sentences:
+
+{{content}}`;
+
 // Generate AI summary for note content (internal function)
+// Applies security guardrails: sanitization, PII detection, length validation
+// Uses text-based fallback when AI API fails (after retries with exponential backoff)
 async function generateSummary(content) {
   try {
-    const response = await fetch(OPENAI_API_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: JSON.stringify({
-        model: 'gpt-4o-mini',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a helpful assistant that creates concise, clear summaries. Keep summaries under 50 words and capture the main point.',
-          },
-          {
-            role: 'user',
-            content: `Please summarize this note in 1-2 sentences:\n\n${content.slice(0, 2000)}${content.length > 2000 ? '...' : ''}`,
-          },
-        ],
-        temperature: 0.7,
-        max_tokens: 100,
-      }),
+    // Sanitize content with guardrails
+    const contentSanitized = sanitizeInput(content || '', {
+      maxLength: MAX_INPUT_LENGTHS.summary,
+      sanitizePII: true,
+      sanitizeInjection: true,
+      truncate: true, // Truncate if too long
     });
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      if (response.status === 429) {
-        throw new Error('OpenAI quota exceeded. Please add credits to your account.');
-      } else if (response.status === 401) {
-        throw new Error('OpenAI API key is invalid or expired.');
-      } else {
-        throw new Error(errorData.error?.message || `API Error (${response.status}): Failed to generate summary`);
+    if (!contentSanitized.isValid) {
+      // If validation fails, use text-based fallback
+      return generateTextSummary(content);
+    }
+
+    // Build secure prompt using template
+    const promptResult = buildSecurePrompt(SUMMARY_TEMPLATE, {
+      content: contentSanitized.sanitized,
+    }, {
+      maxLength: MAX_INPUT_LENGTHS.summary,
+      sanitizePII: true,
+      sanitizeInjection: true,
+    });
+
+    if (!promptResult.isValid) {
+      // Fallback if prompt building fails
+      return generateTextSummary(contentSanitized.sanitized);
+    }
+
+    // Use callLLM service (includes retry logic with exponential backoff)
+    const result = await callLLM({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a helpful assistant that creates concise, clear summaries. Keep summaries under 50 words and capture the main point.',
+        },
+        {
+          role: 'user',
+          content: `Please summarize this note in 1-2 sentences:\n\n${promptResult.prompt}`,
+        },
+      ],
+      temperature: 0.7,
+      maxTokens: 100,
+    });
+
+    // If API call succeeded, return AI-generated summary
+    if (result.success && result.data && result.data.content) {
+      const aiSummary = result.data.content.trim();
+      if (aiSummary.length > 0) {
+        return aiSummary;
       }
     }
 
-    const data = await response.json();
-    const summary = data.choices[0]?.message?.content || '';
-    return summary.trim() || content.slice(0, 100) + '...';
+    // API failed after retries - use text-based fallback
+    // This handles: rate limits, network errors, API errors, quota exceeded, etc.
+    return generateTextSummary(contentSanitized.sanitized);
   } catch (error) {
-    // Silently handle error for demo - just return fallback
-    // console.error('Error generating summary:', error);
-    return content.slice(0, 100) + (content.length > 100 ? '...' : '');
+    // Unexpected error - use text-based fallback
+    // Silently handle error (no user-facing messages as per requirements)
+    return generateTextSummary(content);
   }
 }
 
@@ -290,59 +324,102 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
       return;
     }
 
-    // Auto-fill the next demo message for easy presentation
-    const noteType = content.toLowerCase().includes('dream') && content.toLowerCase().includes('library')
-      ? 'dream'
-      : 'productivity';
-
-    // Count how many user messages have been sent
-    const userMessageCount = chatMessages.filter(msg => msg.role === 'user').length;
-    const demoMessages = DEMO_USER_MESSAGES[noteType];
-
-    // Auto-fill with the next message in sequence (cycles if exceeded)
-    if (demoMessages && demoMessages.length > 0) {
-      const nextMessage = demoMessages[userMessageCount % demoMessages.length];
-      setChatInput(nextMessage);
-    }
-
     setShowChat(true);
   };
 
-  // Handle sending a chat message (stubbed with canned responses)
+  // Handle sending a chat message with OpenAI API integration
   const handleSendChatMessage = async () => {
     if (!chatInput.trim()) return;
 
-    // Add user message
-    const userMessage = { role: 'user', content: chatInput };
-    setChatMessages(prev => [...prev, userMessage]);
+    // Store user input and clear input field
+    const userInput = chatInput.trim();
+    const userMessage = { role: 'user', content: userInput };
     setChatInput('');
     setIsLoadingChat(true);
 
-    // Simulate AI thinking delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    // Build message history with note context BEFORE adding user message to UI
+    // This ensures we don't duplicate the current message
+    // Guardrails are applied: sanitization, PII detection, length validation
+    const chatResult = buildChatMessages(
+      title,
+      content,
+      chatMessages, // Previous conversation history (before current message)
+      userInput // Current user message
+    );
 
-    // Determine which response set to use based on note content
-    const isDreamNote = content.toLowerCase().includes('dream') || content.toLowerCase().includes('library');
-    const responseSet = isDreamNote ? CHAT_RESPONSES.dream : CHAT_RESPONSES.productivity;
-    const noteType = isDreamNote ? 'dream' : 'productivity';
+    // Add user message to chat UI
+    setChatMessages(prev => [...prev, userMessage]);
 
-    // Get the appropriate canned response based on message count
-    const responseIndex = chatMessageCount % responseSet.length;
-    const aiResponse = responseSet[responseIndex];
+    // Log warnings if any (PII detected, injection attempts, etc.)
+    if (chatResult.warnings && chatResult.warnings.length > 0) {
+      console.log('[Chat Guardrails] Warnings:', chatResult.warnings);
+    }
 
-    // Add AI message
-    const aiMessage = { role: 'assistant', content: aiResponse };
-    setChatMessages(prev => [...prev, aiMessage]);
-    setChatMessageCount(prev => prev + 1);
-    setIsLoadingChat(false);
+    try {
+      // Call OpenAI API with sanitized messages
+      const result = await callLLM({
+        model: getDefaultChatModel(),
+        messages: chatResult.messages,
+        temperature: getDefaultTemperature(),
+        maxTokens: getDefaultMaxTokens(),
+      });
 
-    // Auto-fill the next demo message for easy presentation
-    const newUserMessageCount = chatMessages.filter(msg => msg.role === 'user').length + 1; // +1 for message we just sent
-    const demoMessages = DEMO_USER_MESSAGES[noteType];
-
-    if (demoMessages && demoMessages.length > 0) {
-      const nextMessage = demoMessages[newUserMessageCount % demoMessages.length];
-      setChatInput(nextMessage);
+      if (result.success && result.data && result.data.content) {
+        // Add AI response to chat
+        const aiMessage = { role: 'assistant', content: result.data.content };
+        setChatMessages(prev => [...prev, aiMessage]);
+      } else {
+        // Handle API errors gracefully
+        const isQuotaError = result.error && result.error.type === 'QuotaExceededError';
+        const isAuthError = result.error && result.error.type === 'AuthError';
+        
+        // Gracefully handle error - use fallback response in development, otherwise silently fail
+        if (__DEV__ && CHAT_RESPONSES) {
+          const isDreamNote = content.toLowerCase().includes('dream') || content.toLowerCase().includes('library');
+          const responseSet = isDreamNote ? CHAT_RESPONSES.dream : CHAT_RESPONSES.productivity;
+          const noteType = isDreamNote ? 'dream' : 'productivity';
+          
+          if (responseSet && responseSet.length > 0) {
+            const responseIndex = chatMessageCount % responseSet.length;
+            const fallbackResponse = responseSet[responseIndex];
+            const aiMessage = { role: 'assistant', content: fallbackResponse };
+            setChatMessages(prev => [...prev, aiMessage]);
+            setChatMessageCount(prev => prev + 1);
+          } else {
+            // Remove user message if we can't provide a response
+            setChatMessages(prev => prev.slice(0, -1));
+          }
+        } else {
+          // In production, silently remove the user message if API fails
+          // Errors are logged but not shown to users (as per requirements)
+          setChatMessages(prev => prev.slice(0, -1));
+        }
+      }
+    } catch (error) {
+      // Gracefully handle unexpected errors - no user-facing error messages
+      console.error('[Chat] Error sending message:', error);
+      
+      // Use fallback in development, otherwise silently fail
+      if (__DEV__ && CHAT_RESPONSES) {
+        const isDreamNote = content.toLowerCase().includes('dream') || content.toLowerCase().includes('library');
+        const responseSet = isDreamNote ? CHAT_RESPONSES.dream : CHAT_RESPONSES.productivity;
+        const noteType = isDreamNote ? 'dream' : 'productivity';
+        
+        if (responseSet && responseSet.length > 0) {
+          const responseIndex = chatMessageCount % responseSet.length;
+          const fallbackResponse = responseSet[responseIndex];
+          const aiMessage = { role: 'assistant', content: fallbackResponse };
+          setChatMessages(prev => [...prev, aiMessage]);
+          setChatMessageCount(prev => prev + 1);
+        } else {
+          setChatMessages(prev => prev.slice(0, -1));
+        }
+      } else {
+        // Silently remove user message on error
+        setChatMessages(prev => prev.slice(0, -1));
+      }
+    } finally {
+      setIsLoadingChat(false);
     }
   };
 
@@ -447,7 +524,7 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
   const stopAndTranscribe = async () => {
     try {
       console.log('=== STOP RECORDING CALLED ===', new Date().toISOString());
-      
+
       // Wait for recording to actually start if it's still initializing
       let attempts = 0;
       while (isStartingRef.current && attempts < 50) {
@@ -455,7 +532,7 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
         await new Promise(resolve => setTimeout(resolve, 20));
         attempts++;
       }
-      
+
       if (!recordingRef.current) {
         console.log('No recording to stop');
         return;
@@ -464,7 +541,7 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
       setIsRecording(false);
       const status = await recordingRef.current.getStatusAsync();
       console.log('Recording status before stop:', status);
-      
+
       await recordingRef.current.stopAndUnloadAsync();
       const uri = recordingRef.current.getURI();
       recordingRef.current = null;
@@ -516,7 +593,7 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
             <TouchableOpacity onPress={onBack} style={styles.todayButton}>
               <Text style={[styles.todayButtonText, { color: theme.accentColor }]}>← Today</Text>
             </TouchableOpacity>
-            
+
             <View style={styles.titleContainer}>
               {isEditingTitle ? (
                 <TextInput
@@ -527,7 +604,7 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
                   autoFocus
                 />
               ) : (
-                <TouchableOpacity 
+                <TouchableOpacity
                   style={styles.titleDisplay}
                   onPress={() => setIsEditingTitle(true)}
                 >
@@ -538,15 +615,15 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
             </View>
 
             <View style={styles.editorActions}>
-              <TouchableOpacity 
-                onPress={handleUndo} 
+              <TouchableOpacity
+                onPress={handleUndo}
                 style={[styles.actionButton, { backgroundColor: theme.cardBackground, opacity: historyIndex > 0 ? 1 : 0.3 }]}
                 disabled={historyIndex <= 0}
               >
                 <UndoIcon width={20} height={20} color={theme.textColor} />
               </TouchableOpacity>
-              <TouchableOpacity 
-                onPress={handleRedo} 
+              <TouchableOpacity
+                onPress={handleRedo}
                 style={[styles.actionButton, { backgroundColor: theme.cardBackground, opacity: historyIndex < history.length - 1 ? 1 : 0.3 }]}
                 disabled={historyIndex >= history.length - 1}
               >
@@ -607,52 +684,53 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
         onRequestClose={() => setShowChat(false)}
       >
         <View style={styles.chatModalContainer}>
-          <View style={[styles.chatModal, { backgroundColor: theme.backgroundColor }]}>
-            {/* Chat Header */}
-            <View style={[styles.chatHeader, { borderBottomColor: theme.borderColor, paddingTop: insets.top }]}>
-              <Text style={[styles.chatTitle, { color: theme.textColor }]}>Chat about your note</Text>
-              <TouchableOpacity onPress={() => setShowChat(false)} style={styles.closeButton}>
-                <Text style={[styles.closeButtonText, { color: theme.secondaryTextColor }]}>✕</Text>
-              </TouchableOpacity>
-            </View>
+          <KeyboardAvoidingView
+            style={{ flex: 1, marginTop: 50 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+          >
+            <View style={[styles.chatModal, { backgroundColor: theme.backgroundColor, marginTop: 0 }]}>
+              {/* Chat Header */}
+              <View style={[styles.chatHeader, { borderBottomColor: theme.borderColor, paddingTop: insets.top }]}>
+                <Text style={[styles.chatTitle, { color: theme.textColor }]}>Chat about your note</Text>
+                <TouchableOpacity onPress={() => setShowChat(false)} style={styles.closeButton}>
+                  <Text style={[styles.closeButtonText, { color: theme.secondaryTextColor }]}>✕</Text>
+                </TouchableOpacity>
+              </View>
 
-            {/* Chat Messages */}
-            <ScrollView style={styles.chatMessages} contentContainerStyle={styles.chatMessagesContent}>
-              {chatMessages.length === 0 && (
-                <View style={styles.chatEmptyState}>
-                  <Text style={[styles.chatEmptyText, { color: theme.secondaryTextColor }]}>
-                    Ask me anything about your note...
-                  </Text>
-                </View>
-              )}
-              {chatMessages.map((message, index) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.chatMessageBubble,
-                    message.role === 'user' ? styles.userMessage : styles.aiMessage
-                  ]}
-                >
-                  <Text style={[
-                    styles.chatMessageText,
-                    { color: message.role === 'user' ? '#000' : theme.textColor }
-                  ]}>
-                    {message.content}
-                  </Text>
-                </View>
-              ))}
-              {isLoadingChat && (
-                <View style={[styles.chatMessageBubble, styles.aiMessage]}>
-                  <ActivityIndicator size="small" color={theme.textColor} />
-                </View>
-              )}
-            </ScrollView>
+              {/* Chat Messages */}
+              <ScrollView style={styles.chatMessages} contentContainerStyle={styles.chatMessagesContent}>
+                {chatMessages.length === 0 && (
+                  <View style={styles.chatEmptyState}>
+                    <Text style={[styles.chatEmptyText, { color: theme.secondaryTextColor }]}>
+                      Ask me anything about your note...
+                    </Text>
+                  </View>
+                )}
+                {chatMessages.map((message, index) => (
+                  <View
+                    key={index}
+                    style={[
+                      styles.chatMessageBubble,
+                      message.role === 'user' ? styles.userMessage : styles.aiMessage
+                    ]}
+                  >
+                    <Text style={[
+                      styles.chatMessageText,
+                      { color: message.role === 'user' ? '#000' : theme.textColor }
+                    ]}>
+                      {message.content}
+                    </Text>
+                  </View>
+                ))}
+                {isLoadingChat && (
+                  <View style={[styles.chatMessageBubble, styles.aiMessage]}>
+                    <ActivityIndicator size="small" color={theme.textColor} />
+                  </View>
+                )}
+              </ScrollView>
 
-            {/* Chat Input */}
-            <KeyboardAvoidingView
-              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-              keyboardVerticalOffset={0}
-            >
+              {/* Chat Input */}
               <View style={[styles.chatInputContainer, { backgroundColor: theme.cardBackground, borderTopColor: theme.borderColor, paddingBottom: insets.bottom }]}>
                 <TextInput
                   style={[styles.chatInput, { color: theme.textColor }]}
@@ -671,8 +749,8 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
                   <Text style={styles.chatSendButtonText}>Send</Text>
                 </TouchableOpacity>
               </View>
-            </KeyboardAvoidingView>
-          </View>
+            </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
     </View>
@@ -753,6 +831,7 @@ export default function App() {
     setCurrentScreen('editor');
 
     // Generate summary asynchronously and cache it
+    // generateSummary handles retries and fallbacks internally
     try {
       const summary = await generateSummary(transcription);
       const noteWithSummary = { ...newNote, summary, aiSummary: summary };
@@ -762,9 +841,8 @@ export default function App() {
       setNotes(notesWithSummary);
       saveNotes(notesWithSummary);
     } catch (error) {
-      // Silently handle error for demo - just use fallback
-      // console.error('Error generating summary:', error);
-      const fallbackSummary = transcription.slice(0, 100) + '...';
+      // Silently handle error - use text-based fallback
+      const fallbackSummary = generateTextSummary(transcription);
       const noteWithError = { ...newNote, summary: fallbackSummary, aiSummary: fallbackSummary };
       const notesWithError = updatedNotes.map(note =>
         note.id === newNote.id ? noteWithError : note
@@ -960,6 +1038,7 @@ export default function App() {
 
   const handleLogin = () => {
     setIsLoggedIn(true);
+    setHasCompletedOnboarding(true); // Skip onboarding for demo
     setCurrentScreen('main');
   };
 
