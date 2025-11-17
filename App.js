@@ -9,6 +9,7 @@ import { Audio as AVAudio } from 'expo-av';
 
 // Import Screen Components
 import LoginScreen from './screens/LoginScreen';
+import EmailLoginScreen from './screens/EmailLoginScreen';
 import OnboardingScreen from './screens/OnboardingScreen';
 import MainScreen from './screens/MainScreen';
 import SettingsScreen from './screens/SettingsScreen';
@@ -439,6 +440,7 @@ function NoteEditor({ note, notes, onBack, onSave, isDarkMode }) {
       });
 
       if (result.success && result.data && result.data.content) {
+<<<<<<< HEAD
         const assistantMessage = {
           role: 'assistant',
           content: result.data.content,
@@ -459,6 +461,36 @@ function NoteEditor({ note, notes, onBack, onSave, isDarkMode }) {
             messageCount: finalMessages.length,
             lastMessage: assistantMessage,
           });
+=======
+        // Add AI response to chat
+        const aiMessage = { role: 'assistant', content: result.data.content };
+        setChatMessages(prev => [...prev, aiMessage]);
+      } else {
+        // Handle API errors gracefully
+        const isQuotaError = result.error && result.error.type === 'QuotaExceededError';
+        const isAuthError = result.error && result.error.type === 'AuthError';
+        
+        // Gracefully handle error - use fallback response in development, otherwise silently fail
+        if (__DEV__ && CHAT_RESPONSES) {
+          const isDreamNote = content.toLowerCase().includes('dream') || content.toLowerCase().includes('library');
+          const responseSet = isDreamNote ? CHAT_RESPONSES.dream : CHAT_RESPONSES.productivity;
+          const noteType = isDreamNote ? 'dream' : 'productivity';
+          
+          if (responseSet && responseSet.length > 0) {
+            const responseIndex = chatMessageCount % responseSet.length;
+            const fallbackResponse = responseSet[responseIndex];
+            const aiMessage = { role: 'assistant', content: fallbackResponse };
+            setChatMessages(prev => [...prev, aiMessage]);
+            setChatMessageCount(prev => prev + 1);
+          } else {
+            // Remove user message if we can't provide a response
+            setChatMessages(prev => prev.slice(0, -1));
+          }
+        } else {
+          // In production, silently remove the user message if API fails
+          // Errors are logged but not shown to users (as per requirements)
+          setChatMessages(prev => prev.slice(0, -1));
+>>>>>>> cc2f50dfd2832f402612ecd5c53f5cf7cbc5da13
         }
 
         // Clear referenced notes after displaying
@@ -830,6 +862,7 @@ function NoteEditor({ note, notes, onBack, onSave, isDarkMode }) {
 // Main App Component
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [showEmailLogin, setShowEmailLogin] = useState(false);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
   const [notes, setNotes] = useState([]);
   const [deletedNotes, setDeletedNotes] = useState([]);
@@ -1118,17 +1151,44 @@ export default function App() {
   const handleLogin = () => {
     setIsLoggedIn(true);
     setHasCompletedOnboarding(true); // Skip onboarding for demo
+    setCurrentScreen('main');
+  };
+
+  const handleNavigateToEmail = () => {
+    setShowEmailLogin(true);
+  };
+
+  const handleBackFromEmail = () => {
+    setShowEmailLogin(false);
   };
 
   const handleCompleteOnboarding = () => {
     setHasCompletedOnboarding(true);
   };
 
+  const handleLogout = () => {
+    setIsLoggedIn(false);
+    setShowEmailLogin(false);
+    setHasCompletedOnboarding(false);
+    setCurrentScreen('main');
+    setSelectedNoteId(null);
+  };
+
   // Show login screen if not logged in
   if (!isLoggedIn) {
     return (
       <SafeAreaProvider>
-        <LoginScreen onLogin={handleLogin} />
+        {showEmailLogin ? (
+          <EmailLoginScreen
+            onBack={handleBackFromEmail}
+            onLogin={handleLogin}
+          />
+        ) : (
+          <LoginScreen
+            onLogin={handleLogin}
+            onNavigateToEmail={handleNavigateToEmail}
+          />
+        )}
       </SafeAreaProvider>
     );
   }
@@ -1194,7 +1254,11 @@ export default function App() {
           isDarkMode={isDarkMode}
           onBack={handleNavigateBack}
           onClearAllData={handleClearAllData}
+<<<<<<< HEAD
           onNavigateToAdminPanel={handleNavigateToAdminPanel}
+=======
+          onLogout={handleLogout}
+>>>>>>> cc2f50dfd2832f402612ecd5c53f5cf7cbc5da13
         />
       ) : currentScreen === 'recently-deleted' ? (
         <RecentlyDeletedScreen

@@ -122,18 +122,29 @@ async function makeOpenAIRequest(model, messages, temperature, maxTokens, otherO
 
     if (!response.ok) {
       const errorType = getErrorType(response.status, responseData);
+      const errorMessage = responseData.error?.message || `API Error (${response.status})`;
+      const errorCode = responseData.error?.code || null;
+      const errorTypeFromAPI = responseData.error?.type || null;
 
-      // Log critical errors clearly
+      // Log critical errors with full OpenAI error details
       if (errorType === ErrorTypes.QUOTA_EXCEEDED) {
-        logger.logCriticalError(errorType, 'OpenAI quota exceeded - add credits to your account');
+        logger.logCriticalError(errorType, `OpenAI quota exceeded: ${errorMessage}${errorCode ? ` (code: ${errorCode})` : ''}${errorTypeFromAPI ? ` (type: ${errorTypeFromAPI})` : ''}`);
       } else if (errorType === ErrorTypes.AUTH) {
-        logger.logCriticalError(errorType, 'Invalid OpenAI API key');
+        logger.logCriticalError(errorType, `Invalid OpenAI API key: ${errorMessage}${errorCode ? ` (code: ${errorCode})` : ''}`);
       }
+
+      // Create error object with full details
+      const error = new Error(errorMessage);
+      error.details = {
+        code: errorCode,
+        type: errorTypeFromAPI,
+        fullResponse: responseData.error,
+      };
 
       return {
         success: false,
         errorType,
-        error: new Error(responseData.error?.message || `API Error (${response.status})`),
+        error,
         duration,
       };
     }
@@ -285,6 +296,18 @@ async function makeRequestWithRetry(requestId, model, messages, temperature, max
  * }
  */
 async function callLLM({ model = 'gpt-5', messages, temperature, maxTokens, ...otherOptions }) {
+  // Validate API key
+  if (!OPENAI_API_KEY || !OPENAI_API_KEY.trim()) {
+    return {
+      success: false,
+      error: {
+        type: ErrorTypes.AUTH,
+        message: 'OpenAI API key is not configured. Please set OPENAI_API_KEY in your .env file.',
+        details: null,
+      },
+    };
+  }
+
   // Validate model
   if (!SUPPORTED_MODELS.includes(model)) {
     return {
