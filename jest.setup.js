@@ -42,6 +42,8 @@ jest.mock('react-native-safe-area-context', () => ({
 }));
 
 // Setup console mock
+// Jest setup file
+// Mock console methods for cleaner test output
 global.console = {
   ...console,
   log: jest.fn(),
@@ -49,3 +51,7 @@ global.console = {
   warn: jest.fn(),
   info: jest.fn(),
 };
+
+// Mock timers
+jest.useFakeTimers();
+
