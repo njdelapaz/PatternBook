@@ -202,8 +202,6 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
   const [isTranscribing, setIsTranscribing] = useState(false);
   const recordingRef = useRef(null);
   const isStartingRef = useRef(false);
-  const [syncStatus, setSyncStatus] = useState('synced'); // 'syncing', 'synced'
-  const syncTimeoutRef = useRef(null);
 
   // Initialize audio mode on mount for iOS (expo-av)
   useEffect(() => {
@@ -248,33 +246,19 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
     };
   }, []);
 
-  // Auto-save with debouncing and sync status
+  // Auto-save with debouncing
   useEffect(() => {
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
     }
-    if (syncTimeoutRef.current) {
-      clearTimeout(syncTimeoutRef.current);
-    }
-
-    // Show syncing status immediately
-    setSyncStatus('syncing');
 
     saveTimeoutRef.current = setTimeout(() => {
       onSave(title, content);
-
-      // After save, wait 1 second then show synced
-      syncTimeoutRef.current = setTimeout(() => {
-        setSyncStatus('synced');
-      }, 1000);
     }, 500);
 
     return () => {
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
-      }
-      if (syncTimeoutRef.current) {
-        clearTimeout(syncTimeoutRef.current);
       }
     };
   }, [title, content]);
@@ -337,23 +321,6 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
     if (!content.trim() && !title.trim()) {
       alert('Note is empty. Please add some content first.');
       return;
-    }
-
-    // Auto-fill demo message only in development mode
-    if (__DEV__ && DEMO_USER_MESSAGES) {
-      const noteType = content.toLowerCase().includes('dream') && content.toLowerCase().includes('library')
-        ? 'dream'
-        : 'productivity';
-
-      // Count how many user messages have been sent
-      const userMessageCount = chatMessages.filter(msg => msg.role === 'user').length;
-      const demoMessages = DEMO_USER_MESSAGES[noteType];
-
-      // Auto-fill with the next message in sequence (cycles if exceeded)
-      if (demoMessages && demoMessages.length > 0) {
-        const nextMessage = demoMessages[userMessageCount % demoMessages.length];
-        setChatInput(nextMessage);
-      }
     }
 
     setShowChat(true);
@@ -452,19 +419,6 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
       }
     } finally {
       setIsLoadingChat(false);
-
-      // Auto-fill next demo message only in development mode
-      if (__DEV__ && DEMO_USER_MESSAGES) {
-        const isDreamNote = content.toLowerCase().includes('dream') || content.toLowerCase().includes('library');
-        const noteType = isDreamNote ? 'dream' : 'productivity';
-        const newUserMessageCount = chatMessages.filter(msg => msg.role === 'user').length + 1;
-        const demoMessages = DEMO_USER_MESSAGES[noteType];
-
-        if (demoMessages && demoMessages.length > 0) {
-          const nextMessage = demoMessages[newUserMessageCount % demoMessages.length];
-          setChatInput(nextMessage);
-        }
-      }
     }
   };
 
@@ -609,15 +563,6 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
       const transcription = await transcribeAudioWithDeepgram(uri);
       if (transcription) {
         setContent(prev => (prev ? prev + (prev.endsWith('\n') ? '' : '\n') + transcription : transcription));
-
-        // Trigger sync animation after transcription
-        setSyncStatus('syncing');
-        if (syncTimeoutRef.current) {
-          clearTimeout(syncTimeoutRef.current);
-        }
-        syncTimeoutRef.current = setTimeout(() => {
-          setSyncStatus('synced');
-        }, 1000);
       }
     } catch (e) {
       console.error('Failed to stop or transcribe', e);
@@ -658,18 +603,13 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
                   autoFocus
                 />
               ) : (
-                <View style={styles.titleWithSync}>
-                  <TouchableOpacity
-                    style={styles.titleDisplay}
-                    onPress={() => setIsEditingTitle(true)}
-                  >
-                    <Text style={[styles.titleText, { color: theme.textColor }]}>{title}</Text>
-                    <Text style={[styles.renameArrow, { color: theme.secondaryTextColor }]}>⌄</Text>
-                  </TouchableOpacity>
-                  <Text style={[styles.syncIndicator, { color: '#fff' }]}>
-                    {syncStatus === 'syncing' ? 'syncing...' : 'synced'}
-                  </Text>
-                </View>
+                <TouchableOpacity
+                  style={styles.titleDisplay}
+                  onPress={() => setIsEditingTitle(true)}
+                >
+                  <Text style={[styles.titleText, { color: theme.textColor }]}>{title}</Text>
+                  <Text style={[styles.renameArrow, { color: theme.secondaryTextColor }]}>⌄</Text>
+                </TouchableOpacity>
               )}
             </View>
 
@@ -743,52 +683,53 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
         onRequestClose={() => setShowChat(false)}
       >
         <View style={styles.chatModalContainer}>
-          <View style={[styles.chatModal, { backgroundColor: theme.backgroundColor }]}>
-            {/* Chat Header */}
-            <View style={[styles.chatHeader, { borderBottomColor: theme.borderColor, paddingTop: insets.top }]}>
-              <Text style={[styles.chatTitle, { color: theme.textColor }]}>Chat about your note</Text>
-              <TouchableOpacity onPress={() => setShowChat(false)} style={styles.closeButton}>
-                <Text style={[styles.closeButtonText, { color: theme.secondaryTextColor }]}>✕</Text>
-              </TouchableOpacity>
-            </View>
+          <KeyboardAvoidingView
+            style={{ flex: 1, marginTop: 50 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
+          >
+            <View style={[styles.chatModal, { backgroundColor: theme.backgroundColor, marginTop: 0 }]}>
+              {/* Chat Header */}
+              <View style={[styles.chatHeader, { borderBottomColor: theme.borderColor, paddingTop: insets.top }]}>
+                <Text style={[styles.chatTitle, { color: theme.textColor }]}>Chat about your note</Text>
+                <TouchableOpacity onPress={() => setShowChat(false)} style={styles.closeButton}>
+                  <Text style={[styles.closeButtonText, { color: theme.secondaryTextColor }]}>✕</Text>
+                </TouchableOpacity>
+              </View>
 
-            {/* Chat Messages */}
-            <ScrollView style={styles.chatMessages} contentContainerStyle={styles.chatMessagesContent}>
-              {chatMessages.length === 0 && (
-                <View style={styles.chatEmptyState}>
-                  <Text style={[styles.chatEmptyText, { color: theme.secondaryTextColor }]}>
-                    Ask me anything about your note...
-                  </Text>
-                </View>
-              )}
-              {chatMessages.map((message, index) => (
-                <View
-                  key={index}
-                  style={[
-                    styles.chatMessageBubble,
-                    message.role === 'user' ? styles.userMessage : styles.aiMessage
-                  ]}
-                >
-                  <Text style={[
-                    styles.chatMessageText,
-                    { color: message.role === 'user' ? '#000' : theme.textColor }
-                  ]}>
-                    {message.content}
-                  </Text>
-                </View>
-              ))}
-              {isLoadingChat && (
-                <View style={[styles.chatMessageBubble, styles.aiMessage]}>
-                  <ActivityIndicator size="small" color={theme.textColor} />
-                </View>
-              )}
-            </ScrollView>
+              {/* Chat Messages */}
+              <ScrollView style={styles.chatMessages} contentContainerStyle={styles.chatMessagesContent}>
+                {chatMessages.length === 0 && (
+                  <View style={styles.chatEmptyState}>
+                    <Text style={[styles.chatEmptyText, { color: theme.secondaryTextColor }]}>
+                      Ask me anything about your note...
+                    </Text>
+                  </View>
+                )}
+                {chatMessages.map((message, index) => (
+                  <View
+                    key={index}
+                    style={[
+                      styles.chatMessageBubble,
+                      message.role === 'user' ? styles.userMessage : styles.aiMessage
+                    ]}
+                  >
+                    <Text style={[
+                      styles.chatMessageText,
+                      { color: message.role === 'user' ? '#000' : theme.textColor }
+                    ]}>
+                      {message.content}
+                    </Text>
+                  </View>
+                ))}
+                {isLoadingChat && (
+                  <View style={[styles.chatMessageBubble, styles.aiMessage]}>
+                    <ActivityIndicator size="small" color={theme.textColor} />
+                  </View>
+                )}
+              </ScrollView>
 
-            {/* Chat Input */}
-            <KeyboardAvoidingView
-              behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-              keyboardVerticalOffset={0}
-            >
+              {/* Chat Input */}
               <View style={[styles.chatInputContainer, { backgroundColor: theme.cardBackground, borderTopColor: theme.borderColor, paddingBottom: insets.bottom }]}>
                 <TextInput
                   style={[styles.chatInput, { color: theme.textColor }]}
@@ -807,8 +748,8 @@ function NoteEditor({ note, onBack, onSave, isDarkMode }) {
                   <Text style={styles.chatSendButtonText}>Send</Text>
                 </TouchableOpacity>
               </View>
-            </KeyboardAvoidingView>
-          </View>
+            </View>
+          </KeyboardAvoidingView>
         </View>
       </Modal>
     </View>
@@ -1327,9 +1268,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 16,
   },
-  titleWithSync: {
-    alignItems: 'center',
-  },
   titleDisplay: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1340,13 +1278,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginRight: 8,
     letterSpacing: -0.2,
-  },
-  syncIndicator: {
-    fontSize: 14,
-    opacity: 1,
-    fontStyle: 'italic',
-    fontWeight: '600',
-    marginTop: 2,
   },
   renameArrow: {
     fontSize: 14,
