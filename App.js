@@ -1,5 +1,5 @@
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Modal, Pressable, Keyboard, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, ActivityIndicator, Alert } from 'react-native';
+import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Modal, Pressable, Keyboard, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, ActivityIndicator, Alert, PanResponder, Animated } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useEffect, useRef } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -75,7 +75,7 @@ async function generateTitle(content) {
 }
 
 // Note Editor Screen Component
-function NoteEditor({ note, notes, onBack, onSave, isDarkMode }) {
+function NoteEditor({ note, notes, onBack, onSave, onNotePress, isDarkMode }) {
   const insets = useSafeAreaInsets();
   const [title, setTitle] = useState(note?.title || 'New Note');
   const [content, setContent] = useState(note?.content || '');
@@ -527,10 +527,143 @@ function NoteEditor({ note, notes, onBack, onSave, isDarkMode }) {
 
   const contentInputRef = useRef(null);
   const theme = isDarkMode ? darkTheme : lightTheme;
+  const pan = useRef(new Animated.Value(0)).current;
+  const chatPan = useRef(new Animated.Value(0)).current;
+
+  // Interpolate opacity for shadow effect during swipe
+  // Shadow should be dark when not swiping, fade as we swipe
+  const shadowOpacity = pan.interpolate({
+    inputRange: [0, 300],
+    outputRange: [0.3, 0],
+    extrapolate: 'clamp',
+  });
+
+  // Swipe back gesture handler for main editor
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: (evt, _gestureState) => {
+        // Only trigger if swipe starts from left edge (within 50px) and chat is not open
+        return evt.nativeEvent.pageX < 50 && !showChat;
+      },
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        // Only trigger for horizontal swipes from left edge and chat is not open
+        return evt.nativeEvent.pageX < 50 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy) && !showChat;
+      },
+      onPanResponderGrant: () => {
+        pan.setOffset(0);
+      },
+      onPanResponderMove: (_evt, gestureState) => {
+        // Only allow right swipe (positive dx)
+        if (gestureState.dx > 0) {
+          pan.setValue(gestureState.dx);
+        }
+      },
+      onPanResponderRelease: (_evt, gestureState) => {
+        // If swiped more than 100px to the right, complete the swipe animation
+        if (gestureState.dx > 100) {
+          // Animate off-screen to the right
+          Animated.timing(pan, {
+            toValue: 400,
+            duration: 200,
+            useNativeDriver: true,
+          }).start(() => {
+            // After animation completes, navigate back and reset
+            onBack();
+            pan.setValue(0);
+          });
+        } else {
+          // Snap back
+          Animated.spring(pan, {
+            toValue: 0,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    })
+  ).current;
+
+  // Swipe back gesture handler for chat modal
+  const chatPanResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: (evt, _gestureState) => {
+        // Only trigger if swipe starts from left edge (within 50px)
+        return evt.nativeEvent.pageX < 50;
+      },
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        // Only trigger for horizontal swipes from left edge
+        return evt.nativeEvent.pageX < 50 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+      },
+      onPanResponderGrant: () => {
+        chatPan.setOffset(0);
+      },
+      onPanResponderMove: (_evt, gestureState) => {
+        // Only allow right swipe (positive dx)
+        if (gestureState.dx > 0) {
+          chatPan.setValue(gestureState.dx);
+        }
+      },
+      onPanResponderRelease: (_evt, gestureState) => {
+        // If swiped more than 100px to the right, complete the swipe animation
+        if (gestureState.dx > 100) {
+          // Animate off-screen to the right
+          Animated.timing(chatPan, {
+            toValue: 400,
+            duration: 200,
+            useNativeDriver: true,
+          }).start(() => {
+            // After animation completes, close chat and reset
+            setShowChat(false);
+            chatPan.setValue(0);
+          });
+        } else {
+          // Snap back
+          Animated.spring(chatPan, {
+            toValue: 0,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    })
+  ).current;
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
-      <StatusBar style={isDarkMode ? "light" : "dark"} />
+    <View style={styles.container}>
+      {/* Shadow overlay that appears during swipe to create depth */}
+      <Animated.View
+        style={[
+          styles.swipeShadowOverlay,
+          {
+            opacity: shadowOpacity,
+          }
+        ]}
+        pointerEvents="none"
+      />
+
+      <Animated.View
+        style={[
+          styles.container,
+          {
+            backgroundColor: theme.backgroundColor,
+            transform: [
+              { translateX: pan },
+              {
+                scale: pan.interpolate({
+                  inputRange: [0, 300],
+                  outputRange: [1, 0.95],
+                  extrapolate: 'clamp',
+                })
+              }
+            ],
+            borderRadius: pan.interpolate({
+              inputRange: [0, 50],
+              outputRange: [0, 10],
+              extrapolate: 'clamp',
+            })
+          }
+        ]}
+        {...panResponder.panHandlers}
+      >
+        <StatusBar style={isDarkMode ? "light" : "dark"} />
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -639,7 +772,17 @@ function NoteEditor({ note, notes, onBack, onSave, isDarkMode }) {
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 0}
           >
-            <View style={[styles.chatModal, { backgroundColor: theme.backgroundColor, marginTop: 0 }]}>
+            <Animated.View
+              style={[
+                styles.chatModal,
+                {
+                  backgroundColor: theme.backgroundColor,
+                  marginTop: 0,
+                  transform: [{ translateX: chatPan }]
+                }
+              ]}
+              {...chatPanResponder.panHandlers}
+            >
               {/* Chat Header */}
               <View style={[styles.chatHeader, { borderBottomColor: theme.borderColor, paddingTop: insets.top }]}>
                 <Text style={[styles.chatTitle, { color: theme.textColor }]}>Chat about your note</Text>
@@ -675,8 +818,25 @@ function NoteEditor({ note, notes, onBack, onSave, isDarkMode }) {
                     {message.role === 'assistant' && message.retrievedNotes && message.retrievedNotes.length > 0 && (
                       <View style={styles.referencedNotesContainer}>
                         <Text style={[styles.referencedNotesLabel, { color: theme.secondaryTextColor }]}>
-                          Referenced: {message.retrievedNotes.map(n => n.noteTitle).join(', ')}
+                          Referenced notes:
                         </Text>
+                        <View style={styles.referencedNotesList}>
+                          {message.retrievedNotes.map((refNote, idx) => (
+                            <TouchableOpacity
+                              key={idx}
+                              style={[styles.referencedNoteBadge, { backgroundColor: theme.cardBackground, borderColor: theme.borderColor }]}
+                              onPress={() => {
+                                if (onNotePress) {
+                                  onNotePress(refNote.noteId);
+                                }
+                              }}
+                            >
+                              <Text style={[styles.referencedNoteText, { color: theme.accentColor }]}>
+                                {refNote.noteTitle}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
                       </View>
                     )}
                   </View>
@@ -707,10 +867,11 @@ function NoteEditor({ note, notes, onBack, onSave, isDarkMode }) {
                   <Text style={styles.chatSendButtonText}>Send</Text>
                 </TouchableOpacity>
               </View>
-            </View>
+            </Animated.View>
           </KeyboardAvoidingView>
         </View>
       </Modal>
+    </Animated.View>
     </View>
   );
 }
@@ -724,6 +885,7 @@ export default function App() {
   const [deletedNotes, setDeletedNotes] = useState([]);
   const [currentScreen, setCurrentScreen] = useState('main'); // 'main', 'editor', 'voice-record', 'text-editor', 'settings', 'recently-deleted', 'global-chat', 'admin-panel'
   const [selectedNoteId, setSelectedNoteId] = useState(null);
+  const [navigationStack, setNavigationStack] = useState([]); // Stack to track note navigation history
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [showSearch, setShowSearch] = useState(false);
@@ -764,6 +926,7 @@ export default function App() {
       titleGenerated: false,
     };
     setNotes([newNote, ...notes]);
+    setNavigationStack([]); // Clear navigation stack when creating new note
     setSelectedNoteId(newNote.id);
     setCurrentScreen('editor');
   };
@@ -786,6 +949,7 @@ export default function App() {
     saveNotes(updatedNotes);
 
     // Navigate to the note editor
+    setNavigationStack([]); // Clear navigation stack when creating new note
     setSelectedNoteId(newNote.id);
     setCurrentScreen('editor');
   };
@@ -901,8 +1065,21 @@ export default function App() {
   };
 
   // Handle opening an existing note
-  const handleNotePress = (note) => {
-    setSelectedNoteId(note.id);
+  const handleNotePress = (noteOrId) => {
+    // Handle both note object and noteId string
+    const noteId = typeof noteOrId === 'string' ? noteOrId : noteOrId.id;
+
+    // If we're currently in the editor (navigating from note to note),
+    // push the current note to the navigation stack
+    if (currentScreen === 'editor' && selectedNoteId) {
+      setNavigationStack(prev => [...prev, { screen: 'editor', noteId: selectedNoteId }]);
+    } else {
+      // Coming from a different screen (main, global-chat, etc.)
+      // Clear the navigation stack
+      setNavigationStack([]);
+    }
+
+    setSelectedNoteId(noteId);
     setCurrentScreen('editor');
   };
 
@@ -925,7 +1102,7 @@ export default function App() {
     );
   };
 
-  // Handle going back to main screen
+  // Handle going back (to previous note or main screen)
   const handleBack = () => {
     // Check if current note is unedited and should be discarded
     const currentNote = notes.find((note) => note.id === selectedNoteId);
@@ -934,8 +1111,20 @@ export default function App() {
       setNotes((prevNotes) => prevNotes.filter((note) => note.id !== selectedNoteId));
     }
 
-    setCurrentScreen('main');
-    setSelectedNoteId(null);
+    // Check if we have a navigation stack (came from another note)
+    if (navigationStack.length > 0) {
+      // Pop the last item from the stack
+      const previousLocation = navigationStack[navigationStack.length - 1];
+      setNavigationStack(prev => prev.slice(0, -1));
+
+      // Navigate back to the previous note
+      setSelectedNoteId(previousLocation.noteId);
+      setCurrentScreen(previousLocation.screen);
+    } else {
+      // No stack, go back to main screen
+      setCurrentScreen('main');
+      setSelectedNoteId(null);
+    }
   };
 
   // Handle deleting a note
@@ -1051,40 +1240,128 @@ export default function App() {
     );
   }
 
+  // Determine what screen should be shown in the background when swiping
+  const getBackgroundScreen = () => {
+    if (currentScreen === 'editor') {
+      if (navigationStack.length > 0) {
+        // Show previous note in background
+        const previousLocation = navigationStack[navigationStack.length - 1];
+        const previousNote = notes.find(n => n.id === previousLocation.noteId);
+        return (
+          <View style={{ flex: 1 }} pointerEvents="none">
+            <NoteEditor
+              note={previousNote}
+              notes={notes}
+              onBack={() => {}}
+              onSave={() => {}}
+              onNotePress={() => {}}
+              isDarkMode={isDarkMode}
+            />
+          </View>
+        );
+      } else {
+        // Show main screen in background
+        return (
+          <View style={{ flex: 1 }} pointerEvents="none">
+            <MainScreen
+              notes={notes}
+              onNotePress={handleNotePress}
+              onCreateNote={handleCreateNote}
+              onDeleteNote={handleDeleteNote}
+              onTogglePin={handleTogglePin}
+              isDarkMode={isDarkMode}
+              onToggleTheme={handleToggleTheme}
+              searchQuery={searchQuery}
+              onSearchChange={handleSearchChange}
+              showSearch={showSearch}
+              onToggleSearch={handleToggleSearch}
+              sortBy={sortBy}
+              onSortChange={handleSortChange}
+              showThreeDotsMenu={showThreeDotsMenu}
+              onToggleThreeDotsMenu={handleToggleThreeDotsMenu}
+              onNavigateToSettings={handleNavigateToSettings}
+              onNavigateToRecentlyDeleted={handleNavigateToRecentlyDeleted}
+              onNavigateToVoiceRecord={handleNavigateToVoiceRecord}
+              onNavigateToTextEditor={handleNavigateToTextEditor}
+              onNavigateToGlobalChat={handleNavigateToGlobalChat}
+            />
+          </View>
+        );
+      }
+    } else if (currentScreen === 'global-chat') {
+      // Show main screen in background when in global chat
+      return (
+        <View style={{ flex: 1 }} pointerEvents="none">
+          <MainScreen
+            notes={notes}
+            onNotePress={handleNotePress}
+            onCreateNote={handleCreateNote}
+            onDeleteNote={handleDeleteNote}
+            onTogglePin={handleTogglePin}
+            isDarkMode={isDarkMode}
+            onToggleTheme={handleToggleTheme}
+            searchQuery={searchQuery}
+            onSearchChange={handleSearchChange}
+            showSearch={showSearch}
+            onToggleSearch={handleToggleSearch}
+            sortBy={sortBy}
+            onSortChange={handleSortChange}
+            showThreeDotsMenu={showThreeDotsMenu}
+            onToggleThreeDotsMenu={handleToggleThreeDotsMenu}
+            onNavigateToSettings={handleNavigateToSettings}
+            onNavigateToRecentlyDeleted={handleNavigateToRecentlyDeleted}
+            onNavigateToVoiceRecord={handleNavigateToVoiceRecord}
+            onNavigateToTextEditor={handleNavigateToTextEditor}
+            onNavigateToGlobalChat={handleNavigateToGlobalChat}
+          />
+        </View>
+      );
+    }
+
+    return null;
+  };
+
   return (
     <SafeAreaProvider>
-      {currentScreen === 'main' ? (
-        <MainScreen
-          notes={notes}
-          onNotePress={handleNotePress}
-          onCreateNote={handleCreateNote}
-          onDeleteNote={handleDeleteNote}
-          onTogglePin={handleTogglePin}
-          isDarkMode={isDarkMode}
-          onToggleTheme={handleToggleTheme}
-          searchQuery={searchQuery}
-          onSearchChange={handleSearchChange}
-          showSearch={showSearch}
-          onToggleSearch={handleToggleSearch}
-          sortBy={sortBy}
-          onSortChange={handleSortChange}
-          showThreeDotsMenu={showThreeDotsMenu}
-          onToggleThreeDotsMenu={handleToggleThreeDotsMenu}
-          onNavigateToSettings={handleNavigateToSettings}
-          onNavigateToRecentlyDeleted={handleNavigateToRecentlyDeleted}
-          onNavigateToVoiceRecord={handleNavigateToVoiceRecord}
-          onNavigateToTextEditor={handleNavigateToTextEditor}
-          onNavigateToGlobalChat={handleNavigateToGlobalChat}
-        />
-      ) : currentScreen === 'editor' ? (
-        <NoteEditor
-          note={selectedNote}
-          notes={notes}
-          onBack={handleBack}
-          onSave={handleSaveNote}
-          isDarkMode={isDarkMode}
-        />
-      ) : currentScreen === 'voice-record' ? (
+      <View style={{ flex: 1 }}>
+        {/* Background screen (shown when swiping in editor) */}
+        {getBackgroundScreen()}
+
+        {/* Foreground screen */}
+        <View style={(currentScreen === 'editor' || currentScreen === 'global-chat') ? { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 } : { flex: 1 }}>
+          {currentScreen === 'main' ? (
+            <MainScreen
+              notes={notes}
+              onNotePress={handleNotePress}
+              onCreateNote={handleCreateNote}
+              onDeleteNote={handleDeleteNote}
+              onTogglePin={handleTogglePin}
+              isDarkMode={isDarkMode}
+              onToggleTheme={handleToggleTheme}
+              searchQuery={searchQuery}
+              onSearchChange={handleSearchChange}
+              showSearch={showSearch}
+              onToggleSearch={handleToggleSearch}
+              sortBy={sortBy}
+              onSortChange={handleSortChange}
+              showThreeDotsMenu={showThreeDotsMenu}
+              onToggleThreeDotsMenu={handleToggleThreeDotsMenu}
+              onNavigateToSettings={handleNavigateToSettings}
+              onNavigateToRecentlyDeleted={handleNavigateToRecentlyDeleted}
+              onNavigateToVoiceRecord={handleNavigateToVoiceRecord}
+              onNavigateToTextEditor={handleNavigateToTextEditor}
+              onNavigateToGlobalChat={handleNavigateToGlobalChat}
+            />
+          ) : currentScreen === 'editor' ? (
+            <NoteEditor
+              note={selectedNote}
+              notes={notes}
+              onBack={handleBack}
+              onSave={handleSaveNote}
+              onNotePress={handleNotePress}
+              isDarkMode={isDarkMode}
+            />
+          ) : currentScreen === 'voice-record' ? (
         <VoiceRecordingScreen
           isDarkMode={isDarkMode}
           onBack={handleBack}
@@ -1128,6 +1405,8 @@ export default function App() {
           onBack={handleNavigateBack}
         />
       ) : null}
+        </View>
+      </View>
     </SafeAreaProvider>
   );
 }
@@ -1135,6 +1414,15 @@ export default function App() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  swipeShadowOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: '#000',
+    zIndex: 0,
   },
   content: {
     flex: 1,
@@ -1436,7 +1724,22 @@ const styles = StyleSheet.create({
   },
   referencedNotesLabel: {
     fontSize: 12,
-    fontStyle: 'italic',
+    marginBottom: 4,
+  },
+  referencedNotesList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  referencedNoteBadge: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  referencedNoteText: {
+    fontSize: 12,
+    fontWeight: '500',
   },
   chatInputContainer: {
     flexDirection: 'row',

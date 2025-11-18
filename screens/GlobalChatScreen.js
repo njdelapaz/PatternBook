@@ -15,6 +15,8 @@ import {
   Platform,
   ActivityIndicator,
   Alert,
+  Animated,
+  PanResponder,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -214,9 +216,64 @@ export default function GlobalChatScreen({ isDarkMode, onBack, notes, onNotePres
       onNotePress(noteId);
     }
   };
-  
+
+  const pan = useRef(new Animated.Value(0)).current;
+
+  // Swipe back gesture handler
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: (evt, _gestureState) => {
+        // Only trigger if swipe starts from left edge (within 50px)
+        return evt.nativeEvent.pageX < 50;
+      },
+      onMoveShouldSetPanResponder: (evt, gestureState) => {
+        // Only trigger for horizontal swipes from left edge
+        return evt.nativeEvent.pageX < 50 && Math.abs(gestureState.dx) > Math.abs(gestureState.dy);
+      },
+      onPanResponderGrant: () => {
+        pan.setOffset(0);
+      },
+      onPanResponderMove: (_evt, gestureState) => {
+        // Only allow right swipe (positive dx)
+        if (gestureState.dx > 0) {
+          pan.setValue(gestureState.dx);
+        }
+      },
+      onPanResponderRelease: (_evt, gestureState) => {
+        // If swiped more than 100px to the right, complete the swipe animation
+        if (gestureState.dx > 100) {
+          // Animate off-screen to the right
+          Animated.timing(pan, {
+            toValue: 400,
+            duration: 200,
+            useNativeDriver: true,
+          }).start(() => {
+            // After animation completes, navigate back and reset
+            onBack();
+            pan.setValue(0);
+          });
+        } else {
+          // Snap back
+          Animated.spring(pan, {
+            toValue: 0,
+            useNativeDriver: true,
+          }).start();
+        }
+      },
+    })
+  ).current;
+
   return (
-    <View style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
+    <Animated.View
+      style={[
+        styles.container,
+        {
+          backgroundColor: theme.backgroundColor,
+          transform: [{ translateX: pan }]
+        }
+      ]}
+      {...panResponder.panHandlers}
+    >
       <StatusBar style={isDarkMode ? 'light' : 'dark'} />
       
       <KeyboardAvoidingView
@@ -374,7 +431,7 @@ export default function GlobalChatScreen({ isDarkMode, onBack, notes, onNotePres
           </View>
         </View>
       </KeyboardAvoidingView>
-    </View>
+    </Animated.View>
   );
 }
 
