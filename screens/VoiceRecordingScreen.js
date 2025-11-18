@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { 
   StyleSheet, 
   Text, 
@@ -13,11 +13,11 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import * as FileSystem from 'expo-file-system/legacy';
-import { Audio as AVAudio } from 'expo-av';
 import { darkTheme, lightTheme } from '../utils/constants';
-import { transcribeAudioWithDeepgram, isDeepgramConfigured } from '../utils/deepgram';
+import { isDeepgramConfigured } from '../utils/deepgram';
 import { hasVoiceApiConsent, setVoiceApiConsent } from '../utils/storage';
+import { useRecording } from '../hooks/useRecording';
+import { editorHeaderStyles, modernSaveButtonStyles } from '../utils/sharedStyles';
 
 // Import Carbon icons
 import MicrophoneIcon from '../assets/carbon-icons/carbon--microphone-filled.svg';
@@ -27,8 +27,27 @@ export default function VoiceRecordingScreen({ isDarkMode, onBack, onSave }) {
   const insets = useSafeAreaInsets();
   const theme = isDarkMode ? darkTheme : lightTheme;
 
+  // Voice recording states
+  const [transcription, setTranscription] = useState('');
+  const [recordingDuration, setRecordingDuration] = useState(0);
+  const [transcriptionStatus, setTranscriptionStatus] = useState('');
+  const [showConsentModal, setShowConsentModal] = useState(false);
+  const durationTimerRef = useRef(null);
+
+  // Use recording hook
+  const { isRecording, isTranscribing, startRecording, stopAndTranscribe } = useRecording({
+    onTranscriptionComplete: (transcript) => {
+      setTranscription(transcript);
+      setTranscriptionStatus('');
+    },
+    onError: (error) => {
+      setTranscriptionStatus('');
+      Alert.alert('Transcription Failed', error || 'An error occurred during transcription. Please try again.', [{ text: 'OK' }]);
+    },
+  });
+
   // Check Deepgram configuration and consent on component mount
-  React.useEffect(() => {
+  useEffect(() => {
     if (!isDeepgramConfigured()) {
       console.warn('Deepgram API key is not configured');
     }
@@ -64,173 +83,28 @@ export default function VoiceRecordingScreen({ isDarkMode, onBack, onSave }) {
     onBack(); // Navigate back to home page
   };
 
-  // Voice recording states
-  const [isRecording, setIsRecording] = useState(false);
-  const [isTranscribing, setIsTranscribing] = useState(false);
-  const [transcription, setTranscription] = useState('');
-  const [recordingDuration, setRecordingDuration] = useState(0);
-  const [transcriptionStatus, setTranscriptionStatus] = useState('');
-  const [showConsentModal, setShowConsentModal] = useState(false);
-  const recordingRef = useRef(null);
-  const isStartingRef = useRef(false);
-  const durationTimerRef = useRef(null);
-
-  // Voice Recording: Start recording
-  const startRecording = async () => {
-    try {
-      if (isStartingRef.current) return;
-      isStartingRef.current = true;
-      
-      if (Platform.OS === 'web') {
-        alert('Voice recording is not supported on web in this MVP. Use mobile.');
-        return;
-      }
-
-      const perm = await AVAudio.requestPermissionsAsync();
-      if (perm.status !== 'granted') {
-        alert('Microphone permission is required to record.');
-        return;
-      }
-
-      await AVAudio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-        staysActiveInBackground: false,
-      });
-
-      if (recordingRef.current) {
-        try {
-          await recordingRef.current.stopAndUnloadAsync();
-        } catch {}
-        recordingRef.current = null;
-      }
-
-      let recording = new AVAudio.Recording();
-      
-      const recordingOptions = Platform.select({
-        android: {
-          extension: '.m4a',
-          outputFormat: AVAudio.AndroidOutputFormat.MPEG_4,
-          audioEncoder: AVAudio.AndroidAudioEncoder.AAC,
-          sampleRate: 16000,
-          numberOfChannels: 1,
-          bitRate: 64000,
-        },
-        ios: {
-          extension: '.m4a',
-          outputFormat: AVAudio.IOSOutputFormat.MPEG4AAC,
-          audioQuality: AVAudio.IOSAudioQuality.MEDIUM,
-          sampleRate: 16000,
-          numberOfChannels: 1,
-          bitRate: 64000,
-          linearPCMBitDepth: 16,
-          linearPCMIsBigEndian: false,
-          linearPCMIsFloat: false,
-        },
-      });
-      
-      try {
-        await recording.prepareToRecordAsync(recordingOptions);
-        await recording.startAsync();
-      } catch (err) {
-        recording = new AVAudio.Recording();
-        await recording.prepareToRecordAsync(AVAudio.RecordingOptionsPresets.HIGH_QUALITY);
-        await recording.startAsync();
-      }
-      
-      recordingRef.current = recording;
-      setIsRecording(true);
-      setRecordingDuration(0);
-      
-      // Start duration timer
-      durationTimerRef.current = setInterval(() => {
-        setRecordingDuration(prev => prev + 1);
-      }, 1000);
-      
-    } catch (e) {
-      console.error('Failed to start recording', e);
-      alert('Failed to start recording: ' + e.message);
-    } finally {
-      isStartingRef.current = false;
-    }
+  // Start recording with duration tracking
+  const handleStartRecording = async () => {
+    await startRecording();
+    setRecordingDuration(0);
+    
+    // Start duration timer
+    durationTimerRef.current = setInterval(() => {
+      setRecordingDuration(prev => prev + 1);
+    }, 1000);
   };
 
-  // Voice Recording: Stop and transcribe
-  const stopAndTranscribe = async () => {
-    try {
-      setIsRecording(false);
-      if (durationTimerRef.current) {
-        clearInterval(durationTimerRef.current);
-        durationTimerRef.current = null;
-      }
-
-      if (!recordingRef.current) {
-        console.log('No recording to stop');
-        return;
-      }
-
-      const status = await recordingRef.current.getStatusAsync();
-      if (!status.canRecord) return;
-
-      await recordingRef.current.stopAndUnloadAsync();
-      const uri = recordingRef.current.getURI();
-      recordingRef.current = null;
-
-      if (!uri) {
-        alert('Failed to save recording');
-        return;
-      }
-
-      setIsTranscribing(true);
-      setTranscriptionStatus('Uploading audio...');
-      await transcribeWithDeepgram(uri);
-    } catch (error) {
-      console.error('Error stopping recording:', error);
-      Alert.alert(
-        'Recording Error',
-        'Error processing recording: ' + error.message,
-        [{ text: 'OK' }]
-      );
-    } finally {
-      setIsTranscribing(false);
-      setTranscriptionStatus('');
+  // Stop recording and transcribe
+  const handleStopRecording = async () => {
+    if (durationTimerRef.current) {
+      clearInterval(durationTimerRef.current);
+      durationTimerRef.current = null;
     }
+    
+    setTranscriptionStatus('Uploading audio...');
+    await stopAndTranscribe();
   };
 
-  // Real transcription using Deepgram API
-  const transcribeWithDeepgram = async (audioUri) => {
-    try {
-      // Check if Deepgram is configured
-      if (!isDeepgramConfigured()) {
-        Alert.alert(
-          'Configuration Error',
-          'Deepgram API key is not configured. Please check your .env file.',
-          [{ text: 'OK' }]
-        );
-        return;
-      }
-
-      console.log('Starting transcription for audio file:', audioUri);
-      
-      setTranscriptionStatus('Processing with Deepgram...');
-      
-      // Use the Deepgram API to transcribe the audio
-      const transcript = await transcribeAudioWithDeepgram(audioUri);
-      
-      console.log('Transcription completed successfully');
-      setTranscription(transcript);
-      setTranscriptionStatus('');
-      
-    } catch (error) {
-      console.error('Transcription error:', error);
-      setTranscriptionStatus('');
-      Alert.alert(
-        'Transcription Failed',
-        error.message || 'An error occurred during transcription. Please try again.',
-        [{ text: 'OK' }]
-      );
-    }
-  };
 
   // Save the transcription as a new note
   const handleSave = () => {
@@ -253,22 +127,22 @@ export default function VoiceRecordingScreen({ isDarkMode, onBack, onSave }) {
       
       <View style={{ paddingTop: insets.top, flex: 1 }}>
         {/* Header */}
-        <View style={[styles.editorHeader, { borderBottomColor: theme.borderColor }]}>
-          <TouchableOpacity onPress={onBack} style={styles.todayButton}>
-            <Text style={[styles.todayButtonText, { color: theme.accentColor }]}>← Back</Text>
+        <View style={[editorHeaderStyles.editorHeader, { borderBottomColor: theme.borderColor }]}>
+          <TouchableOpacity onPress={onBack} style={editorHeaderStyles.todayButton}>
+            <Text style={[editorHeaderStyles.todayButtonText, { color: theme.accentColor }]}>← Back</Text>
           </TouchableOpacity>
           
-          <View style={styles.titleContainer}>
-            <Text style={[styles.titleText, { color: theme.textColor }]}>Voice Recording</Text>
+          <View style={editorHeaderStyles.titleContainer}>
+            <Text style={[editorHeaderStyles.titleText, { color: theme.textColor }]}>Voice Recording</Text>
           </View>
           
-          <View style={styles.editorActions}>
+          <View style={editorHeaderStyles.editorActions}>
             {transcription.trim() && (
               <TouchableOpacity 
                 onPress={handleSave}
-                style={[styles.modernSaveButton, { backgroundColor: theme.accentColor }]}
+                style={[modernSaveButtonStyles.modernSaveButton, { backgroundColor: theme.accentColor }]}
               >
-                <Text style={[styles.modernSaveButtonText, { color: '#fff' }]}>Save</Text>
+                <Text style={[modernSaveButtonStyles.modernSaveButtonText, { color: '#fff' }]}>Save</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -299,7 +173,7 @@ export default function VoiceRecordingScreen({ isDarkMode, onBack, onSave }) {
                   transform: [{ scale: isRecording ? 1.1 : 1.0 }]
                 }
               ]}
-              onPress={isRecording ? stopAndTranscribe : startRecording}
+              onPress={isRecording ? handleStopRecording : handleStartRecording}
               disabled={isTranscribing}
             >
               {isTranscribing ? (
@@ -384,38 +258,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  editorHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
-    borderBottomWidth: 0.5,
-    justifyContent: 'space-between',
-    minHeight: 56,
-  },
-  todayButton: {
-    padding: 12,
-  },
-  todayButtonText: {
-    fontSize: 15,
-    fontWeight: '500',
-  },
-  titleContainer: {
-    flex: 1,
-    alignItems: 'center',
-    paddingHorizontal: 16,
-  },
-  titleText: {
-    fontSize: 17,
-    fontWeight: '600',
-    letterSpacing: -0.2,
-  },
-  editorActions: {
-    flexDirection: 'row',
-    gap: 8,
-    minWidth: 80, // Consistent width for proper centering
-    justifyContent: 'flex-end',
-  },
   voiceRecordingContent: {
     flex: 1,
     justifyContent: 'center',
@@ -472,28 +314,6 @@ const styles = StyleSheet.create({
   transcriptionText: {
     fontSize: 16,
     lineHeight: 24,
-  },
-  // Modern save button styles (Lightpage-inspired)
-  modernSaveButton: {
-    paddingHorizontal: 24,
-    paddingVertical: 12,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
-    minWidth: 120,
-  },
-  modernSaveButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
-    letterSpacing: 0.2,
   },
   // Consent modal styles
   consentModalOverlay: {

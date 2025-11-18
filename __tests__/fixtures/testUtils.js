@@ -1,6 +1,6 @@
 // Test utilities for voice transcription testing
 
-import { act } from '@testing-library/react-native';
+import { act, fireEvent, waitFor } from '@testing-library/react-native';
 
 /**
  * Simulates a complete recording session (start -> record -> stop)
