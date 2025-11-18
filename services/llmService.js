@@ -7,6 +7,7 @@
 import { OPENAI_API_KEY } from '@env';
 import rateLimiter from './llmRateLimiter';
 import logger from './llmLogger';
+import { sanitizeAIResponse } from '../utils/llmGuardrails';
 
 // OpenAI API Configuration
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
@@ -98,7 +99,7 @@ function sleep(ms) {
 /**
  * Make OpenAI API request
  */
-async function makeOpenAIRequest(model, messages, temperature, maxTokens, otherOptions) {
+async function makeOpenAIRequest(requestId, model, messages, temperature, maxTokens, otherOptions) {
   const startTime = Date.now();
 
   try {
@@ -150,15 +151,54 @@ async function makeOpenAIRequest(model, messages, temperature, maxTokens, otherO
     }
 
     // Extract data from response
-    const content = responseData.choices?.[0]?.message?.content || '';
+    const rawContent = responseData.choices?.[0]?.message?.content || '';
     const usage = responseData.usage || {};
+
+    // Sanitize AI response before returning
+    const sanitizationResult = sanitizeAIResponse(rawContent, {
+      sanitizePII: true,
+      sanitizeHarmful: true,
+      sanitizeCode: true,
+      removeHarmfulContent: true,
+    });
+
+    const sanitizedContent = sanitizationResult.sanitized;
+
+    // Log sanitization if any issues were detected
+    if (sanitizationResult.warnings.length > 0 || 
+        sanitizationResult.detectedPII.length > 0 ||
+        sanitizationResult.detectedHarmful.length > 0 ||
+        sanitizationResult.detectedCode.length > 0) {
+      // Log sanitization event for audit purposes
+      console.log('[LLM] Response sanitization applied:', {
+        requestId: requestId || 'unknown',
+        model,
+        warnings: sanitizationResult.warnings,
+        detectedPII: sanitizationResult.detectedPII,
+        detectedHarmful: sanitizationResult.detectedHarmful,
+        detectedCode: sanitizationResult.detectedCode,
+        originalLength: sanitizationResult.originalLength,
+        sanitizedLength: sanitizationResult.sanitizedLength,
+        removalRatio: sanitizationResult.removalRatio,
+      });
+    }
 
     return {
       success: true,
       data: {
-        content,
+        content: sanitizedContent,
         finishReason: responseData.choices?.[0]?.finish_reason,
         raw: responseData,
+        sanitization: {
+          applied: sanitizationResult.warnings.length > 0 || 
+                   sanitizationResult.detectedPII.length > 0 ||
+                   sanitizationResult.detectedHarmful.length > 0 ||
+                   sanitizationResult.detectedCode.length > 0,
+          warnings: sanitizationResult.warnings,
+          detectedPII: sanitizationResult.detectedPII,
+          detectedHarmful: sanitizationResult.detectedHarmful,
+          detectedCode: sanitizationResult.detectedCode,
+        },
       },
       usage: {
         promptTokens: usage.prompt_tokens || 0,
@@ -187,7 +227,7 @@ async function makeRequestWithRetry(requestId, model, messages, temperature, max
   let attempt = 0;
 
   while (attempt < RETRY_CONFIG.maxRetries) {
-    const result = await makeOpenAIRequest(model, messages, temperature, maxTokens, otherOptions);
+    const result = await makeOpenAIRequest(requestId, model, messages, temperature, maxTokens, otherOptions);
 
     if (result.success) {
       // Success - log and return
