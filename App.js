@@ -25,8 +25,6 @@ import { darkTheme, lightTheme, RETRIEVAL_CONFIG } from './utils/constants';
 import { transcribeAudioWithDeepgram, isDeepgramConfigured } from './utils/deepgram';
 import { MarkdownText, formatTimestamp } from './utils/components';
 import { buildChatMessages, getDefaultChatModel, getDefaultMaxTokens, getDefaultTemperature } from './utils/chat';
-import { buildSecurePrompt, sanitizeInput, MAX_INPUT_LENGTHS } from './utils/llmGuardrails';
-import { generateTextSummary } from './utils/textSummarization';
 import { loadChatHistory, saveChatHistory } from './utils/chatStorage';
 import { buildNoteChatContext } from './utils/contextBuilder';
 
@@ -45,149 +43,35 @@ import ChatIcon from './assets/carbon-icons/carbon--chat.svg';
 // OpenAI API Configuration
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
-// Demo user messages that auto-fill for easy presentation (development only)
-const DEMO_USER_MESSAGES = __DEV__ ? {
-  dream: [
-    "What do you think this dream means?",
-    "I'm not sure, maybe I've been thinking about nostalgia lately",
-    "That makes sense"
-  ],
-  productivity: [
-    "How can I actually make this change?",
-    "Maybe I should focus on one thing at a time",
-    "I think it means choosing projects that align with my values"
-  ]
-} : null;
-
-// Canned chat responses for demo - organized by note content (development only)
-// Note: These are only used as fallback if API fails
-const CHAT_RESPONSES = __DEV__ ? {
-  // For the "dream library" note (first voice recording)
-  dream: [
-    "That's a fascinating dream! The library of altered memories sounds like your subconscious exploring the malleability of memory. What do you think triggered this dream?",
-    "It's interesting how dreams can reveal our deeper thoughts about identity and truth. The fact that each book was slightly different suggests you might be processing how perspective shapes our past.",
-    "This reminds me of the concept of 'memory reconsolidation' - each time we recall something, we actually change it slightly. Your dream seems to be grappling with that very idea."
-  ],
-  // For the "productivity" note (second voice recording and beyond)
-  productivity: [
-    "That's a really mature insight about productivity culture. What do you think would help you shift from quantity to quality in practice?",
-    "It sounds like you're recognizing the difference between being busy and being purposeful. Have you thought about what 'intentional' looks like for you specifically?",
-    "This is such an important realization. Measuring worth by accomplishments can be exhausting. What would it look like to measure your worth differently?"
-  ]
-} : null;
-
-// Generate title based on content (hard-coded for demo)
-function generateTitleFromContent(content) {
-  const lowerContent = content.toLowerCase();
-
-  // Check for dream/library note
-  if (lowerContent.includes('dream') && lowerContent.includes('library')) {
-    return "Dream about an endless library";
-  }
-
-  // Check for productivity note
-  if (lowerContent.includes('productivity') || lowerContent.includes('accomplish')) {
-    return "Rethinking productivity and worth";
-  }
-
-  // Fallback to first few words
-  return content.split(' ').slice(0, 5).join(' ') || 'Untitled Note';
-}
-
-// Summary prompt template
-const SUMMARY_TEMPLATE = `You are a helpful assistant that creates concise, clear summaries. Keep summaries under 50 words and capture the main point.
-
-Please summarize this note in 1-2 sentences:
-
-{{content}}`;
-
-// Generate AI summary for note content (internal function)
-// Applies security guardrails: sanitization, PII detection, length validation
-// Uses text-based fallback when AI API fails (after retries with exponential backoff)
-async function generateSummary(content) {
+// Generate title from content using LLM
+async function generateTitle(content) {
   try {
-    // Sanitize content with guardrails
-    const contentSanitized = sanitizeInput(content || '', {
-      maxLength: MAX_INPUT_LENGTHS.summary,
-      sanitizePII: true,
-      sanitizeInjection: true,
-      truncate: true, // Truncate if too long
-    });
-
-    if (!contentSanitized.isValid) {
-      // If validation fails, use text-based fallback
-      return generateTextSummary(content);
-    }
-
-    // Build secure prompt using template
-    const promptResult = buildSecurePrompt(SUMMARY_TEMPLATE, {
-      content: contentSanitized.sanitized,
-    }, {
-      maxLength: MAX_INPUT_LENGTHS.summary,
-      sanitizePII: true,
-      sanitizeInjection: true,
-    });
-
-    if (!promptResult.isValid) {
-      // Fallback if prompt building fails
-      return generateTextSummary(contentSanitized.sanitized);
-    }
-
-    // Use callLLM service (includes retry logic with exponential backoff)
     const result = await callLLM({
       model: 'gpt-4o-mini',
       messages: [
         {
           role: 'system',
-          content: 'You are a helpful assistant that creates concise, clear summaries. Keep summaries under 50 words and capture the main point.',
+          content: 'You are a helpful assistant that creates concise, clear titles for journal entries. Keep titles under 8 words.',
         },
         {
           role: 'user',
-          content: `Please summarize this note in 1-2 sentences:\n\n${promptResult.prompt}`,
+          content: `Generate a short, descriptive title for this journal entry:\n\n${content.slice(0, 500)}`,
         },
       ],
       temperature: 0.7,
-      maxTokens: 100,
+      maxTokens: 50,
     });
 
-    // If API call succeeded, return AI-generated summary
     if (result.success && result.data && result.data.content) {
-      const aiSummary = result.data.content.trim();
-      if (aiSummary.length > 0) {
-        return aiSummary;
-      }
+      return result.data.content.trim().replace(/^["']|["']$/g, ''); // Remove quotes if present
     }
 
-    // API failed after retries - use text-based fallback
-    // This handles: rate limits, network errors, API errors, quota exceeded, etc.
-    return generateTextSummary(contentSanitized.sanitized);
+    // Fallback to first few words
+    return content.split(' ').slice(0, 5).join(' ') || 'Untitled Note';
   } catch (error) {
-    // Unexpected error - use text-based fallback
-    // Silently handle error (no user-facing messages as per requirements)
-    return generateTextSummary(content);
+    // Fallback to first few words
+    return content.split(' ').slice(0, 5).join(' ') || 'Untitled Note';
   }
-}
-
-// Get or generate AI summary with caching
-async function getCachedSummary(note, notes, setNotes) {
-  // Check if we already have a cached summary
-  if (note.aiSummary) {
-    return note.aiSummary;
-  }
-
-  // Generate new summary
-  const summary = await generateSummary(note.content);
-  
-  // Cache the summary in the note object
-  const updatedNotes = notes.map(n => 
-    n.id === note.id ? { ...n, aiSummary: summary } : n
-  );
-  
-  // Update state and persist to storage
-  setNotes(updatedNotes);
-  await saveNotes(updatedNotes);
-  
-  return summary;
 }
 
 // Note Editor Screen Component
@@ -200,7 +84,6 @@ function NoteEditor({ note, notes, onBack, onSave, isDarkMode }) {
   const [chatInput, setChatInput] = useState('');
   const [isLoadingChat, setIsLoadingChat] = useState(false);
   const [showChat, setShowChat] = useState(false);
-  const [chatMessageCount, setChatMessageCount] = useState(0);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [history, setHistory] = useState([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
@@ -210,6 +93,30 @@ function NoteEditor({ note, notes, onBack, onSave, isDarkMode }) {
   const [referencedNotes, setReferencedNotes] = useState([]);
   const recordingRef = useRef(null);
   const isStartingRef = useRef(false);
+  const titleGeneratedRef = useRef(note?.titleGenerated || false);
+
+  // Auto-generate title when content reaches threshold (only once)
+  useEffect(() => {
+    const generateTitleForNote = async () => {
+      // Only auto-generate if:
+      // 1. Title is still "New Note"
+      // 2. Content has some substance (at least 20 characters)
+      // 3. Title hasn't been auto-generated yet
+      if (
+        title === 'New Note' &&
+        content.trim().length >= 20 &&
+        !titleGeneratedRef.current
+      ) {
+        titleGeneratedRef.current = true;
+        const generatedTitle = await generateTitle(content);
+        setTitle(generatedTitle);
+      }
+    };
+
+    // Debounce to avoid generating too frequently while typing
+    const timeoutId = setTimeout(generateTitleForNote, 2000);
+    return () => clearTimeout(timeoutId);
+  }, [content]);
 
   // Load chat history on mount
   useEffect(() => {
@@ -293,7 +200,7 @@ function NoteEditor({ note, notes, onBack, onSave, isDarkMode }) {
     }
 
     saveTimeoutRef.current = setTimeout(() => {
-      onSave(title, content);
+      onSave(title, content, titleGeneratedRef.current);
     }, 500);
 
     return () => {
@@ -440,64 +347,13 @@ function NoteEditor({ note, notes, onBack, onSave, isDarkMode }) {
       });
 
       if (result.success && result.data && result.data.content) {
-<<<<<<< HEAD
-        const assistantMessage = {
-          role: 'assistant',
-          content: result.data.content,
-          timestamp: Date.now(),
-          retrievedNotes: contextResult.metadata.retrievedNotes,
-        };
-
-        const finalMessages = [...updatedMessages, assistantMessage];
-        setChatMessages(finalMessages);
-        
-        // Save chat history
-        if (note && note.id) {
-          await saveChatHistory(note.id, finalMessages);
-          
-          // Log chat save
-          await ragLogger.logChatSave({
-            chatId: note.id,
-            messageCount: finalMessages.length,
-            lastMessage: assistantMessage,
-          });
-=======
         // Add AI response to chat
         const aiMessage = { role: 'assistant', content: result.data.content };
         setChatMessages(prev => [...prev, aiMessage]);
       } else {
-        // Handle API errors gracefully
-        const isQuotaError = result.error && result.error.type === 'QuotaExceededError';
-        const isAuthError = result.error && result.error.type === 'AuthError';
-        
-        // Gracefully handle error - use fallback response in development, otherwise silently fail
-        if (__DEV__ && CHAT_RESPONSES) {
-          const isDreamNote = content.toLowerCase().includes('dream') || content.toLowerCase().includes('library');
-          const responseSet = isDreamNote ? CHAT_RESPONSES.dream : CHAT_RESPONSES.productivity;
-          const noteType = isDreamNote ? 'dream' : 'productivity';
-          
-          if (responseSet && responseSet.length > 0) {
-            const responseIndex = chatMessageCount % responseSet.length;
-            const fallbackResponse = responseSet[responseIndex];
-            const aiMessage = { role: 'assistant', content: fallbackResponse };
-            setChatMessages(prev => [...prev, aiMessage]);
-            setChatMessageCount(prev => prev + 1);
-          } else {
-            // Remove user message if we can't provide a response
-            setChatMessages(prev => prev.slice(0, -1));
-          }
-        } else {
-          // In production, silently remove the user message if API fails
-          // Errors are logged but not shown to users (as per requirements)
-          setChatMessages(prev => prev.slice(0, -1));
->>>>>>> cc2f50dfd2832f402612ecd5c53f5cf7cbc5da13
-        }
-
-        // Clear referenced notes after displaying
-        setTimeout(() => setReferencedNotes([]), 3000);
-      } else {
-        // Handle error - remove user message
-        setChatMessages(chatMessages);
+        // Handle API errors gracefully - silently remove the user message if API fails
+        // Errors are logged but not shown to users (as per requirements)
+        setChatMessages(prev => prev.slice(0, -1));
         console.error('[Chat] API error:', result.error);
       }
     } catch (error) {
@@ -905,6 +761,7 @@ export default function App() {
       createdAt: Date.now(),
       updatedAt: Date.now(),
       pinned: false,
+      titleGenerated: false,
     };
     setNotes([newNote, ...notes]);
     setSelectedNoteId(newNote.id);
@@ -915,12 +772,12 @@ export default function App() {
   const handleCreateNoteFromTranscription = async (transcription) => {
     const newNote = {
       id: Date.now().toString(),
-      title: generateTitleFromContent(transcription),
+      title: 'New Note',
       content: transcription,
       createdAt: Date.now(),
       updatedAt: Date.now(),
       pinned: false,
-      summary: 'Generating summary...',
+      titleGenerated: false,
     };
 
     // Add note immediately
@@ -928,69 +785,27 @@ export default function App() {
     setNotes(updatedNotes);
     saveNotes(updatedNotes);
 
-    // For demo: Navigate to the note editor instead of going back to dashboard
+    // Navigate to the note editor
     setSelectedNoteId(newNote.id);
     setCurrentScreen('editor');
-
-    // Generate summary asynchronously and cache it
-    // generateSummary handles retries and fallbacks internally
-    try {
-      const summary = await generateSummary(transcription);
-      const noteWithSummary = { ...newNote, summary, aiSummary: summary };
-      const notesWithSummary = updatedNotes.map(note =>
-        note.id === newNote.id ? noteWithSummary : note
-      );
-      setNotes(notesWithSummary);
-      saveNotes(notesWithSummary);
-    } catch (error) {
-      // Silently handle error - use text-based fallback
-      const fallbackSummary = generateTextSummary(transcription);
-      const noteWithError = { ...newNote, summary: fallbackSummary, aiSummary: fallbackSummary };
-      const notesWithError = updatedNotes.map(note =>
-        note.id === newNote.id ? noteWithError : note
-      );
-      setNotes(notesWithError);
-      saveNotes(notesWithError);
-    }
   };
 
   // Handle creating note from text editor
   const handleCreateNoteFromText = async (title, content) => {
     const newNote = {
       id: Date.now().toString(),
-      title: generateTitleFromContent(content),
+      title: title || 'New Note',
       content: content,
       createdAt: Date.now(),
       updatedAt: Date.now(),
       pinned: false,
-      summary: 'Generating summary...',
+      titleGenerated: false,
     };
-    
+
     // Add note immediately
     const updatedNotes = [newNote, ...notes];
     setNotes(updatedNotes);
     saveNotes(updatedNotes);
-    
-    // Generate summary asynchronously and cache it
-    try {
-      const summary = await generateSummary(content);
-      const noteWithSummary = { ...newNote, summary, aiSummary: summary };
-      const notesWithSummary = updatedNotes.map(note => 
-        note.id === newNote.id ? noteWithSummary : note
-      );
-      setNotes(notesWithSummary);
-      saveNotes(notesWithSummary);
-    } catch (error) {
-      // Silently handle error for demo - just use fallback
-      // console.error('Error generating summary:', error);
-      const fallbackSummary = content.slice(0, 100) + '...';
-      const noteWithError = { ...newNote, summary: fallbackSummary, aiSummary: fallbackSummary };
-      const notesWithError = updatedNotes.map(note =>
-        note.id === newNote.id ? noteWithError : note
-      );
-      setNotes(notesWithError);
-      saveNotes(notesWithError);
-    }
   };
 
   // Navigate to voice recording screen
@@ -1013,26 +828,94 @@ export default function App() {
     setCurrentScreen('admin-panel');
   };
 
+  // Handle importing test notes from test_data_notes_only.json
+  const handleImportTestNotes = async (count, onProgress) => {
+    try {
+      // Load test data
+      const testData = require('./test_data_notes_only.json');
+      
+      // Limit to requested count
+      const notesToImport = Math.min(count, testData.length);
+      
+      let importedCount = 0;
+
+      // Process notes one by one
+      for (let i = 0; i < notesToImport; i++) {
+        const testNote = testData[i];
+        
+        // Create note with just the body content
+        const newNote = {
+          id: Date.now().toString() + '-' + i, // Ensure unique IDs
+          title: 'Generating title...',
+          content: testNote.content,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+          pinned: false,
+          titleGenerated: false,
+        };
+
+        // Add note to state
+        setNotes(prevNotes => [newNote, ...prevNotes]);
+
+        // Generate title (simulating the auto-generation process)
+        try {
+          const generatedTitle = await generateTitle(testNote.content);
+          newNote.title = generatedTitle;
+          newNote.titleGenerated = true;
+          
+          // Update the note with generated title
+          setNotes(prevNotes => {
+            const updated = prevNotes.map(n => 
+              n.id === newNote.id ? { ...n, title: generatedTitle, titleGenerated: true } : n
+            );
+            saveNotes(updated);
+            return updated;
+          });
+        } catch (error) {
+          console.error('[ImportTestNotes] Error generating title:', error);
+          // Use a fallback title
+          newNote.title = `Note ${i + 1}`;
+          setNotes(prevNotes => {
+            const updated = prevNotes.map(n => 
+              n.id === newNote.id ? { ...n, title: `Note ${i + 1}` } : n
+            );
+            saveNotes(updated);
+            return updated;
+          });
+        }
+
+        importedCount++;
+        if (onProgress) {
+          onProgress(importedCount, notesToImport);
+        }
+
+        // Small delay between notes to avoid overwhelming the system
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+
+      return { success: true, count: importedCount };
+    } catch (error) {
+      console.error('[ImportTestNotes] Error importing test notes:', error);
+      return { success: false, error: error.message };
+    }
+  };
+
   // Handle opening an existing note
   const handleNotePress = (note) => {
     setSelectedNoteId(note.id);
     setCurrentScreen('editor');
   };
 
-  // Handle saving note changes
-  const handleSaveNote = async (title, content) => {
-    const currentNote = notes.find(note => note.id === selectedNoteId);
-    const contentChanged = currentNote && currentNote.content !== content;
-    
-    const updatedNote = { 
-      title, 
-      content, 
+  // Handle saving note changes (called from NoteEditor)
+  const handleSaveNote = async (title, content, titleGenerated = false) => {
+    const updatedNote = {
+      title,
+      content,
       updatedAt: Date.now(),
-      // Only show "Updating summary..." if content actually changed
-      summary: contentChanged ? 'Updating summary...' : (currentNote?.summary || currentNote?.aiSummary)
+      titleGenerated: titleGenerated,
     };
-    
-    // Update note immediately
+
+    // Update note
     setNotes((prevNotes) =>
       prevNotes.map((note) =>
         note.id === selectedNoteId
@@ -1040,40 +923,6 @@ export default function App() {
           : note
       )
     );
-
-    // Generate new summary only if content changed
-    if (contentChanged) {
-      try {
-        const newSummary = await generateSummary(content);
-        const updatedNotes = notes.map((note) =>
-          note.id === selectedNoteId
-            ? { ...note, summary: newSummary, aiSummary: newSummary }
-            : note
-        );
-        setNotes(updatedNotes);
-        await saveNotes(updatedNotes);
-      } catch (error) {
-        console.error('Error updating summary:', error);
-        // Fallback to truncated content
-        const fallbackSummary = content.slice(0, 100) + (content.length > 100 ? '...' : '');
-        const updatedNotes = notes.map((note) =>
-          note.id === selectedNoteId
-            ? { ...note, summary: fallbackSummary, aiSummary: fallbackSummary }
-            : note
-        );
-        setNotes(updatedNotes);
-        await saveNotes(updatedNotes);
-      }
-    } else if (title !== currentNote?.title) {
-      // Just save the title change without regenerating summary
-      const updatedNotes = notes.map((note) =>
-        note.id === selectedNoteId
-          ? { ...note, title, updatedAt: Date.now() }
-          : note
-      );
-      setNotes(updatedNotes);
-      await saveNotes(updatedNotes);
-    }
   };
 
   // Handle going back to main screen
@@ -1254,11 +1103,9 @@ export default function App() {
           isDarkMode={isDarkMode}
           onBack={handleNavigateBack}
           onClearAllData={handleClearAllData}
-<<<<<<< HEAD
           onNavigateToAdminPanel={handleNavigateToAdminPanel}
-=======
+          onImportTestNotes={handleImportTestNotes}
           onLogout={handleLogout}
->>>>>>> cc2f50dfd2832f402612ecd5c53f5cf7cbc5da13
         />
       ) : currentScreen === 'recently-deleted' ? (
         <RecentlyDeletedScreen

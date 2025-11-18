@@ -134,12 +134,6 @@ class LLMLogger {
   /**
    * Log failed API call
    */
-<<<<<<< HEAD
-  async logError({ requestId, model, duration, error, errorType, messages }) {
-    // Console log
-    console.log(`[LLM] ${model} | error | ${error.message} (${errorType})`);
-    console.log('[LLM] Messages sent:', JSON.stringify(messages, null, 2));
-=======
   async logError({ requestId, model, duration, error, errorType }) {
     // Console log with full error details
     const errorDetails = error.details || {};
@@ -151,7 +145,6 @@ class LLMLogger {
     if (errorDetails.fullResponse) {
       console.log(`[LLM] Full OpenAI error response:`, JSON.stringify(errorDetails.fullResponse, null, 2));
     }
->>>>>>> cc2f50dfd2832f402612ecd5c53f5cf7cbc5da13
 
     // Update session metrics
     this.sessionMetrics.totalCalls++;
