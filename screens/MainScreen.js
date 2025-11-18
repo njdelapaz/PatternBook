@@ -22,6 +22,13 @@ import ChatIcon from '../assets/carbon-icons/carbon--chat.svg';
 import MicrophoneIcon from '../assets/carbon-icons/carbon--microphone-filled.svg';
 import PenIcon from '../assets/carbon-icons/carbon--pen.svg';
 
+// Helper function to get first two lines of content
+function getPreviewText(content) {
+  if (!content) return '';
+  const lines = content.split('\n').filter(line => line.trim().length > 0);
+  return lines.slice(0, 2).join('\n');
+}
+
 // Main Screen Component
 export default function MainScreen({ 
   notes, 
@@ -42,7 +49,8 @@ export default function MainScreen({
   onNavigateToSettings, 
   onNavigateToRecentlyDeleted, 
   onNavigateToVoiceRecord, 
-  onNavigateToTextEditor 
+  onNavigateToTextEditor,
+  onNavigateToGlobalChat 
 }) {
   const insets = useSafeAreaInsets();
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
@@ -331,8 +339,8 @@ export default function MainScreen({
                       {sortBy === 'old-to-new' ? `Created ${formatDateOnly(note.createdAt)}` : `Updated ${formatDateOnly(note.updatedAt)}`}
                     </Text>
                     <Text style={[styles.noteText, { color: theme.textColor }]}>{note.title}</Text>
-                    <Text style={[styles.notePreview, { color: theme.secondaryTextColor, fontFamily: 'Times New Roman' }]} numberOfLines={3}>
-                      {note.aiSummary || note.summary || (note.content.length > 150 ? note.content.substring(0, 150) + '...' : note.content)}
+                    <Text style={[styles.notePreview, { color: theme.secondaryTextColor, fontFamily: 'Times New Roman' }]} numberOfLines={2}>
+                      {getPreviewText(note.content)}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -355,8 +363,8 @@ export default function MainScreen({
                       {sortBy === 'old-to-new' ? `Created ${formatDateOnly(note.createdAt)}` : `Updated ${formatDateOnly(note.updatedAt)}`}
                     </Text>
                     <Text style={[styles.noteText, { color: theme.textColor }]}>{note.title}</Text>
-                    <Text style={[styles.notePreview, { color: theme.secondaryTextColor, fontFamily: 'Times New Roman' }]} numberOfLines={3}>
-                      {note.aiSummary || note.summary || (note.content.length > 150 ? note.content.substring(0, 150) + '...' : note.content)}
+                    <Text style={[styles.notePreview, { color: theme.secondaryTextColor, fontFamily: 'Times New Roman' }]} numberOfLines={2}>
+                      {getPreviewText(note.content)}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -379,8 +387,8 @@ export default function MainScreen({
                       {sortBy === 'old-to-new' ? `Created ${formatDateOnly(note.createdAt)}` : `Updated ${formatDateOnly(note.updatedAt)}`}
                     </Text>
                     <Text style={[styles.noteText, { color: theme.textColor }]}>{note.title}</Text>
-                    <Text style={[styles.notePreview, { color: theme.secondaryTextColor, fontFamily: 'Times New Roman' }]} numberOfLines={3}>
-                      {note.aiSummary || note.summary || (note.content.length > 150 ? note.content.substring(0, 150) + '...' : note.content)}
+                    <Text style={[styles.notePreview, { color: theme.secondaryTextColor, fontFamily: 'Times New Roman' }]} numberOfLines={2}>
+                      {getPreviewText(note.content)}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -403,8 +411,8 @@ export default function MainScreen({
                       {sortBy === 'old-to-new' ? `Created ${formatDateOnly(note.createdAt)}` : `Updated ${formatDateOnly(note.updatedAt)}`}
                     </Text>
                     <Text style={[styles.noteText, { color: theme.textColor }]}>{note.title}</Text>
-                    <Text style={[styles.notePreview, { color: theme.secondaryTextColor, fontFamily: 'Times New Roman' }]} numberOfLines={3}>
-                      {note.aiSummary || note.summary || (note.content.length > 150 ? note.content.substring(0, 150) + '...' : note.content)}
+                    <Text style={[styles.notePreview, { color: theme.secondaryTextColor, fontFamily: 'Times New Roman' }]} numberOfLines={2}>
+                      {getPreviewText(note.content)}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -420,7 +428,7 @@ export default function MainScreen({
         <TouchableOpacity style={styles.navButton} onPress={onToggleSearch}>
           <SearchIcon width={24} height={24} color={theme.iconColor} />
         </TouchableOpacity>
-        <TouchableOpacity style={styles.navButton}>
+        <TouchableOpacity style={styles.navButton} onPress={onNavigateToGlobalChat}>
           <ChatIcon width={24} height={24} color={theme.iconColor} />
         </TouchableOpacity>
         <TouchableOpacity style={styles.navButton} onPress={onNavigateToVoiceRecord}>

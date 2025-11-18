@@ -8,7 +8,9 @@ import {
   TextInput, 
   Platform,
   ActivityIndicator,
-  Alert
+  Alert,
+  Modal,
+  KeyboardAvoidingView
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -18,11 +20,15 @@ import { Audio as AVAudio } from 'expo-av';
 import { darkTheme, lightTheme } from '../utils/constants';
 
 // Settings Screen Component
-export default function SettingsScreen({ settings, onSettingsChange, isDarkMode, onBack, onClearAllData, onLogout }) {
+export default function SettingsScreen({ settings, onSettingsChange, isDarkMode, onBack, onClearAllData, onNavigateToAdminPanel, onImportTestNotes }) {
   const insets = useSafeAreaInsets();
   const theme = isDarkMode ? darkTheme : lightTheme;
   const [isMicChecking, setIsMicChecking] = useState(false);
   const [micCheckResult, setMicCheckResult] = useState('');
+  const [isImporting, setIsImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
+  const [showImportInput, setShowImportInput] = useState(false);
+  const [importCount, setImportCount] = useState('10');
 
   const handleNameChange = (name) => {
     onSettingsChange({
@@ -160,6 +166,68 @@ export default function SettingsScreen({ settings, onSettingsChange, isDarkMode,
     );
   };
 
+  const handleImportTestNotes = async () => {
+    if (!onImportTestNotes) {
+      Alert.alert('Error', 'Import function not available');
+      return;
+    }
+
+    setShowImportInput(true);
+  };
+
+  const confirmImport = async () => {
+    const count = parseInt(importCount, 10);
+    
+    if (isNaN(count) || count <= 0) {
+      Alert.alert('Invalid Number', 'Please enter a valid number greater than 0');
+      return;
+    }
+
+    if (count > 100) {
+      Alert.alert('Too Many', 'Maximum 100 notes can be imported at once');
+      return;
+    }
+
+    setShowImportInput(false);
+
+    Alert.alert(
+      'Import Test Notes',
+      `This will import ${count} test note${count === 1 ? '' : 's'} from test_data_notes_only.json. Each note will be processed with title generation. This may take a few minutes.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Import',
+          onPress: async () => {
+            setIsImporting(true);
+            setImportProgress({ current: 0, total: 0 });
+
+            try {
+              const result = await onImportTestNotes(count, (current, total) => {
+                setImportProgress({ current, total });
+              });
+
+              if (result.success) {
+                Alert.alert(
+                  'Success',
+                  `Successfully imported ${result.count} test note${result.count === 1 ? '' : 's'}!`,
+                  [{ text: 'OK' }]
+                );
+              } else {
+                Alert.alert('Error', `Failed to import notes: ${result.error}`);
+              }
+            } catch (error) {
+              console.error('[SettingsScreen] Import error:', error);
+              Alert.alert('Error', 'Failed to import test notes');
+            } finally {
+              setIsImporting(false);
+              setImportProgress({ current: 0, total: 0 });
+            }
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
       <StatusBar style={isDarkMode ? "light" : "dark"} />
@@ -267,6 +335,36 @@ export default function SettingsScreen({ settings, onSettingsChange, isDarkMode,
           {/* Data Management Section */}
           <View style={[styles.settingsCard, { backgroundColor: theme.cardBackground }]}>
             <Text style={[styles.settingsSectionTitle, { color: theme.textColor }]}>Data Management</Text>
+            
+            <Text style={[styles.settingsLabel, { color: theme.secondaryTextColor, marginBottom: 8 }]}>
+              Import test notes for RAG testing and development
+            </Text>
+            <TouchableOpacity
+              style={[styles.testButton, { backgroundColor: isImporting ? theme.borderColor : '#FF9500', marginBottom: 12 }]}
+              onPress={handleImportTestNotes}
+              disabled={isImporting}
+            >
+              {isImporting ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <ActivityIndicator size="small" color="#000" />
+                  <Text style={styles.testButtonText}>
+                    Importing {importProgress.current}/{importProgress.total}
+                  </Text>
+                </View>
+              ) : (
+                <Text style={styles.testButtonText}>📥 Import Test Notes</Text>
+              )}
+            </TouchableOpacity>
+
+            <Text style={[styles.settingsLabel, { color: theme.secondaryTextColor, marginBottom: 8 }]}>
+              View RAG operations, chat queries, and system logs in the admin panel.
+            </Text>
+            <TouchableOpacity
+              style={[styles.testButton, { backgroundColor: theme.accentColor, marginBottom: 12 }]}
+              onPress={onNavigateToAdminPanel}
+            >
+              <Text style={styles.testButtonText}>🔧 Admin Panel</Text>
+            </TouchableOpacity>
             <Text style={[styles.settingsLabel, { color: theme.secondaryTextColor, marginBottom: 8 }]}>
               Clear all app data including notes, settings, and cached files. This action cannot be undone.
             </Text>
@@ -279,6 +377,57 @@ export default function SettingsScreen({ settings, onSettingsChange, isDarkMode,
           </View>
         </ScrollView>
       </View>
+
+      {/* Import Count Input Modal */}
+      <Modal
+        visible={showImportInput}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowImportInput(false)}
+      >
+        <KeyboardAvoidingView 
+          style={styles.modalOverlay} 
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        >
+          <View style={[styles.modalContent, { backgroundColor: theme.cardBackground }]}>
+            <Text style={[styles.modalTitle, { color: theme.textColor }]}>Import Test Notes</Text>
+            <Text style={[styles.modalDescription, { color: theme.secondaryTextColor }]}>
+              How many notes would you like to import? (Max: 100)
+            </Text>
+            
+            <TextInput
+              style={[styles.modalInput, { 
+                color: theme.textColor, 
+                backgroundColor: theme.inputBackground,
+                borderColor: theme.borderColor 
+              }]}
+              value={importCount}
+              onChangeText={setImportCount}
+              placeholder="Enter number (e.g., 10)"
+              placeholderTextColor={theme.placeholderColor}
+              keyboardType="number-pad"
+              maxLength={3}
+              autoFocus={true}
+            />
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonCancel, { backgroundColor: theme.borderColor }]}
+                onPress={() => setShowImportInput(false)}
+              >
+                <Text style={[styles.modalButtonText, { color: theme.textColor }]}>Cancel</Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonConfirm, { backgroundColor: theme.accentColor }]}
+                onPress={confirmImport}
+              >
+                <Text style={[styles.modalButtonText, { color: '#000' }]}>Import</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
@@ -383,5 +532,63 @@ const styles = StyleSheet.create({
   noteTime: {
     fontSize: 13,
     fontWeight: '500',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '85%',
+    borderRadius: 16,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 5,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  modalDescription: {
+    fontSize: 14,
+    marginBottom: 20,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  modalInput: {
+    borderWidth: 1,
+    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    fontSize: 18,
+    marginBottom: 24,
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalButton: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  modalButtonCancel: {
+    // Specific styles can be added here if needed
+  },
+  modalButtonConfirm: {
+    // Specific styles can be added here if needed
+  },
+  modalButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
