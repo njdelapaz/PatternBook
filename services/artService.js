@@ -74,7 +74,8 @@ export async function getArtworkDetails(objectID) {
 
     // Only return if we have an image
     if (!artwork.imageUrl) {
-      console.log('[ArtService] Artwork has no image:', objectID);
+      // This is expected behavior - some artworks don't have images
+      // Reduced log verbosity to avoid spam
       return null;
     }
 
@@ -87,6 +88,54 @@ export async function getArtworkDetails(objectID) {
 }
 
 /**
+ * Find a specific artwork by title and artist
+ * @param {string} artworkTitle - Title of the artwork
+ * @param {string} artistName - Name of the artist
+ * @returns {Promise<Object|null>} Artwork details or null
+ */
+export async function findSpecificArtwork(artworkTitle, artistName) {
+  try {
+    // Search by artist name + artwork title for better accuracy
+    const query = `${artistName} ${artworkTitle}`;
+    console.log('[ArtService] Searching for specific artwork:', query);
+
+    const objectIDs = await searchArtwork(query);
+
+    if (objectIDs.length === 0) {
+      console.log('[ArtService] No results found for specific artwork');
+      return null;
+    }
+
+    console.log(`[ArtService] Found ${objectIDs.length} potential matches`);
+
+    // Try to find the artwork in the first 10 results
+    for (let i = 0; i < Math.min(10, objectIDs.length); i++) {
+      const artwork = await getArtworkDetails(objectIDs[i]);
+      if (artwork && artwork.imageUrl) {
+        // Check if the title or artist roughly matches
+        const titleMatches = artwork.title.toLowerCase().includes(artworkTitle.toLowerCase()) ||
+                           artworkTitle.toLowerCase().includes(artwork.title.toLowerCase());
+        const artistMatches = artwork.artist.toLowerCase().includes(artistName.toLowerCase()) ||
+                             artistName.toLowerCase().includes(artwork.artist.toLowerCase());
+
+        if (titleMatches && artistMatches) {
+          console.log(`[ArtService] Found matching artwork: ${artwork.title} by ${artwork.artist}`);
+          return artwork;
+        }
+      }
+      // Small delay to avoid overwhelming the API
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    console.log('[ArtService] No matching artwork found');
+    return null;
+  } catch (error) {
+    console.error('[ArtService] Error finding specific artwork:', error);
+    return null;
+  }
+}
+
+/**
  * Find a suitable artwork for a theme
  * @param {string} searchQuery - Search query for artwork
  * @returns {Promise<Object|null>} Artwork details or null
@@ -94,21 +143,26 @@ export async function getArtworkDetails(objectID) {
 export async function findArtworkForTheme(searchQuery) {
   try {
     const objectIDs = await searchArtwork(searchQuery);
-    
+
     if (objectIDs.length === 0) {
+      console.log('[ArtService] No results found for query:', searchQuery);
       return null;
     }
 
-    // Try to get details for the first few results until we find one with an image
-    for (let i = 0; i < Math.min(5, objectIDs.length); i++) {
+    console.log(`[ArtService] Trying up to 10 artworks from ${objectIDs.length} results`);
+
+    // Try to get details for the first 10 results until we find one with an image
+    for (let i = 0; i < Math.min(10, objectIDs.length); i++) {
       const artwork = await getArtworkDetails(objectIDs[i]);
       if (artwork && artwork.imageUrl) {
+        console.log(`[ArtService] Found valid artwork on attempt ${i + 1}`);
         return artwork;
       }
       // Small delay to avoid overwhelming the API
       await new Promise(resolve => setTimeout(resolve, 100));
     }
 
+    console.log('[ArtService] No artworks with images found after 10 attempts');
     return null;
   } catch (error) {
     console.error('[ArtService] Error finding artwork for theme:', error);

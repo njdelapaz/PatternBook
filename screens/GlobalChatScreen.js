@@ -20,6 +20,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Markdown from 'react-native-markdown-display';
 import { darkTheme, lightTheme, RETRIEVAL_CONFIG } from '../utils/constants';
 import { loadGlobalChatHistory, saveGlobalChatHistory } from '../utils/chatStorage';
 import { buildGlobalChatContext } from '../utils/contextBuilder';
@@ -327,19 +328,67 @@ export default function GlobalChatScreen({ isDarkMode, onBack, notes, onNotePres
                         : [styles.assistantMessage, { backgroundColor: theme.cardBackground }],
                     ]}
                   >
-                    <Text
-                      style={[
-                        styles.messageText,
-                        {
-                          color:
-                            message.role === 'user'
-                              ? '#FFFFFF'
-                              : theme.textColor,
-                        },
-                      ]}
-                    >
-                      {message.content}
-                    </Text>
+                    {message.role === 'user' ? (
+                      <Text
+                        style={[
+                          styles.messageText,
+                          { color: '#FFFFFF' },
+                        ]}
+                      >
+                        {message.content}
+                      </Text>
+                    ) : (
+                      <Markdown
+                        style={{
+                          body: {
+                            color: theme.textColor,
+                            fontSize: 16,
+                            lineHeight: 24,
+                          },
+                          paragraph: {
+                            marginTop: 0,
+                            marginBottom: 8,
+                          },
+                          strong: {
+                            fontWeight: '700',
+                          },
+                          em: {
+                            fontStyle: 'italic',
+                          },
+                          code_inline: {
+                            backgroundColor: theme.inputBackground,
+                            color: theme.accentColor,
+                            paddingHorizontal: 4,
+                            paddingVertical: 2,
+                            borderRadius: 4,
+                            fontFamily: 'monospace',
+                          },
+                          code_block: {
+                            backgroundColor: theme.inputBackground,
+                            padding: 12,
+                            borderRadius: 8,
+                            fontFamily: 'monospace',
+                          },
+                          fence: {
+                            backgroundColor: theme.inputBackground,
+                            padding: 12,
+                            borderRadius: 8,
+                            fontFamily: 'monospace',
+                          },
+                          bullet_list: {
+                            marginBottom: 8,
+                          },
+                          ordered_list: {
+                            marginBottom: 8,
+                          },
+                          list_item: {
+                            marginBottom: 4,
+                          },
+                        }}
+                      >
+                        {message.content}
+                      </Markdown>
+                    )}
                   </View>
                   
                   {/* Show referenced notes for assistant messages */}

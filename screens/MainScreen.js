@@ -15,7 +15,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { darkTheme, lightTheme } from '../utils/constants';
 import { formatTimestamp, formatDateOnly } from '../utils/components';
-import { generateSuggestions } from '../services/mediaSuggestionsService';
+import { generateSuggestions, loadPersistedSuggestions } from '../services/mediaSuggestionsService';
 import { clearOldCache } from '../services/imageCache';
 
 // Import Carbon icons
@@ -63,6 +63,20 @@ export default function MainScreen({
   const [suggestions, setSuggestions] = useState([]);
   const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
+  // Load persisted suggestions on mount
+  useEffect(() => {
+    const loadInitialSuggestions = async () => {
+      try {
+        const persisted = await loadPersistedSuggestions();
+        setSuggestions(persisted);
+        console.log('[MainScreen] Loaded', persisted.length, 'persisted suggestions');
+      } catch (error) {
+        console.error('[MainScreen] Error loading persisted suggestions:', error);
+      }
+    };
+    loadInitialSuggestions();
+  }, []);
+
   // Load suggestions when notes change
   useEffect(() => {
     loadSuggestions();
@@ -75,7 +89,9 @@ export default function MainScreen({
 
   const loadSuggestions = async () => {
     if (notes.length === 0) {
-      setSuggestions([]);
+      // Still load persisted suggestions even if no notes
+      const persisted = await loadPersistedSuggestions();
+      setSuggestions(persisted);
       return;
     }
 
@@ -85,7 +101,9 @@ export default function MainScreen({
       setSuggestions(newSuggestions);
     } catch (error) {
       console.error('[MainScreen] Error loading suggestions:', error);
-      setSuggestions([]);
+      // Fall back to persisted suggestions on error
+      const persisted = await loadPersistedSuggestions();
+      setSuggestions(persisted);
     } finally {
       setSuggestionsLoading(false);
     }
@@ -267,21 +285,26 @@ export default function MainScreen({
           )}
 
           {/* AI Suggestions Bar */}
-          {suggestionsLoading && (
-            <View style={styles.suggestionsLoadingContainer}>
-              <ActivityIndicator size="small" color={theme.accentColor} />
-              <Text style={[styles.suggestionsLoadingText, { color: theme.secondaryTextColor }]}>
-                Finding suggestions for you...
-              </Text>
-            </View>
-          )}
-          {!suggestionsLoading && suggestions.length > 0 && (
+          {(suggestions.length > 0 || suggestionsLoading) && (
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
               style={styles.suggestionsContainer}
               contentContainerStyle={styles.suggestionsContent}
             >
+              {/* Loading Card - shown at the beginning when loading */}
+              {suggestionsLoading && (
+                <View style={[styles.suggestionCard, styles.suggestionLoadingCard, { backgroundColor: theme.cardBackground }]}>
+                  <View style={styles.suggestionLoadingContent}>
+                    <ActivityIndicator size="large" color={theme.accentColor} />
+                    <Text style={[styles.suggestionLoadingText, { color: theme.secondaryTextColor }]}>
+                      Finding suggestions for you...
+                    </Text>
+                  </View>
+                </View>
+              )}
+
+              {/* Existing suggestions */}
               {suggestions.map((suggestion, index) => (
                 <TouchableOpacity
                   key={index}
@@ -564,13 +587,6 @@ export default function MainScreen({
 
           {/* Bottom navigation */}
           <View style={styles.suggestionModalNav}>
-            <TouchableOpacity style={styles.suggestionModalNavButton}>
-              <Text style={styles.suggestionModalNavIcon}>💬</Text>
-              <Text style={styles.suggestionModalNavText}>Chat</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.suggestionModalNavButton}>
-              <Text style={styles.suggestionModalNavIcon}>⋯</Text>
-            </TouchableOpacity>
             <TouchableOpacity
               style={[styles.suggestionModalNavButton, currentSuggestionIndex === 0 && styles.suggestionModalNavButtonDisabled]}
               onPress={handleNavigateLeft}
@@ -938,6 +954,21 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 11,
     fontWeight: '600',
+  },
+  suggestionLoadingCard: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    minHeight: 200,
+  },
+  suggestionLoadingContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 12,
+    padding: 20,
+  },
+  suggestionLoadingText: {
+    fontSize: 14,
+    textAlign: 'center',
   },
 
   // Suggestion Modal

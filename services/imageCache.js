@@ -4,10 +4,10 @@
  * Images expire after 7 days
  */
 
-import * as FileSystem from 'expo-file-system';
+import * as FileSystemLegacy from 'expo-file-system/legacy';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const CACHE_DIR = FileSystem.cacheDirectory + 'suggestions/';
+const CACHE_DIR = FileSystemLegacy.cacheDirectory + 'suggestions/';
 const CACHE_INDEX_KEY = '@patternbook_image_cache_index';
 const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
 
@@ -15,9 +15,9 @@ const CACHE_TTL = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
  * Initialize cache directory
  */
 async function ensureCacheDir() {
-  const dirInfo = await FileSystem.getInfoAsync(CACHE_DIR);
+  const dirInfo = await FileSystemLegacy.getInfoAsync(CACHE_DIR);
   if (!dirInfo.exists) {
-    await FileSystem.makeDirectoryAsync(CACHE_DIR, { intermediates: true });
+    await FileSystemLegacy.makeDirectoryAsync(CACHE_DIR, { intermediates: true });
   }
 }
 
@@ -75,7 +75,7 @@ export async function getCachedImage(url) {
 
     // Check if cached and not expired
     if (cached && cached.expiresAt > Date.now()) {
-      const fileInfo = await FileSystem.getInfoAsync(cached.localUri);
+      const fileInfo = await FileSystemLegacy.getInfoAsync(cached.localUri);
       if (fileInfo.exists) {
         console.log('[ImageCache] Using cached image:', cacheKey);
         return cached.localUri;
@@ -87,7 +87,7 @@ export async function getCachedImage(url) {
     const fileExtension = url.split('.').pop().split('?')[0] || 'jpg';
     const localUri = CACHE_DIR + cacheKey + '.' + fileExtension;
 
-    const downloadResult = await FileSystem.downloadAsync(url, localUri);
+    const downloadResult = await FileSystemLegacy.downloadAsync(url, localUri);
     
     if (downloadResult.status === 200) {
       // Update cache index
@@ -125,9 +125,9 @@ export async function clearOldCache() {
       if (entry.expiresAt < now) {
         // Delete file
         try {
-          const fileInfo = await FileSystem.getInfoAsync(entry.localUri);
+          const fileInfo = await FileSystemLegacy.getInfoAsync(entry.localUri);
           if (fileInfo.exists) {
-            await FileSystem.deleteAsync(entry.localUri, { idempotent: true });
+            await FileSystemLegacy.deleteAsync(entry.localUri, { idempotent: true });
           }
           delete cacheIndex[key];
           cleaned++;
@@ -154,7 +154,7 @@ export async function clearOldCache() {
  */
 export async function clearAllCache() {
   try {
-    await FileSystem.deleteAsync(CACHE_DIR, { idempotent: true });
+    await FileSystemLegacy.deleteAsync(CACHE_DIR, { idempotent: true });
     await AsyncStorage.removeItem(CACHE_INDEX_KEY);
     console.log('[ImageCache] All cache cleared');
   } catch (error) {

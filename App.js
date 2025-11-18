@@ -2,6 +2,7 @@ import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View, ScrollView, TouchableOpacity, TextInput, Modal, Pressable, Keyboard, KeyboardAvoidingView, Platform, TouchableWithoutFeedback, ActivityIndicator, Alert, PanResponder, Animated } from 'react-native';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useState, useEffect, useRef } from 'react';
+import Markdown from 'react-native-markdown-display';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { OPENAI_API_KEY } from '@env';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -14,7 +15,6 @@ import OnboardingScreen from './screens/OnboardingScreen';
 import MainScreen from './screens/MainScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import RecentlyDeletedScreen from './screens/RecentlyDeletedScreen';
-import TextEditorScreen from './screens/TextEditorScreen';
 import VoiceRecordingScreen from './screens/VoiceRecordingScreen';
 import GlobalChatScreen from './screens/GlobalChatScreen';
 import AdminPanelScreen from './screens/AdminPanelScreen';
@@ -808,12 +808,79 @@ function NoteEditor({ note, notes, onBack, onSave, onNotePress, isDarkMode }) {
                         message.role === 'user' ? styles.userMessage : styles.aiMessage
                       ]}
                     >
-                      <Text style={[
-                        styles.chatMessageText,
-                        { color: message.role === 'user' ? '#000' : theme.textColor }
-                      ]}>
-                        {message.content}
-                      </Text>
+                      {message.role === 'user' ? (
+                        <Text style={[
+                          styles.chatMessageText,
+                          { color: '#000' }
+                        ]}>
+                          {message.content}
+                        </Text>
+                      ) : (
+                        <Markdown
+                          style={{
+                            body: {
+                              color: theme.textColor,
+                              fontSize: 16,
+                              lineHeight: 24,
+                            },
+                            paragraph: {
+                              marginTop: 0,
+                              marginBottom: 8,
+                            },
+                            strong: {
+                              fontWeight: '700',
+                              color: theme.textColor,
+                            },
+                            em: {
+                              fontStyle: 'italic',
+                              color: theme.textColor,
+                            },
+                            code_inline: {
+                              backgroundColor: theme.cardBackground,
+                              color: theme.accentColor,
+                              paddingHorizontal: 4,
+                              paddingVertical: 2,
+                              borderRadius: 4,
+                              fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+                            },
+                            code_block: {
+                              backgroundColor: theme.cardBackground,
+                              padding: 12,
+                              borderRadius: 8,
+                              fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+                            },
+                            fence: {
+                              backgroundColor: theme.cardBackground,
+                              padding: 12,
+                              borderRadius: 8,
+                              fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+                            },
+                            bullet_list: {
+                              marginBottom: 8,
+                            },
+                            ordered_list: {
+                              marginBottom: 8,
+                            },
+                            list_item: {
+                              marginBottom: 4,
+                            },
+                            link: {
+                              color: theme.accentColor,
+                              textDecorationLine: 'underline',
+                            },
+                            blockquote: {
+                              backgroundColor: theme.cardBackground,
+                              borderLeftColor: theme.accentColor,
+                              borderLeftWidth: 4,
+                              paddingLeft: 12,
+                              paddingVertical: 8,
+                              marginBottom: 8,
+                            },
+                          }}
+                        >
+                          {message.content}
+                        </Markdown>
+                      )}
                     </View>
                     {message.role === 'assistant' && message.retrievedNotes && message.retrievedNotes.length > 0 && (
                       <View style={styles.referencedNotesContainer}>
@@ -883,7 +950,7 @@ export default function App() {
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
   const [notes, setNotes] = useState([]);
   const [deletedNotes, setDeletedNotes] = useState([]);
-  const [currentScreen, setCurrentScreen] = useState('main'); // 'main', 'editor', 'voice-record', 'text-editor', 'settings', 'recently-deleted', 'global-chat', 'admin-panel'
+  const [currentScreen, setCurrentScreen] = useState('main'); // 'main', 'editor', 'voice-record', 'settings', 'recently-deleted', 'global-chat', 'admin-panel'
   const [selectedNoteId, setSelectedNoteId] = useState(null);
   const [navigationStack, setNavigationStack] = useState([]); // Stack to track note navigation history
   const [isDarkMode, setIsDarkMode] = useState(true);
@@ -954,32 +1021,28 @@ export default function App() {
     setCurrentScreen('editor');
   };
 
-  // Handle creating note from text editor
-  const handleCreateNoteFromText = async (title, content) => {
-    const newNote = {
-      id: Date.now().toString(),
-      title: title || 'New Note',
-      content: content,
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-      pinned: false,
-      titleGenerated: false,
-    };
-
-    // Add note immediately
-    const updatedNotes = [newNote, ...notes];
-    setNotes(updatedNotes);
-    saveNotes(updatedNotes);
-  };
 
   // Navigate to voice recording screen
   const handleNavigateToVoiceRecord = () => {
     setCurrentScreen('voice-record');
   };
 
-  // Navigate to text editor screen
+  // Navigate to text editor screen (now creates a note and opens in full editor)
   const handleNavigateToTextEditor = () => {
-    setCurrentScreen('text-editor');
+    // Create a new note and open it in the full editor (same as handleCreateNote)
+    const newNote = {
+      id: Date.now().toString(),
+      title: 'New Note',
+      content: '',
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+      pinned: false,
+      titleGenerated: false,
+    };
+    setNotes([newNote, ...notes]);
+    setNavigationStack([]); // Clear navigation stack when creating new note
+    setSelectedNoteId(newNote.id);
+    setCurrentScreen('editor');
   };
 
   // Navigate to global chat screen
@@ -993,18 +1056,23 @@ export default function App() {
   };
 
   // Handle importing test notes from test_data_notes_only.json
-  const handleImportTestNotes = async (count, onProgress) => {
+  const handleImportTestNotes = async (count, startIndex, onProgress) => {
     try {
       // Load test data
       const testData = require('./test_data_notes_only.json');
-      
-      // Limit to requested count
-      const notesToImport = Math.min(count, testData.length);
-      
+
+      // Calculate the range to import (avoid duplicates)
+      const endIndex = Math.min(startIndex + count, testData.length);
+      const notesToImport = endIndex - startIndex;
+
+      if (notesToImport <= 0) {
+        return { success: false, error: 'No more notes to import or invalid range' };
+      }
+
       let importedCount = 0;
 
-      // Process notes one by one
-      for (let i = 0; i < notesToImport; i++) {
+      // Process notes one by one starting from startIndex
+      for (let i = startIndex; i < endIndex; i++) {
         const testNote = testData[i];
         
         // Create note with just the body content
@@ -1048,15 +1116,36 @@ export default function App() {
           });
         }
 
+        // Generate art suggestion for this note (runs in background, errors are muted)
+        try {
+          const finalNote = {
+            ...newNote,
+            title: newNote.title,
+            titleGenerated: newNote.titleGenerated
+          };
+          
+          // Import generateSuggestionForNote dynamically to avoid circular dependencies
+          const { generateSuggestionForNote } = require('./services/mediaSuggestionsService');
+          await generateSuggestionForNote(finalNote);
+          console.log('[ImportTestNotes] Generated art suggestion for note:', finalNote.title);
+        } catch (error) {
+          // Silently handle art suggestion errors - user should not see these
+          console.error('[ImportTestNotes] Error generating art suggestion (muted from user):', error);
+        }
+
+        // RAG chunking happens automatically via useEffect in App.js that watches notes array
+        // No need to manually trigger it here
+
         importedCount++;
         if (onProgress) {
           onProgress(importedCount, notesToImport);
         }
 
-        // Small delay between notes to avoid overwhelming the system
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // 5 second delay between notes to allow title generation, RAG chunking, and art suggestion to complete
+        await new Promise(resolve => setTimeout(resolve, 5000));
       }
 
+      console.log(`[ImportTestNotes] Imported ${importedCount} notes (indices ${startIndex} to ${endIndex - 1})`);
       return { success: true, count: importedCount };
     } catch (error) {
       console.error('[ImportTestNotes] Error importing test notes:', error);
@@ -1073,8 +1162,11 @@ export default function App() {
     // push the current note to the navigation stack
     if (currentScreen === 'editor' && selectedNoteId) {
       setNavigationStack(prev => [...prev, { screen: 'editor', noteId: selectedNoteId }]);
+    } else if (currentScreen === 'global-chat') {
+      // Coming from global chat, save it to the navigation stack
+      setNavigationStack([{ screen: 'global-chat' }]);
     } else {
-      // Coming from a different screen (main, global-chat, etc.)
+      // Coming from a different screen (main, etc.)
       // Clear the navigation stack
       setNavigationStack([]);
     }
@@ -1111,15 +1203,22 @@ export default function App() {
       setNotes((prevNotes) => prevNotes.filter((note) => note.id !== selectedNoteId));
     }
 
-    // Check if we have a navigation stack (came from another note)
+    // Check if we have a navigation stack (came from another note or screen)
     if (navigationStack.length > 0) {
       // Pop the last item from the stack
       const previousLocation = navigationStack[navigationStack.length - 1];
       setNavigationStack(prev => prev.slice(0, -1));
 
-      // Navigate back to the previous note
-      setSelectedNoteId(previousLocation.noteId);
-      setCurrentScreen(previousLocation.screen);
+      // Navigate back to the previous location
+      if (previousLocation.screen === 'editor') {
+        // Going back to another note
+        setSelectedNoteId(previousLocation.noteId);
+        setCurrentScreen(previousLocation.screen);
+      } else {
+        // Going back to a different screen (like global-chat)
+        setCurrentScreen(previousLocation.screen);
+        setSelectedNoteId(null);
+      }
     } else {
       // No stack, go back to main screen
       setCurrentScreen('main');
@@ -1366,12 +1465,6 @@ export default function App() {
           isDarkMode={isDarkMode}
           onBack={handleBack}
           onSave={handleCreateNoteFromTranscription}
-        />
-      ) : currentScreen === 'text-editor' ? (
-        <TextEditorScreen
-          isDarkMode={isDarkMode}
-          onBack={handleBack}
-          onSave={handleCreateNoteFromText}
         />
       ) : currentScreen === 'settings' ? (
         <SettingsScreen

@@ -1,16 +1,14 @@
-import React, { useState } from 'react';
-import { 
-  StyleSheet, 
-  Text, 
-  View, 
-  ScrollView, 
-  TouchableOpacity, 
-  TextInput, 
+import React, { useState, useEffect } from 'react';
+import {
+  StyleSheet,
+  Text,
+  View,
+  ScrollView,
+  TouchableOpacity,
+  TextInput,
   Platform,
   ActivityIndicator,
-  Alert,
-  Modal,
-  KeyboardAvoidingView
+  Alert
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -27,8 +25,23 @@ export default function SettingsScreen({ settings, onSettingsChange, isDarkMode,
   const [micCheckResult, setMicCheckResult] = useState('');
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
-  const [showImportInput, setShowImportInput] = useState(false);
-  const [importCount, setImportCount] = useState('10');
+  const [importCount, setImportCount] = useState('1');
+  const [totalImported, setTotalImported] = useState(0);
+
+  // Load total imported count on mount
+  useEffect(() => {
+    const loadImportedCount = async () => {
+      try {
+        const count = await AsyncStorage.getItem('@patternbook_imported_count');
+        if (count) {
+          setTotalImported(parseInt(count, 10));
+        }
+      } catch (error) {
+        console.error('[SettingsScreen] Error loading imported count:', error);
+      }
+    };
+    loadImportedCount();
+  }, []);
 
   const handleNameChange = (name) => {
     onSettingsChange({
@@ -172,12 +185,8 @@ export default function SettingsScreen({ settings, onSettingsChange, isDarkMode,
       return;
     }
 
-    setShowImportInput(true);
-  };
-
-  const confirmImport = async () => {
     const count = parseInt(importCount, 10);
-    
+
     if (isNaN(count) || count <= 0) {
       Alert.alert('Invalid Number', 'Please enter a valid number greater than 0');
       return;
@@ -188,44 +197,30 @@ export default function SettingsScreen({ settings, onSettingsChange, isDarkMode,
       return;
     }
 
-    setShowImportInput(false);
+    setIsImporting(true);
+    setImportProgress({ current: 0, total: 0 });
 
-    Alert.alert(
-      'Import Test Notes',
-      `This will import ${count} test note${count === 1 ? '' : 's'} from test_data_notes_only.json. Each note will be processed with title generation. This may take a few minutes.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Import',
-          onPress: async () => {
-            setIsImporting(true);
-            setImportProgress({ current: 0, total: 0 });
+    try {
+      const result = await onImportTestNotes(count, totalImported, (current, total) => {
+        setImportProgress({ current, total });
+      });
 
-            try {
-              const result = await onImportTestNotes(count, (current, total) => {
-                setImportProgress({ current, total });
-              });
+      if (result.success) {
+        // Update total imported count
+        const newTotal = totalImported + result.count;
+        setTotalImported(newTotal);
+        await AsyncStorage.setItem('@patternbook_imported_count', newTotal.toString());
 
-              if (result.success) {
-                Alert.alert(
-                  'Success',
-                  `Successfully imported ${result.count} test note${result.count === 1 ? '' : 's'}!`,
-                  [{ text: 'OK' }]
-                );
-              } else {
-                Alert.alert('Error', `Failed to import notes: ${result.error}`);
-              }
-            } catch (error) {
-              console.error('[SettingsScreen] Import error:', error);
-              Alert.alert('Error', 'Failed to import test notes');
-            } finally {
-              setIsImporting(false);
-              setImportProgress({ current: 0, total: 0 });
-            }
-          }
-        }
-      ]
-    );
+      } else {
+        Alert.alert('Error', `Failed to import notes: ${result.error}`);
+      }
+    } catch (error) {
+      console.error('[SettingsScreen] Import error:', error);
+      Alert.alert('Error', 'Failed to import test notes');
+    } finally {
+      setIsImporting(false);
+      setImportProgress({ current: 0, total: 0 });
+    }
   };
 
   return (
@@ -335,26 +330,49 @@ export default function SettingsScreen({ settings, onSettingsChange, isDarkMode,
           {/* Data Management Section */}
           <View style={[styles.settingsCard, { backgroundColor: theme.cardBackground }]}>
             <Text style={[styles.settingsSectionTitle, { color: theme.textColor }]}>Data Management</Text>
-            
-            <Text style={[styles.settingsLabel, { color: theme.secondaryTextColor, marginBottom: 8 }]}>
+
+            <Text style={[styles.settingsLabel, { color: theme.secondaryTextColor, marginBottom: 12 }]}>
               Import test notes for RAG testing and development
             </Text>
-            <TouchableOpacity
-              style={[styles.testButton, { backgroundColor: isImporting ? theme.borderColor : '#FF9500', marginBottom: 12 }]}
-              onPress={handleImportTestNotes}
-              disabled={isImporting}
-            >
-              {isImporting ? (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <ActivityIndicator size="small" color="#000" />
-                  <Text style={styles.testButtonText}>
-                    Importing {importProgress.current}/{importProgress.total}
-                  </Text>
-                </View>
-              ) : (
-                <Text style={styles.testButtonText}>📥 Import Test Notes</Text>
-              )}
-            </TouchableOpacity>
+
+            {/* Total imported counter */}
+            <Text style={[styles.settingsLabel, { color: theme.accentColor, marginBottom: 12, fontSize: 14 }]}>
+              Total imported: {totalImported} notes
+            </Text>
+
+            {/* Inline import controls */}
+            <View style={styles.importControlsRow}>
+              <TextInput
+                style={[styles.importCountInput, {
+                  color: theme.textColor,
+                  backgroundColor: theme.inputBackground,
+                  borderColor: theme.borderColor
+                }]}
+                value={importCount}
+                onChangeText={setImportCount}
+                placeholder="Count"
+                placeholderTextColor={theme.placeholderColor}
+                keyboardType="number-pad"
+                maxLength={3}
+                editable={!isImporting}
+              />
+              <TouchableOpacity
+                style={[styles.importButton, { backgroundColor: isImporting ? theme.borderColor : '#FF9500' }]}
+                onPress={handleImportTestNotes}
+                disabled={isImporting}
+              >
+                {isImporting ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                    <ActivityIndicator size="small" color="#000" />
+                    <Text style={styles.testButtonText}>
+                      {importProgress.current}/{importProgress.total}
+                    </Text>
+                  </View>
+                ) : (
+                  <Text style={styles.testButtonText}>📥 Import Notes</Text>
+                )}
+              </TouchableOpacity>
+            </View>
 
             <Text style={[styles.settingsLabel, { color: theme.secondaryTextColor, marginBottom: 8 }]}>
               View RAG operations, chat queries, and system logs in the admin panel.
@@ -377,57 +395,6 @@ export default function SettingsScreen({ settings, onSettingsChange, isDarkMode,
           </View>
         </ScrollView>
       </View>
-
-      {/* Import Count Input Modal */}
-      <Modal
-        visible={showImportInput}
-        transparent={true}
-        animationType="fade"
-        onRequestClose={() => setShowImportInput(false)}
-      >
-        <KeyboardAvoidingView 
-          style={styles.modalOverlay} 
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-          <View style={[styles.modalContent, { backgroundColor: theme.cardBackground }]}>
-            <Text style={[styles.modalTitle, { color: theme.textColor }]}>Import Test Notes</Text>
-            <Text style={[styles.modalDescription, { color: theme.secondaryTextColor }]}>
-              How many notes would you like to import? (Max: 100)
-            </Text>
-            
-            <TextInput
-              style={[styles.modalInput, { 
-                color: theme.textColor, 
-                backgroundColor: theme.inputBackground,
-                borderColor: theme.borderColor 
-              }]}
-              value={importCount}
-              onChangeText={setImportCount}
-              placeholder="Enter number (e.g., 10)"
-              placeholderTextColor={theme.placeholderColor}
-              keyboardType="number-pad"
-              maxLength={3}
-              autoFocus={true}
-            />
-
-            <View style={styles.modalButtons}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonCancel, { backgroundColor: theme.borderColor }]}
-                onPress={() => setShowImportInput(false)}
-              >
-                <Text style={[styles.modalButtonText, { color: theme.textColor }]}>Cancel</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.modalButton, styles.modalButtonConfirm, { backgroundColor: theme.accentColor }]}
-                onPress={confirmImport}
-              >
-                <Text style={[styles.modalButtonText, { color: '#000' }]}>Import</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
     </View>
   );
 }
@@ -533,62 +500,28 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '500',
   },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
+  importControlsRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-  },
-  modalContent: {
-    width: '85%',
-    borderRadius: 16,
-    padding: 24,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: '700',
+    gap: 12,
     marginBottom: 12,
-    textAlign: 'center',
   },
-  modalDescription: {
-    fontSize: 14,
-    marginBottom: 20,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  modalInput: {
+  importCountInput: {
     borderWidth: 1,
     borderRadius: 8,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    fontSize: 18,
-    marginBottom: 24,
+    paddingVertical: 10,
+    fontSize: 16,
+    width: 80,
     textAlign: 'center',
     fontWeight: '600',
   },
-  modalButtons: {
-    flexDirection: 'row',
-    gap: 12,
-  },
-  modalButton: {
+  importButton: {
     flex: 1,
-    paddingVertical: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 10,
     borderRadius: 8,
     alignItems: 'center',
-  },
-  modalButtonCancel: {
-    // Specific styles can be added here if needed
-  },
-  modalButtonConfirm: {
-    // Specific styles can be added here if needed
-  },
-  modalButtonText: {
-    fontSize: 16,
-    fontWeight: '600',
+    justifyContent: 'center',
   },
 });
