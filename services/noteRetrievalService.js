@@ -8,6 +8,45 @@
 import { chunkNotes } from '../utils/noteChunking';
 
 /**
+ * Recency weighting configuration
+ */
+const MS_IN_DAY = 24 * 60 * 60 * 1000;
+const RECENCY_HALF_LIFE_DAYS = 21; // light bias toward recent notes (~3 weeks)
+const RECENCY_BONUS_MAX = 0.3; // cap boost so older notes remain relevant
+
+/**
+ * Calculate a recency weight for a chunk based on its note timestamps
+ * Uses exponential decay with a configurable half-life and floor
+ * @param {Object} chunk - Note chunk metadata
+ * @returns {number} Weight multiplier >= 1 (only boosts recency)
+ */
+function calculateRecencyWeight(chunk) {
+  const timestamp = chunk.noteUpdatedAt || chunk.noteCreatedAt;
+  if (!timestamp) {
+    return 1;
+  }
+
+  const chunkTime = new Date(timestamp).getTime();
+  if (Number.isNaN(chunkTime)) {
+    return 1;
+  }
+
+  const now = Date.now();
+  const ageMs = now - chunkTime;
+
+  if (ageMs <= 0) {
+    return 1;
+  }
+
+  const ageDays = ageMs / MS_IN_DAY;
+  const lambda = Math.log(2) / RECENCY_HALF_LIFE_DAYS;
+  const decay = Math.exp(-lambda * ageDays);
+
+  const bonus = decay * RECENCY_BONUS_MAX;
+  return 1 + bonus;
+}
+
+/**
  * Common English stopwords to filter out
  */
 const STOPWORDS = new Set([
@@ -18,20 +57,71 @@ const STOPWORDS = new Set([
 ]);
 
 /**
+ * Basic stemming to align simple morphological variants
+ * (e.g., "productive" vs "productivity")
+ * @param {string} token
+ * @returns {string}
+ */
+function normalizeToken(token) {
+  if (!token) {
+    return '';
+  }
+  
+  const suffixes = [
+    'ization',
+    'isation',
+    'iveness',
+    'fulness',
+    'tional',
+    'ational',
+    'ities',
+    'ility',
+    'ivity',
+    'ness',
+    'ment',
+    'tion',
+    'sion',
+    'ously',
+    'fully',
+    'edly',
+    'ingly',
+    'able',
+    'ible',
+    'ive',
+    'ity',
+    'ing',
+    'ed',
+    'ly',
+    's',
+  ];
+  
+  let normalized = token;
+  
+  for (const suffix of suffixes) {
+    if (normalized.length - suffix.length >= 3 && normalized.endsWith(suffix)) {
+      normalized = normalized.slice(0, -suffix.length);
+      break;
+    }
+  }
+  
+  return normalized;
+}
+
+/**
  * Tokenize text into words
  * @param {string} text - Text to tokenize
- * @returns {Array} Array of tokens (lowercase, no punctuation)
+ * @returns {Array} Array of tokens (lowercase, normalized)
  */
 function tokenize(text) {
   if (!text || typeof text !== 'string') {
     return [];
   }
   
-  // Convert to lowercase and split on non-alphanumeric characters
   const tokens = text
     .toLowerCase()
     .replace(/[^\w\s]/g, ' ')
     .split(/\s+/)
+    .map(token => normalizeToken(token))
     .filter(token => token.length > 0 && !STOPWORDS.has(token));
   
   return tokens;
@@ -112,6 +202,8 @@ function scoreChunk(queryTokens, chunk, idfScores) {
   return score;
 }
 
+const RAG_DEBUG = process.env.RAG_DEBUG === '1';
+
 /**
  * Keyword-based retriever using TF-IDF
  */
@@ -132,11 +224,13 @@ class KeywordRetriever {
     const indexedChunks = chunks.map(chunk => {
       const tokens = tokenize(chunk.text);
       const tf = calculateTermFrequency(tokens);
+      const recencyWeight = calculateRecencyWeight(chunk);
       
       return {
         ...chunk,
         tokens,
         tf,
+        recencyWeight,
       };
     });
     
@@ -171,16 +265,35 @@ class KeywordRetriever {
     }
     
     // Score all chunks
-    const scoredChunks = this.index.chunks.map(chunk => ({
-      ...chunk,
-      score: scoreChunk(queryTokens, chunk, this.index.idfScores),
-    }));
+    const scoredChunks = this.index.chunks.map(chunk => {
+      const baseScore = scoreChunk(queryTokens, chunk, this.index.idfScores);
+      const recencyWeight = chunk.recencyWeight || 1;
+
+      return {
+        ...chunk,
+        score: baseScore * recencyWeight,
+        baseScore,
+        recencyWeight,
+      };
+    });
     
-    // Filter by minimum score and sort by score (descending)
     const relevantChunks = scoredChunks
       .filter(chunk => chunk.score >= minScore)
       .sort((a, b) => b.score - a.score)
       .slice(0, topK);
+
+    if (RAG_DEBUG) {
+      console.log('[RetrievalService] Query:', query);
+      console.log(
+        '[RetrievalService] Results:',
+        relevantChunks.map(chunk => ({
+          noteId: chunk.noteId,
+          score: Number(chunk.score.toFixed(4)),
+          baseScore: Number((chunk.baseScore || 0).toFixed(4)),
+          weight: Number((chunk.recencyWeight || 1).toFixed(3)),
+        }))
+      );
+    }
     
     return relevantChunks;
   }
@@ -242,8 +355,13 @@ class RetrievalService {
       minScore = 0.01,
       excludeNoteId = null,
     } = options;
+    const minScoreProvided = Object.prototype.hasOwnProperty.call(options, 'minScore');
     
     let results = this.retriever.retrieve(query, topK * 2, minScore);
+    
+    if (results.length === 0 && !minScoreProvided) {
+      results = this.retriever.retrieve(query, topK * 2, 0);
+    }
     
     // Filter out excluded note if specified
     if (excludeNoteId) {

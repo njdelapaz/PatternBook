@@ -65,17 +65,22 @@ export function chunkNote(note) {
   const content = note.content || '';
   const textChunks = chunkText(content);
   
-  return textChunks.map((chunk, index) => ({
-    id: `${note.id}-chunk-${index}`,
-    noteId: note.id,
-    noteTitle: note.title || 'Untitled',
-    chunkIndex: index,
-    text: chunk.text,
-    startPos: chunk.startPos,
-    endPos: chunk.endPos,
-    noteCreatedAt: note.createdAt,
-    noteUpdatedAt: note.updatedAt,
-  }));
+  return textChunks.map((chunk, index) => {
+    const noteTitle = note.title || 'Untitled';
+    const textWithTitle = `${noteTitle} ${chunk.text}`.trim();
+    
+    return {
+      id: `${note.id}-chunk-${index}`,
+      noteId: note.id,
+      noteTitle,
+      chunkIndex: index,
+      text: textWithTitle,
+      startPos: chunk.startPos,
+      endPos: chunk.endPos,
+      noteCreatedAt: note.createdAt,
+      noteUpdatedAt: note.updatedAt,
+    };
+  });
 }
 
 /**
