@@ -203,6 +203,47 @@ describe('KeywordRetriever', () => {
       const hasGoalsNote = results.some(r => r.noteId === 'note-3');
       expect(hasGoalsNote).toBe(true);
     });
+
+    it('should prioritize newer notes via recency weighting', () => {
+      const now = Date.now();
+      const recencyNotes = [
+        {
+          id: 'recent-note',
+          title: 'Productivity Focus',
+          content: 'Focus on productivity with single-tasking.',
+          createdAt: now - 2 * 24 * 60 * 60 * 1000,
+          updatedAt: now,
+        },
+        {
+          id: 'older-note',
+          title: 'Productivity Focus',
+          content: 'Focus on productivity with single-tasking.',
+          createdAt: now - 30 * 24 * 60 * 60 * 1000,
+          updatedAt: now - 30 * 24 * 60 * 60 * 1000,
+        },
+        {
+          id: 'unrelated-note',
+          title: 'Gardening Tips',
+          content: 'Completely different topic about gardening and plants.',
+          createdAt: now,
+          updatedAt: now,
+        },
+      ];
+
+      const recencyRetriever = new KeywordRetriever();
+      recencyRetriever.buildIndex(recencyNotes);
+
+      const results = recencyRetriever.retrieve('productivity focus single tasking', 3, 0);
+
+      const recentResult = results.find(r => r.noteId === 'recent-note');
+      const olderResult = results.find(r => r.noteId === 'older-note');
+
+      expect(recentResult).toBeDefined();
+      expect(olderResult).toBeDefined();
+      expect(recentResult.score).toBeGreaterThan(olderResult.score);
+      expect(recentResult.recencyWeight).toBeGreaterThan(olderResult.recencyWeight);
+      expect(recentResult.baseScore).toBeCloseTo(olderResult.baseScore, 5);
+    });
   });
 
   describe('getStats', () => {
