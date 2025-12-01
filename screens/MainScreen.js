@@ -15,6 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { darkTheme, lightTheme } from '../utils/constants';
 import { formatTimestamp, formatDateOnly } from '../utils/components';
 import { getSuggestionsForNotes } from '../utils/suggestions';
+import { useDeviceType } from '../hooks/useDeviceType';
 
 // Import Carbon icons
 import SearchIcon from '../assets/carbon-icons/carbon--search.svg';
@@ -53,6 +54,7 @@ export default function MainScreen({
   onNavigateToGlobalChat 
 }) {
   const insets = useSafeAreaInsets();
+  const { isLandscape } = useDeviceType();
   const [deleteModalVisible, setDeleteModalVisible] = useState(false);
   const [noteToDelete, setNoteToDelete] = useState(null);
   const [noteToPin, setNoteToPin] = useState(null);
@@ -61,6 +63,9 @@ export default function MainScreen({
 
   // Get suggestions based on notes
   const suggestions = getSuggestionsForNotes(notes);
+  
+  // Add extra horizontal padding in landscape to avoid notch
+  const horizontalPadding = isLandscape ? Math.max(insets.left, insets.right, 20) : 20;
 
   const handleNavigateLeft = () => {
     if (currentSuggestionIndex > 0) {
@@ -180,7 +185,7 @@ export default function MainScreen({
 
       {/* Main Content with proper top spacing */}
       <View style={{ paddingTop: insets.top, flex: 1 }}>
-        <ScrollView style={styles.content} contentContainerStyle={{ paddingTop: 20 }}>
+        <ScrollView style={[styles.content, { paddingHorizontal: horizontalPadding }]} contentContainerStyle={{ paddingTop: 20 }}>
           {/* Header Section */}
           <View style={styles.header}>
             <View style={styles.headerLeft}>
@@ -446,6 +451,7 @@ export default function MainScreen({
           transparent={true}
           animationType="fade"
           onRequestClose={onToggleThreeDotsMenu}
+          supportedOrientations={['portrait', 'landscape']}
         >
           <Pressable
             style={styles.modalOverlay}
@@ -481,6 +487,7 @@ export default function MainScreen({
         transparent={true}
         animationType="fade"
         onRequestClose={handleCloseSuggestion}
+        supportedOrientations={['portrait', 'landscape']}
       >
         <View style={styles.suggestionModalContainer}>
           {/* Close button at top */}
@@ -599,6 +606,7 @@ export default function MainScreen({
         transparent={true}
         animationType="fade"
         onRequestClose={handleCancelDelete}
+        supportedOrientations={['portrait', 'landscape']}
       >
         <Pressable
           style={styles.modalOverlay}
@@ -636,7 +644,6 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    paddingHorizontal: 20,
   },
   header: {
     flexDirection: 'row',
