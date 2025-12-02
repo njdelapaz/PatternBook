@@ -6,6 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { OPENAI_API_KEY } from '@env';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Audio as AVAudio } from 'expo-av';
+import { useDeviceType } from './hooks/useDeviceType';
 
 // Import Screen Components
 import LoginScreen from './screens/LoginScreen';
@@ -77,6 +78,7 @@ async function generateTitle(content) {
 // Note Editor Screen Component
 function NoteEditor({ note, notes, onBack, onSave, isDarkMode }) {
   const insets = useSafeAreaInsets();
+  const { isLandscape } = useDeviceType();
   const [title, setTitle] = useState(note?.title || 'New Note');
   const [content, setContent] = useState(note?.content || '');
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
@@ -192,6 +194,13 @@ function NoteEditor({ note, notes, onBack, onSave, isDarkMode }) {
       keyboardDidHideListener.remove();
     };
   }, []);
+
+  // Auto-dismiss keyboard when rotating to landscape
+  useEffect(() => {
+    if (isLandscape && isKeyboardVisible) {
+      Keyboard.dismiss();
+    }
+  }, [isLandscape]);
 
   // Auto-save with debouncing
   useEffect(() => {
@@ -527,6 +536,9 @@ function NoteEditor({ note, notes, onBack, onSave, isDarkMode }) {
 
   const contentInputRef = useRef(null);
   const theme = isDarkMode ? darkTheme : lightTheme;
+  
+  // Add extra horizontal padding in landscape to avoid notch
+  const horizontalPadding = isLandscape ? Math.max(insets.left, insets.right, 20) : 20;
 
   return (
     <View style={[styles.container, { backgroundColor: theme.backgroundColor }]}>
@@ -539,7 +551,7 @@ function NoteEditor({ note, notes, onBack, onSave, isDarkMode }) {
       >
         <View style={{ paddingTop: insets.top, flex: 1 }}>
           {/* Header with Today button, centered title, and undo/redo */}
-          <View style={[styles.editorHeader, { borderBottomColor: theme.borderColor }]}>
+          <View style={[styles.editorHeader, { borderBottomColor: theme.borderColor, paddingHorizontal: horizontalPadding }]}>
             <TouchableOpacity onPress={onBack} style={styles.todayButton}>
               <Text style={[styles.todayButtonText, { color: theme.accentColor }]}>← Today</Text>
             </TouchableOpacity>
@@ -584,7 +596,7 @@ function NoteEditor({ note, notes, onBack, onSave, isDarkMode }) {
 
           {/* Editor Content */}
           <TouchableWithoutFeedback onPress={handleDismissKeyboard}>
-            <View style={styles.editorContent}>
+            <View style={[styles.editorContent, { paddingHorizontal: horizontalPadding }]}>
               <TextInput
                 ref={contentInputRef}
                 style={[styles.contentInput, { color: theme.textColor, fontFamily: 'Times New Roman' }]}
@@ -600,7 +612,7 @@ function NoteEditor({ note, notes, onBack, onSave, isDarkMode }) {
         </View>
 
         {/* Footer with action buttons */}
-        <View style={[styles.editorFooter, { paddingBottom: insets.bottom, backgroundColor: theme.navBackground, borderTopColor: theme.borderColor }]}>
+        <View style={[styles.editorFooter, { paddingBottom: insets.bottom, paddingHorizontal: horizontalPadding, backgroundColor: theme.navBackground, borderTopColor: theme.borderColor }]}>
           <TouchableOpacity style={[styles.editorFooterButton, { backgroundColor: theme.cardBackground }]} onPress={handleOpenChat}>
             <ChatIcon width={20} height={20} color={theme.iconColor} />
           </TouchableOpacity>
@@ -632,6 +644,7 @@ function NoteEditor({ note, notes, onBack, onSave, isDarkMode }) {
         transparent={true}
         animationType="slide"
         onRequestClose={() => setShowChat(false)}
+        supportedOrientations={['portrait', 'landscape']}
       >
         <View style={styles.chatModalContainer}>
           <KeyboardAvoidingView
@@ -641,7 +654,7 @@ function NoteEditor({ note, notes, onBack, onSave, isDarkMode }) {
           >
             <View style={[styles.chatModal, { backgroundColor: theme.backgroundColor, marginTop: 0 }]}>
               {/* Chat Header */}
-              <View style={[styles.chatHeader, { borderBottomColor: theme.borderColor, paddingTop: insets.top }]}>
+              <View style={[styles.chatHeader, { borderBottomColor: theme.borderColor, paddingTop: insets.top, paddingHorizontal: horizontalPadding }]}>
                 <Text style={[styles.chatTitle, { color: theme.textColor }]}>Chat about your note</Text>
                 <TouchableOpacity onPress={() => setShowChat(false)} style={styles.closeButton}>
                   <Text style={[styles.closeButtonText, { color: theme.secondaryTextColor }]}>✕</Text>
@@ -649,7 +662,7 @@ function NoteEditor({ note, notes, onBack, onSave, isDarkMode }) {
               </View>
 
               {/* Chat Messages */}
-              <ScrollView style={styles.chatMessages} contentContainerStyle={styles.chatMessagesContent}>
+              <ScrollView style={styles.chatMessages} contentContainerStyle={[styles.chatMessagesContent, { paddingHorizontal: horizontalPadding }]}>
                 {chatMessages.length === 0 && (
                   <View style={styles.chatEmptyState}>
                     <Text style={[styles.chatEmptyText, { color: theme.secondaryTextColor }]}>
@@ -689,7 +702,7 @@ function NoteEditor({ note, notes, onBack, onSave, isDarkMode }) {
               </ScrollView>
 
               {/* Chat Input */}
-              <View style={[styles.chatInputContainer, { backgroundColor: theme.cardBackground, borderTopColor: theme.borderColor, paddingBottom: insets.bottom }]}>
+              <View style={[styles.chatInputContainer, { backgroundColor: theme.cardBackground, borderTopColor: theme.borderColor, paddingBottom: insets.bottom, paddingHorizontal: horizontalPadding }]}>
                 <TextInput
                   style={[styles.chatInput, { color: theme.textColor }]}
                   value={chatInput}
@@ -1023,21 +1036,25 @@ export default function App() {
     setSelectedNoteId(null);
   };
 
+  const theme = isDarkMode ? darkTheme : lightTheme;
+
   // Show login screen if not logged in
   if (!isLoggedIn) {
     return (
       <SafeAreaProvider>
-        {showEmailLogin ? (
-          <EmailLoginScreen
-            onBack={handleBackFromEmail}
-            onLogin={handleLogin}
-          />
-        ) : (
-          <LoginScreen
-            onLogin={handleLogin}
-            onNavigateToEmail={handleNavigateToEmail}
-          />
-        )}
+        <View style={[styles.appRoot, { backgroundColor: theme.backgroundColor }]}>
+          {showEmailLogin ? (
+            <EmailLoginScreen
+              onBack={handleBackFromEmail}
+              onLogin={handleLogin}
+            />
+          ) : (
+            <LoginScreen
+              onLogin={handleLogin}
+              onNavigateToEmail={handleNavigateToEmail}
+            />
+          )}
+        </View>
       </SafeAreaProvider>
     );
   }
@@ -1046,93 +1063,100 @@ export default function App() {
   if (!hasCompletedOnboarding) {
     return (
       <SafeAreaProvider>
-        <OnboardingScreen onComplete={handleCompleteOnboarding} />
+        <View style={[styles.appRoot, { backgroundColor: theme.backgroundColor }]}>
+          <OnboardingScreen onComplete={handleCompleteOnboarding} />
+        </View>
       </SafeAreaProvider>
     );
   }
 
   return (
     <SafeAreaProvider>
-      {currentScreen === 'main' ? (
-        <MainScreen
-          notes={notes}
-          onNotePress={handleNotePress}
-          onCreateNote={handleCreateNote}
-          onDeleteNote={handleDeleteNote}
-          onTogglePin={handleTogglePin}
-          isDarkMode={isDarkMode}
-          onToggleTheme={handleToggleTheme}
-          searchQuery={searchQuery}
-          onSearchChange={handleSearchChange}
-          showSearch={showSearch}
-          onToggleSearch={handleToggleSearch}
-          sortBy={sortBy}
-          onSortChange={handleSortChange}
-          showThreeDotsMenu={showThreeDotsMenu}
-          onToggleThreeDotsMenu={handleToggleThreeDotsMenu}
-          onNavigateToSettings={handleNavigateToSettings}
-          onNavigateToRecentlyDeleted={handleNavigateToRecentlyDeleted}
-          onNavigateToVoiceRecord={handleNavigateToVoiceRecord}
-          onNavigateToTextEditor={handleNavigateToTextEditor}
-          onNavigateToGlobalChat={handleNavigateToGlobalChat}
-        />
-      ) : currentScreen === 'editor' ? (
-        <NoteEditor
-          note={selectedNote}
-          notes={notes}
-          onBack={handleBack}
-          onSave={handleSaveNote}
-          isDarkMode={isDarkMode}
-        />
-      ) : currentScreen === 'voice-record' ? (
-        <VoiceRecordingScreen
-          isDarkMode={isDarkMode}
-          onBack={handleBack}
-          onSave={handleCreateNoteFromTranscription}
-        />
-      ) : currentScreen === 'text-editor' ? (
-        <TextEditorScreen
-          isDarkMode={isDarkMode}
-          onBack={handleBack}
-          onSave={handleCreateNoteFromText}
-        />
-      ) : currentScreen === 'settings' ? (
-        <SettingsScreen
-          settings={settings}
-          onSettingsChange={handleSettingsChange}
-          isDarkMode={isDarkMode}
-          onBack={handleNavigateBack}
-          onClearAllData={handleClearAllData}
-          onNavigateToAdminPanel={handleNavigateToAdminPanel}
-          onImportTestNotes={handleImportTestNotes}
-          onLogout={handleLogout}
-        />
-      ) : currentScreen === 'recently-deleted' ? (
-        <RecentlyDeletedScreen
-          deletedNotes={deletedNotes}
-          onRestoreNote={handleRestoreNote}
-          onPermanentlyDeleteNote={handlePermanentlyDeleteNote}
-          isDarkMode={isDarkMode}
-          onBack={handleNavigateBack}
-        />
-      ) : currentScreen === 'global-chat' ? (
-        <GlobalChatScreen
-          isDarkMode={isDarkMode}
-          onBack={handleNavigateBack}
-          notes={notes}
-          onNotePress={handleNotePress}
-        />
-      ) : currentScreen === 'admin-panel' ? (
-        <AdminPanelScreen
-          isDarkMode={isDarkMode}
-          onBack={handleNavigateBack}
-        />
-      ) : null}
+      <View style={[styles.appRoot, { backgroundColor: theme.backgroundColor }]}>
+        {currentScreen === 'main' ? (
+          <MainScreen
+            notes={notes}
+            onNotePress={handleNotePress}
+            onCreateNote={handleCreateNote}
+            onDeleteNote={handleDeleteNote}
+            onTogglePin={handleTogglePin}
+            isDarkMode={isDarkMode}
+            onToggleTheme={handleToggleTheme}
+            searchQuery={searchQuery}
+            onSearchChange={handleSearchChange}
+            showSearch={showSearch}
+            onToggleSearch={handleToggleSearch}
+            sortBy={sortBy}
+            onSortChange={handleSortChange}
+            showThreeDotsMenu={showThreeDotsMenu}
+            onToggleThreeDotsMenu={handleToggleThreeDotsMenu}
+            onNavigateToSettings={handleNavigateToSettings}
+            onNavigateToRecentlyDeleted={handleNavigateToRecentlyDeleted}
+            onNavigateToVoiceRecord={handleNavigateToVoiceRecord}
+            onNavigateToTextEditor={handleNavigateToTextEditor}
+            onNavigateToGlobalChat={handleNavigateToGlobalChat}
+          />
+        ) : currentScreen === 'editor' ? (
+          <NoteEditor
+            note={selectedNote}
+            notes={notes}
+            onBack={handleBack}
+            onSave={handleSaveNote}
+            isDarkMode={isDarkMode}
+          />
+        ) : currentScreen === 'voice-record' ? (
+          <VoiceRecordingScreen
+            isDarkMode={isDarkMode}
+            onBack={handleBack}
+            onSave={handleCreateNoteFromTranscription}
+          />
+        ) : currentScreen === 'text-editor' ? (
+          <TextEditorScreen
+            isDarkMode={isDarkMode}
+            onBack={handleBack}
+            onSave={handleCreateNoteFromText}
+          />
+        ) : currentScreen === 'settings' ? (
+          <SettingsScreen
+            settings={settings}
+            onSettingsChange={handleSettingsChange}
+            isDarkMode={isDarkMode}
+            onBack={handleNavigateBack}
+            onClearAllData={handleClearAllData}
+            onNavigateToAdminPanel={handleNavigateToAdminPanel}
+            onImportTestNotes={handleImportTestNotes}
+            onLogout={handleLogout}
+          />
+        ) : currentScreen === 'recently-deleted' ? (
+          <RecentlyDeletedScreen
+            deletedNotes={deletedNotes}
+            onRestoreNote={handleRestoreNote}
+            onPermanentlyDeleteNote={handlePermanentlyDeleteNote}
+            isDarkMode={isDarkMode}
+            onBack={handleNavigateBack}
+          />
+        ) : currentScreen === 'global-chat' ? (
+          <GlobalChatScreen
+            isDarkMode={isDarkMode}
+            onBack={handleNavigateBack}
+            notes={notes}
+            onNotePress={handleNotePress}
+          />
+        ) : currentScreen === 'admin-panel' ? (
+          <AdminPanelScreen
+            isDarkMode={isDarkMode}
+            onBack={handleNavigateBack}
+          />
+        ) : null}
+      </View>
     </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
+  appRoot: {
+    flex: 1,
+  },
   container: {
     flex: 1,
   },
@@ -1257,7 +1281,6 @@ const styles = StyleSheet.create({
   editorHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 0.5,
     justifyContent: 'space-between',
@@ -1312,7 +1335,6 @@ const styles = StyleSheet.create({
   },
   editorContent: {
     flex: 1,
-    paddingHorizontal: 24,
     paddingTop: 24,
   },
   contentInput: {
@@ -1326,7 +1348,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 20,
     paddingVertical: 16,
     gap: 32,
     borderTopWidth: 0.5,
@@ -1379,7 +1400,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
     paddingVertical: 16,
     borderBottomWidth: 1,
   },
@@ -1398,7 +1418,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   chatMessagesContent: {
-    padding: 20,
+    paddingVertical: 20,
     flexGrow: 1,
   },
   chatEmptyState: {
@@ -1441,7 +1461,6 @@ const styles = StyleSheet.create({
   chatInputContainer: {
     flexDirection: 'row',
     alignItems: 'flex-end',
-    paddingHorizontal: 16,
     paddingTop: 12,
     paddingBottom: 12,
     borderTopWidth: 1,
