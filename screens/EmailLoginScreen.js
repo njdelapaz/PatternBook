@@ -113,7 +113,14 @@ export default function EmailLoginScreen({ onBack, onLogin }) {
         }
         
         // Successfully created account, now login
-        onLogin(result.user);
+        try {
+          await onLogin(result.user);
+          // Login successful - loading will be handled by navigation
+        } catch (loginErr) {
+          console.error('Login error:', loginErr);
+          setError('Failed to complete login. Please try again.');
+          setIsLoading(false);
+        }
       } else {
         // Verify existing user credentials
         const result = await verifyUser(email.trim(), password);
@@ -125,7 +132,14 @@ export default function EmailLoginScreen({ onBack, onLogin }) {
         }
         
         // Successfully logged in
-        onLogin(result.user);
+        try {
+          await onLogin(result.user);
+          // Login successful - loading will be handled by navigation
+        } catch (loginErr) {
+          console.error('Login error:', loginErr);
+          setError('Failed to complete login. Please try again.');
+          setIsLoading(false);
+        }
       }
     } catch (err) {
       console.error('Authentication error:', err);

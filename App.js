@@ -28,7 +28,7 @@ import { MarkdownText, formatTimestamp } from './utils/components';
 import { buildChatMessages, getDefaultChatModel, getDefaultMaxTokens, getDefaultTemperature } from './utils/chat';
 import { loadChatHistory, saveChatHistory } from './utils/chatStorage';
 import { buildNoteChatContext } from './utils/contextBuilder';
-import { getCurrentUser, setCurrentUser, clearCurrentUser } from './utils/userStorage';
+import { getCurrentUser, setCurrentUser, clearCurrentUser, setOnboardingCompleted, hasCompletedOnboarding as checkOnboardingStatus } from './utils/userStorage';
 
 // Import LLM Service
 import { callLLM } from './services/llmService';
@@ -772,15 +772,21 @@ export default function App() {
     async function checkUserSession() {
       const user = await getCurrentUser();
       if (user) {
-        setCurrentUserState(user);
+        // Check if user has completed onboarding (persisted independently from note count)
+        const completed = await checkOnboardingStatus(user.id);
+        
+        // Ensure the user object includes the onboarding flag
+        const userWithOnboarding = { ...user, hasCompletedOnboarding: completed };
+        
+        setCurrentUserState(userWithOnboarding);
         setIsLoggedIn(true);
         
         // Load user's notes
         const userNotes = await loadNotes(user.id);
         setNotes(userNotes);
         
-        // Show onboarding for new users (no notes), skip for existing users
-        setHasCompletedOnboarding(userNotes.length > 0);
+        // Set onboarding state
+        setHasCompletedOnboarding(completed);
       }
     }
     checkUserSession();
@@ -1043,24 +1049,35 @@ export default function App() {
   };
 
   const handleLogin = async (user) => {
-    // Save user session
-    await setCurrentUser(user);
-    setCurrentUserState(user);
-    setIsLoggedIn(true);
-    setCurrentScreen('main');
-    
-    // Load user's notes
-    const userNotes = await loadNotes(user.id);
-    setNotes(userNotes);
-    
-    // Show onboarding for new users (no notes), skip for existing users
-    setHasCompletedOnboarding(userNotes.length > 0);
-    
-    // Update settings with user's email
-    setSettings(prev => ({
-      ...prev,
-      profile: { name: user.email }
-    }));
+    try {
+      // Check if user has completed onboarding first (before saving user session)
+      const completed = await checkOnboardingStatus(user.id);
+      
+      // Ensure the user object includes the onboarding flag
+      const userWithOnboarding = { ...user, hasCompletedOnboarding: completed };
+      
+      // Save user session with onboarding flag
+      await setCurrentUser(userWithOnboarding);
+      setCurrentUserState(userWithOnboarding);
+      setIsLoggedIn(true);
+      setCurrentScreen('main');
+      
+      // Load user's notes
+      const userNotes = await loadNotes(user.id);
+      setNotes(userNotes);
+      
+      // Set onboarding state
+      setHasCompletedOnboarding(completed);
+      
+      // Update settings with user's email
+      setSettings(prev => ({
+        ...prev,
+        profile: { name: user.email }
+      }));
+    } catch (error) {
+      console.error('Error in handleLogin:', error);
+      throw error; // Re-throw so EmailLoginScreen can handle it
+    }
   };
 
   const handleNavigateToEmail = () => {
@@ -1071,8 +1088,19 @@ export default function App() {
     setShowEmailLogin(false);
   };
 
-  const handleCompleteOnboarding = () => {
+  const handleCompleteOnboarding = async () => {
     setHasCompletedOnboarding(true);
+    // Persist onboarding completion for the current user
+    const user = currentUser || await getCurrentUser();
+    if (user && user.id) {
+      await setOnboardingCompleted(user.id);
+      // Update the current user state to reflect the change
+      if (currentUser) {
+        setCurrentUserState({ ...currentUser, hasCompletedOnboarding: true });
+      }
+    } else {
+      console.error('Cannot save onboarding completion: user not found');
+    }
   };
 
   const handleLogout = async () => {
