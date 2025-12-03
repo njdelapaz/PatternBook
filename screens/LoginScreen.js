@@ -11,7 +11,7 @@ import { StatusBar } from 'expo-status-bar';
 
 // Import icons
 import LightpageLogo from '../assets/lightpage-logo.svg';
-import GoogleIcon from '../assets/google-icon.svg';
+// import GoogleIcon from '../assets/google-icon.svg';
 import EmailIcon from '../assets/email-icon.svg';
 
 export default function LoginScreen({ onLogin, onNavigateToEmail }) {
@@ -43,14 +43,14 @@ export default function LoginScreen({ onLogin, onNavigateToEmail }) {
 
         {/* Login Buttons */}
         <View style={styles.loginButtonsContainer}>
-          <TouchableOpacity
+          {/* <TouchableOpacity
             style={styles.loginButton}
             onPress={onLogin}
             activeOpacity={0.8}
           >
             <GoogleIcon width={20} height={20} />
             <Text style={styles.loginButtonText}>Continue with Google</Text>
-          </TouchableOpacity>
+          </TouchableOpacity> */}
 
           <TouchableOpacity
             style={styles.loginButton}

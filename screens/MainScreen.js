@@ -1217,8 +1217,9 @@ const styles = StyleSheet.create({
   },
   suggestionModalNav: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'center',
     alignItems: 'center',
+    gap: 32,
     paddingVertical: 20,
     paddingHorizontal: 24,
     borderTopWidth: 0.5,

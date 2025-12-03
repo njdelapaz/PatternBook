@@ -774,11 +774,13 @@ export default function App() {
       if (user) {
         setCurrentUserState(user);
         setIsLoggedIn(true);
-        setHasCompletedOnboarding(true);
         
         // Load user's notes
         const userNotes = await loadNotes(user.id);
         setNotes(userNotes);
+        
+        // Show onboarding for new users (no notes), skip for existing users
+        setHasCompletedOnboarding(userNotes.length > 0);
       }
     }
     checkUserSession();
@@ -1045,12 +1047,14 @@ export default function App() {
     await setCurrentUser(user);
     setCurrentUserState(user);
     setIsLoggedIn(true);
-    setHasCompletedOnboarding(true); // Skip onboarding for demo
     setCurrentScreen('main');
     
     // Load user's notes
     const userNotes = await loadNotes(user.id);
     setNotes(userNotes);
+    
+    // Show onboarding for new users (no notes), skip for existing users
+    setHasCompletedOnboarding(userNotes.length > 0);
     
     // Update settings with user's email
     setSettings(prev => ({
