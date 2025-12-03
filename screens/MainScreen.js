@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   StyleSheet,
   Text,
@@ -8,13 +8,14 @@ import {
   TextInput,
   Modal,
   Pressable,
-  Image
+  Image,
+  ActivityIndicator
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { darkTheme, lightTheme } from '../utils/constants';
 import { formatTimestamp, formatDateOnly } from '../utils/components';
-import { getSuggestionsForNotes } from '../utils/suggestions';
+import { generateAISuggestions, clearSuggestionsCache } from '../utils/suggestions';
 import { useDeviceType } from '../hooks/useDeviceType';
 
 // Import Carbon icons
@@ -60,9 +61,59 @@ export default function MainScreen({
   const [noteToPin, setNoteToPin] = useState(null);
   const [selectedSuggestion, setSelectedSuggestion] = useState(null);
   const [currentSuggestionIndex, setCurrentSuggestionIndex] = useState(0);
+  
+  // AI Suggestions state
+  const [suggestions, setSuggestions] = useState([]);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
-  // Get suggestions based on notes
-  const suggestions = getSuggestionsForNotes(notes);
+  // Generate AI suggestions when notes change
+  useEffect(() => {
+    let mounted = true;
+
+    const loadSuggestions = async () => {
+      if (notes.length === 0) {
+        setSuggestions([]);
+        return;
+      }
+
+      setSuggestionsLoading(true);
+      try {
+        const aiSuggestions = await generateAISuggestions(notes);
+        if (mounted) {
+          setSuggestions(aiSuggestions);
+        }
+      } catch (error) {
+        console.error('[MainScreen] Failed to load suggestions:', error);
+        if (mounted) {
+          setSuggestions([]);
+        }
+      } finally {
+        if (mounted) {
+          setSuggestionsLoading(false);
+        }
+      }
+    };
+
+    loadSuggestions();
+
+    return () => {
+      mounted = false;
+    };
+  }, [notes.length]); // Re-generate when note count changes
+
+  // Refresh suggestions manually
+  const handleRefreshSuggestions = async () => {
+    await clearSuggestionsCache();
+    setSuggestionsLoading(true);
+    try {
+      const aiSuggestions = await generateAISuggestions(notes, { forceRefresh: true });
+      setSuggestions(aiSuggestions);
+    } catch (error) {
+      console.error('[MainScreen] Failed to refresh suggestions:', error);
+    } finally {
+      setSuggestionsLoading(false);
+    }
+  };
   
   // Add extra horizontal padding in landscape to avoid notch
   const horizontalPadding = isLandscape ? Math.max(insets.left, insets.right, 20) : 20;
@@ -243,52 +294,71 @@ export default function MainScreen({
           )}
 
           {/* AI Suggestions Bar */}
-          {suggestions.length > 0 && (
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.suggestionsContainer}
-              contentContainerStyle={styles.suggestionsContent}
-            >
-              {suggestions.map((suggestion, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={[styles.suggestionCard, { backgroundColor: theme.cardBackground }]}
-                  onPress={() => handleOpenSuggestion(suggestion, index)}
-                  activeOpacity={0.8}
+          {(suggestionsLoading || suggestions.length > 0) && (
+            <View style={styles.suggestionsWrapper}>
+              <View style={styles.suggestionsHeader}>
+                <Text style={[styles.suggestionsHeaderText, { color: theme.secondaryTextColor }]}>
+                  AI Suggestions
+                </Text>
+                {!suggestionsLoading && suggestions.length > 0 && (
+                  <TouchableOpacity onPress={handleRefreshSuggestions} style={styles.refreshButton}>
+                    <Text style={[styles.refreshButtonText, { color: theme.accentColor }]}>↻ Refresh</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              {suggestionsLoading ? (
+                <View style={[styles.suggestionsLoading, { backgroundColor: theme.cardBackground }]}>
+                  <ActivityIndicator color={theme.accentColor} />
+                  <Text style={[styles.suggestionsLoadingText, { color: theme.secondaryTextColor }]}>
+                    Generating suggestions...
+                  </Text>
+                </View>
+              ) : (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.suggestionsContainer}
+                  contentContainerStyle={styles.suggestionsContent}
                 >
-                  {suggestion.type === 'art' && suggestion.image && (
+                  {suggestions.map((suggestion, index) => (
+                    <TouchableOpacity
+                      key={index}
+                      style={[styles.suggestionCard, { backgroundColor: theme.cardBackground }]}
+                      onPress={() => handleOpenSuggestion(suggestion, index)}
+                      activeOpacity={0.8}
+                    >
+                  {suggestion.type === 'art' && (suggestion.image || suggestion.imageUri) && (
                     <Image
-                      source={suggestion.image}
+                      source={suggestion.image || { uri: suggestion.imageUri }}
                       style={styles.suggestionImage}
                       resizeMode="cover"
                     />
                   )}
-                  {suggestion.type === 'quote' && (
+                  {(suggestion.type === 'quote' || suggestion.type === 'insight') && (
                     <View style={styles.suggestionQuoteContent}>
                       <Text style={[styles.suggestionQuoteText, { color: theme.textColor }]} numberOfLines={3}>
                         {suggestion.title}
                       </Text>
-                      <Text style={[styles.suggestionQuoteAuthor, { color: theme.secondaryTextColor }]}>
-                        {suggestion.author}
-                      </Text>
+                      {suggestion.author && (
+                        <Text style={[styles.suggestionQuoteAuthor, { color: theme.secondaryTextColor }]}>
+                          {suggestion.author}
+                        </Text>
+                      )}
                     </View>
                   )}
-                  {suggestion.type === 'letter' && (
-                    <View style={styles.suggestionLetterContent}>
-                      {suggestion.gradient && (
-                        <Image
-                          source={suggestion.gradient}
-                          style={styles.suggestionLetterGradient}
-                          resizeMode="cover"
-                        />
-                      )}
-                      <Text style={[styles.suggestionLetterTitle, { color: theme.textColor }]}>
+                  {suggestion.type === 'art' && !suggestion.image && !suggestion.imageUri && (
+                    <View style={styles.suggestionQuoteContent}>
+                      <View style={styles.suggestionTypeIndicator}>
+                        <Text style={[styles.suggestionTypeText, { color: theme.accentColor }]}>🎨</Text>
+                      </View>
+                      <Text style={[styles.suggestionQuoteText, { color: theme.textColor }]} numberOfLines={3}>
                         {suggestion.title}
                       </Text>
-                      <Text style={[styles.suggestionLetterSubtitle, { color: theme.secondaryTextColor }]}>
-                        {suggestion.subtitle}
-                      </Text>
+                      {suggestion.author && (
+                        <Text style={[styles.suggestionQuoteAuthor, { color: theme.secondaryTextColor }]}>
+                          {suggestion.author}
+                        </Text>
+                      )}
                     </View>
                   )}
                   <View style={styles.suggestionBadge}>
@@ -297,6 +367,8 @@ export default function MainScreen({
                 </TouchableOpacity>
               ))}
             </ScrollView>
+              )}
+            </View>
           )}
 
           {/* Empty State or Notes List */}
@@ -514,19 +586,26 @@ export default function MainScreen({
           <ScrollView style={styles.suggestionModalScroll} contentContainerStyle={styles.suggestionModalScrollContent}>
             {selectedSuggestion?.type === 'art' && (
               <>
-                {selectedSuggestion.image && (
+                {(selectedSuggestion.image || selectedSuggestion.imageUri) && (
                   <Image
-                    source={selectedSuggestion.image}
+                    source={selectedSuggestion.image || { uri: selectedSuggestion.imageUri }}
                     style={styles.suggestionModalImage}
                     resizeMode="contain"
                   />
                 )}
                 <View style={styles.suggestionModalInfo}>
                   <Text style={styles.suggestionModalTitle}>
-                    {selectedSuggestion.title}, <Text style={styles.suggestionModalSubtitle}>{selectedSuggestion.subtitle}</Text>
+                    {selectedSuggestion.title}
+                    {selectedSuggestion.subtitle && (
+                      <Text style={styles.suggestionModalSubtitle}>, {selectedSuggestion.subtitle}</Text>
+                    )}
                   </Text>
-                  <Text style={styles.suggestionModalArtist}>{selectedSuggestion.artist}</Text>
-                  <Text style={styles.suggestionModalMuseum}>🏛 {selectedSuggestion.museum}</Text>
+                  {selectedSuggestion.author && (
+                    <Text style={styles.suggestionModalArtist}>{selectedSuggestion.author}</Text>
+                  )}
+                  {selectedSuggestion.museum && (
+                    <Text style={styles.suggestionModalMuseum}>🏛 {selectedSuggestion.museum}</Text>
+                  )}
                   <View style={styles.suggestionModalBadge}>
                     <Text style={styles.suggestionModalBadgeText}>● {selectedSuggestion.badge}</Text>
                   </View>
@@ -535,40 +614,21 @@ export default function MainScreen({
               </>
             )}
 
-            {selectedSuggestion?.type === 'quote' && (
+            {(selectedSuggestion?.type === 'quote' || selectedSuggestion?.type === 'insight') && (
               <View style={styles.suggestionModalQuoteContainer}>
                 <View style={styles.suggestionModalQuote}>
                   <Text style={styles.suggestionModalQuoteText}>{selectedSuggestion.title}</Text>
-                  <Text style={styles.suggestionModalQuoteAuthor}>—{selectedSuggestion.author}</Text>
+                  {selectedSuggestion.author && (
+                    <Text style={styles.suggestionModalQuoteAuthor}>—{selectedSuggestion.author}</Text>
+                  )}
+                  {selectedSuggestion.subtitle && !selectedSuggestion.author && (
+                    <Text style={styles.suggestionModalQuoteAuthor}>{selectedSuggestion.subtitle}</Text>
+                  )}
                   <View style={styles.suggestionModalBadge}>
                     <Text style={styles.suggestionModalBadgeText}>● {selectedSuggestion.badge}</Text>
                   </View>
                   <Text style={styles.suggestionModalDescription}>{selectedSuggestion.description}</Text>
                 </View>
-              </View>
-            )}
-
-            {selectedSuggestion?.type === 'letter' && (
-              <View style={styles.suggestionModalLetter}>
-                <View style={styles.suggestionModalLetterHeader}>
-                  <View style={styles.suggestionModalLetterBadge}>
-                    <Text style={styles.suggestionModalLetterBadgeText}>● {selectedSuggestion.subtitle}</Text>
-                  </View>
-                  <Text style={styles.suggestionModalLetterDate}>{selectedSuggestion.date}</Text>
-                </View>
-                <Text style={styles.suggestionModalLetterTitle}>{selectedSuggestion.title}</Text>
-                {selectedSuggestion.gradient && (
-                  <Image
-                    source={selectedSuggestion.gradient}
-                    style={styles.suggestionModalLetterGradientLarge}
-                    resizeMode="cover"
-                  />
-                )}
-                {selectedSuggestion.content.map((paragraph, index) => (
-                  <Text key={index} style={styles.suggestionModalLetterParagraph}>
-                    {paragraph}
-                  </Text>
-                ))}
               </View>
             )}
           </ScrollView>
@@ -893,8 +953,43 @@ const styles = StyleSheet.create({
   },
 
   // Suggestions Bar
-  suggestionsContainer: {
+  suggestionsWrapper: {
     marginBottom: 16,
+  },
+  suggestionsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 8,
+  },
+  suggestionsHeaderText: {
+    fontSize: 12,
+    fontWeight: '600',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  refreshButton: {
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  refreshButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  suggestionsLoading: {
+    height: 120,
+    borderRadius: 12,
+    marginHorizontal: 20,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 12,
+  },
+  suggestionsLoadingText: {
+    fontSize: 14,
+  },
+  suggestionsContainer: {
     marginHorizontal: -20, // Full width bleed
   },
   suggestionsContent: {
@@ -915,6 +1010,12 @@ const styles = StyleSheet.create({
     padding: 20,
     minHeight: 200,
     justifyContent: 'center',
+  },
+  suggestionTypeIndicator: {
+    marginBottom: 12,
+  },
+  suggestionTypeText: {
+    fontSize: 24,
   },
   suggestionQuoteText: {
     fontSize: 16,

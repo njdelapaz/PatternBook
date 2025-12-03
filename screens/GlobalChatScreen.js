@@ -26,7 +26,7 @@ import { getDefaultChatModel, getDefaultMaxTokens, getDefaultTemperature } from 
 import { callLLM as callLLMService } from '../services/llmService';
 import ragLogger from '../services/ragLogger';
 
-export default function GlobalChatScreen({ isDarkMode, onBack, notes, onNotePress }) {
+export default function GlobalChatScreen({ isDarkMode, onBack, notes, onNotePress, userId }) {
   const insets = useSafeAreaInsets();
   const theme = isDarkMode ? darkTheme : lightTheme;
   
@@ -40,7 +40,7 @@ export default function GlobalChatScreen({ isDarkMode, onBack, notes, onNotePres
   // Load chat history on mount
   useEffect(() => {
     loadHistory();
-  }, []);
+  }, [userId]);
   
   // Index notes for retrieval when notes change
   useEffect(() => {
@@ -60,7 +60,7 @@ export default function GlobalChatScreen({ isDarkMode, onBack, notes, onNotePres
   
   const loadHistory = async () => {
     try {
-      const history = await loadGlobalChatHistory();
+      const history = await loadGlobalChatHistory(userId);
       setChatMessages(history);
     } catch (error) {
       console.error('[GlobalChat] Error loading history:', error);
@@ -69,7 +69,7 @@ export default function GlobalChatScreen({ isDarkMode, onBack, notes, onNotePres
   
   const saveHistory = async (messages) => {
     try {
-      await saveGlobalChatHistory(messages);
+      await saveGlobalChatHistory(messages, userId);
     } catch (error) {
       console.error('[GlobalChat] Error saving history:', error);
     }
