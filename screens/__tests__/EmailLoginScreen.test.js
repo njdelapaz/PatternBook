@@ -7,14 +7,31 @@ import React from 'react';
 import { render, fireEvent, waitFor } from '@testing-library/react-native';
 import EmailLoginScreen from '../EmailLoginScreen';
 import { createEmailLoginScreenProps } from '../../__tests__/fixtures/uiTestUtils';
+import { createUser, verifyUser } from '../../utils/userStorage';
+
+// Mock user storage functions
+jest.mock('../../utils/userStorage', () => ({
+  createUser: jest.fn(),
+  verifyUser: jest.fn(),
+}));
 
 describe('EmailLoginScreen', () => {
   let defaultProps;
+  
+  const mockUser = {
+    id: '123',
+    email: 'test@example.com',
+    createdAt: Date.now(),
+  };
 
   beforeEach(() => {
     defaultProps = createEmailLoginScreenProps();
     jest.clearAllMocks();
     jest.useFakeTimers();
+    
+    // Set up default successful mocks
+    createUser.mockResolvedValue({ success: true, user: mockUser });
+    verifyUser.mockResolvedValue({ success: true, user: mockUser });
   });
 
   afterEach(() => {
@@ -150,7 +167,7 @@ describe('EmailLoginScreen', () => {
       const passwordInput = getByPlaceholderText('Enter your password');
       
       fireEvent.changeText(emailInput, 'test@example.com');
-      fireEvent.changeText(passwordInput, 'password123');
+      fireEvent.changeText(passwordInput, 'Password1!');
       
       // Submit - get the button (not the title)
       const submitButtons = getAllByText('Sign in');
@@ -158,9 +175,9 @@ describe('EmailLoginScreen', () => {
       fireEvent.press(submitButton);
       
       // Wait for async operation
-      jest.advanceTimersByTime(1000);
       await waitFor(() => {
-        expect(defaultProps.onLogin).toHaveBeenCalled();
+        expect(verifyUser).toHaveBeenCalledWith('test@example.com', 'Password1!');
+        expect(defaultProps.onLogin).toHaveBeenCalledWith(mockUser);
       });
     });
 
@@ -184,9 +201,9 @@ describe('EmailLoginScreen', () => {
       fireEvent.press(submitButton);
       
       // Wait for async operation
-      jest.advanceTimersByTime(1000);
       await waitFor(() => {
-        expect(defaultProps.onLogin).toHaveBeenCalled();
+        expect(createUser).toHaveBeenCalledWith('test@example.com', 'Password1!');
+        expect(defaultProps.onLogin).toHaveBeenCalledWith(mockUser);
       });
     });
   });
@@ -503,7 +520,7 @@ describe('EmailLoginScreen', () => {
       const passwordInput = getByPlaceholderText('Enter your password');
       
       fireEvent.changeText(emailInput, 'test@example.com');
-      fireEvent.changeText(passwordInput, 'password123');
+      fireEvent.changeText(passwordInput, 'Password1!');
       
       // Submit
       const submitButtons = getAllByText('Sign in');
@@ -513,10 +530,10 @@ describe('EmailLoginScreen', () => {
       // Should show loading
       expect(getByText('Loading...')).toBeTruthy();
       
-      // Complete the timeout
-      jest.advanceTimersByTime(1000);
+      // Wait for async operation
       await waitFor(() => {
-        expect(defaultProps.onLogin).toHaveBeenCalled();
+        expect(verifyUser).toHaveBeenCalledWith('test@example.com', 'Password1!');
+        expect(defaultProps.onLogin).toHaveBeenCalledWith(mockUser);
       });
     });
   });
