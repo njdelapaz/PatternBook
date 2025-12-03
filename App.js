@@ -1059,13 +1059,24 @@ export default function App() {
     await setCurrentUser(user);
     setCurrentUserState(user);
     setIsLoggedIn(true);
-    setHasCompletedOnboarding(true); // Skip onboarding for demo
-    setCurrentScreen('main');
-    
+
+    // Check if user has already selected persona and completed onboarding
+    const personaSelected = await AsyncStorage.getItem(`${PERSONA_SELECTED_KEY}_${user.id}`);
+    setHasSelectedPersona(personaSelected === 'true');
+
     // Load user's notes
     const userNotes = await loadNotes(user.id);
     setNotes(userNotes);
-    
+
+    // If user has existing notes, mark both persona and onboarding as complete (migration)
+    if (userNotes.length > 0) {
+      if (personaSelected !== 'true') {
+        await AsyncStorage.setItem(`${PERSONA_SELECTED_KEY}_${user.id}`, 'true');
+        setHasSelectedPersona(true);
+      }
+      setHasCompletedOnboarding(true);
+    }
+
     // Update settings with user's email
     setSettings(prev => ({
       ...prev,
@@ -1163,18 +1174,7 @@ export default function App() {
     );
   }
 
-  // Show onboarding screen if not completed
-  if (!hasCompletedOnboarding) {
-    return (
-      <SafeAreaProvider>
-        <View style={[styles.appRoot, { backgroundColor: theme.backgroundColor }]}>
-          <OnboardingScreen onComplete={handleCompleteOnboarding} />
-        </View>
-      </SafeAreaProvider>
-    );
-  }
-
-  // Show persona selection screen if not yet selected
+  // Show persona selection screen if not yet selected (happens first, right after login)
   if (!hasSelectedPersona) {
     return (
       <SafeAreaProvider>
@@ -1184,6 +1184,17 @@ export default function App() {
             isDarkMode={isDarkMode}
             isLoading={isLoadingPersona}
           />
+        </View>
+      </SafeAreaProvider>
+    );
+  }
+
+  // Show onboarding screen if not completed (happens after persona selection)
+  if (!hasCompletedOnboarding) {
+    return (
+      <SafeAreaProvider>
+        <View style={[styles.appRoot, { backgroundColor: theme.backgroundColor }]}>
+          <OnboardingScreen onComplete={handleCompleteOnboarding} />
         </View>
       </SafeAreaProvider>
     );
