@@ -1,10 +1,20 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NOTES_STORAGE_KEY, VOICE_API_CONSENT_KEY } from './constants';
 
+/**
+ * Get the storage key for a user's notes
+ * @param {string} userId - User ID (if null, uses global key for backwards compatibility)
+ * @returns {string} Storage key
+ */
+function getUserNotesKey(userId) {
+  return userId ? `${NOTES_STORAGE_KEY}_${userId}` : NOTES_STORAGE_KEY;
+}
+
 // AsyncStorage functions
-export async function loadNotes() {
+export async function loadNotes(userId = null) {
   try {
-    const notesJson = await AsyncStorage.getItem(NOTES_STORAGE_KEY);
+    const storageKey = getUserNotesKey(userId);
+    const notesJson = await AsyncStorage.getItem(storageKey);
     return notesJson ? JSON.parse(notesJson) : [];
   } catch (error) {
     console.error('Error loading notes:', error);
@@ -12,9 +22,10 @@ export async function loadNotes() {
   }
 }
 
-export async function saveNotes(notes) {
+export async function saveNotes(notes, userId = null) {
   try {
-    await AsyncStorage.setItem(NOTES_STORAGE_KEY, JSON.stringify(notes));
+    const storageKey = getUserNotesKey(userId);
+    await AsyncStorage.setItem(storageKey, JSON.stringify(notes));
   } catch (error) {
     console.error('Error saving notes:', error);
   }

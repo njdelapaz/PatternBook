@@ -11,6 +11,7 @@ import {
   Platform
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { createUser, verifyUser } from '../utils/userStorage';
 
 // Email validation regex
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -100,13 +101,37 @@ export default function EmailLoginScreen({ onBack, onLogin }) {
 
     setIsLoading(true);
 
-    // Simulate API call (no actual backend authentication)
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    // For now, just call onLogin to proceed
-    // In a real app, you'd validate credentials against a backend
-    setIsLoading(false);
-    onLogin();
+    try {
+      if (isSignUp) {
+        // Create new user account
+        const result = await createUser(email.trim(), password);
+        
+        if (!result.success) {
+          setError(result.error);
+          setIsLoading(false);
+          return;
+        }
+        
+        // Successfully created account, now login
+        onLogin(result.user);
+      } else {
+        // Verify existing user credentials
+        const result = await verifyUser(email.trim(), password);
+        
+        if (!result.success) {
+          setError(result.error);
+          setIsLoading(false);
+          return;
+        }
+        
+        // Successfully logged in
+        onLogin(result.user);
+      }
+    } catch (err) {
+      console.error('Authentication error:', err);
+      setError('An unexpected error occurred. Please try again.');
+      setIsLoading(false);
+    }
   };
 
   return (

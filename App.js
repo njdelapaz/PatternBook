@@ -28,6 +28,7 @@ import { MarkdownText, formatTimestamp } from './utils/components';
 import { buildChatMessages, getDefaultChatModel, getDefaultMaxTokens, getDefaultTemperature } from './utils/chat';
 import { loadChatHistory, saveChatHistory } from './utils/chatStorage';
 import { buildNoteChatContext } from './utils/contextBuilder';
+import { getCurrentUser, setCurrentUser, clearCurrentUser } from './utils/userStorage';
 
 // Import LLM Service
 import { callLLM } from './services/llmService';
@@ -76,7 +77,7 @@ async function generateTitle(content) {
 }
 
 // Note Editor Screen Component
-function NoteEditor({ note, notes, onBack, onSave, isDarkMode }) {
+function NoteEditor({ note, notes, onBack, onSave, isDarkMode, userId }) {
   const insets = useSafeAreaInsets();
   const { isLandscape } = useDeviceType();
   const [title, setTitle] = useState(note?.title || 'New Note');
@@ -125,7 +126,7 @@ function NoteEditor({ note, notes, onBack, onSave, isDarkMode }) {
     const loadHistory = async () => {
       if (note && note.id) {
         try {
-          const history = await loadChatHistory(note.id);
+          const history = await loadChatHistory(note.id, userId);
           setChatMessages(history);
         } catch (error) {
           console.error('[NoteEditor] Error loading chat history:', error);
@@ -133,7 +134,21 @@ function NoteEditor({ note, notes, onBack, onSave, isDarkMode }) {
       }
     };
     loadHistory();
-  }, [note?.id]);
+  }, [note?.id, userId]);
+
+  // Save chat history when messages change
+  useEffect(() => {
+    const saveHistory = async () => {
+      if (note && note.id && chatMessages.length > 0) {
+        try {
+          await saveChatHistory(note.id, chatMessages, userId);
+        } catch (error) {
+          console.error('[NoteEditor] Error saving chat history:', error);
+        }
+      }
+    };
+    saveHistory();
+  }, [chatMessages, note?.id, userId]);
 
   // Index notes for retrieval when notes change
   useEffect(() => {
@@ -733,6 +748,7 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showEmailLogin, setShowEmailLogin] = useState(false);
   const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
+  const [currentUser, setCurrentUserState] = useState(null); // Store current logged-in user
   const [notes, setNotes] = useState([]);
   const [deletedNotes, setDeletedNotes] = useState([]);
   const [currentScreen, setCurrentScreen] = useState('main'); // 'main', 'editor', 'voice-record', 'text-editor', 'settings', 'recently-deleted', 'global-chat', 'admin-panel'
@@ -751,19 +767,29 @@ export default function App() {
     }
   });
 
-  // Load notes on app start
+  // Check for existing user session on app start
   useEffect(() => {
-    loadNotes().then((loadedNotes) => {
-      setNotes(loadedNotes);
-    });
+    async function checkUserSession() {
+      const user = await getCurrentUser();
+      if (user) {
+        setCurrentUserState(user);
+        setIsLoggedIn(true);
+        setHasCompletedOnboarding(true);
+        
+        // Load user's notes
+        const userNotes = await loadNotes(user.id);
+        setNotes(userNotes);
+      }
+    }
+    checkUserSession();
   }, []);
 
-  // Save notes whenever they change
+  // Save notes whenever they change (user-specific)
   useEffect(() => {
-    if (notes.length > 0 || currentScreen === 'main') {
-      saveNotes(notes);
+    if (currentUser && (notes.length > 0 || currentScreen === 'main')) {
+      saveNotes(notes, currentUser.id);
     }
-  }, [notes]);
+  }, [notes, currentUser]);
 
   // Handle creating a new note
   const handleCreateNote = () => {
@@ -796,7 +822,9 @@ export default function App() {
     // Add note immediately
     const updatedNotes = [newNote, ...notes];
     setNotes(updatedNotes);
-    saveNotes(updatedNotes);
+    if (currentUser) {
+      saveNotes(updatedNotes, currentUser.id);
+    }
 
     // Navigate to the note editor
     setSelectedNoteId(newNote.id);
@@ -818,7 +846,9 @@ export default function App() {
     // Add note immediately
     const updatedNotes = [newNote, ...notes];
     setNotes(updatedNotes);
-    saveNotes(updatedNotes);
+    if (currentUser) {
+      saveNotes(updatedNotes, currentUser.id);
+    }
   };
 
   // Navigate to voice recording screen
@@ -1010,10 +1040,23 @@ export default function App() {
     setDeletedNotes(prev => prev.filter(note => note.id !== noteId));
   };
 
-  const handleLogin = () => {
+  const handleLogin = async (user) => {
+    // Save user session
+    await setCurrentUser(user);
+    setCurrentUserState(user);
     setIsLoggedIn(true);
     setHasCompletedOnboarding(true); // Skip onboarding for demo
     setCurrentScreen('main');
+    
+    // Load user's notes
+    const userNotes = await loadNotes(user.id);
+    setNotes(userNotes);
+    
+    // Update settings with user's email
+    setSettings(prev => ({
+      ...prev,
+      profile: { name: user.email }
+    }));
   };
 
   const handleNavigateToEmail = () => {
@@ -1028,12 +1071,21 @@ export default function App() {
     setHasCompletedOnboarding(true);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    // Clear user session
+    await clearCurrentUser();
+    setCurrentUserState(null);
+    
+    // Clear app state
     setIsLoggedIn(false);
     setShowEmailLogin(false);
     setHasCompletedOnboarding(false);
     setCurrentScreen('main');
     setSelectedNoteId(null);
+    setNotes([]);
+    setDeletedNotes([]);
+    setSearchQuery('');
+    setShowSearch(false);
   };
 
   const theme = isDarkMode ? darkTheme : lightTheme;
@@ -1103,6 +1155,7 @@ export default function App() {
             onBack={handleBack}
             onSave={handleSaveNote}
             isDarkMode={isDarkMode}
+            userId={currentUser?.id}
           />
         ) : currentScreen === 'voice-record' ? (
           <VoiceRecordingScreen
@@ -1141,6 +1194,7 @@ export default function App() {
             onBack={handleNavigateBack}
             notes={notes}
             onNotePress={handleNotePress}
+            userId={currentUser?.id}
           />
         ) : currentScreen === 'admin-panel' ? (
           <AdminPanelScreen
