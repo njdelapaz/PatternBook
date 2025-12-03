@@ -20,7 +20,7 @@ import { Audio as AVAudio } from 'expo-av';
 import { darkTheme, lightTheme } from '../utils/constants';
 
 // Settings Screen Component
-export default function SettingsScreen({ settings, onSettingsChange, isDarkMode, onBack, onClearAllData, onNavigateToAdminPanel, onImportTestNotes }) {
+export default function SettingsScreen({ settings, onSettingsChange, isDarkMode, onBack, onClearAllData, onNavigateToAdminPanel, onImportTestNotes, onLogout }) {
   const insets = useSafeAreaInsets();
   const theme = isDarkMode ? darkTheme : lightTheme;
   const [isMicChecking, setIsMicChecking] = useState(false);
