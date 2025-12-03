@@ -20,7 +20,7 @@ import { Audio as AVAudio } from 'expo-av';
 import { darkTheme, lightTheme } from '../utils/constants';
 
 // Settings Screen Component
-export default function SettingsScreen({ settings, onSettingsChange, isDarkMode, onBack, onClearAllData, onNavigateToAdminPanel, onImportTestNotes, onLogout }) {
+export default function SettingsScreen({ settings, onSettingsChange, isDarkMode, onBack, onClearAllData, onNavigateToAdminPanel, onImportTestNotes }) {
   const insets = useSafeAreaInsets();
   const theme = isDarkMode ? darkTheme : lightTheme;
   const [isMicChecking, setIsMicChecking] = useState(false);
@@ -155,16 +155,6 @@ export default function SettingsScreen({ settings, onSettingsChange, isDarkMode,
     );
   };
 
-  const confirmLogout = () => {
-    Alert.alert(
-      'Log Out',
-      'Are you sure you want to log out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Log Out', style: 'destructive', onPress: onLogout }
-      ]
-    );
-  };
 
   const handleImportTestNotes = async () => {
     if (!onImportTestNotes) {
@@ -318,20 +308,6 @@ export default function SettingsScreen({ settings, onSettingsChange, isDarkMode,
             ) : null}
           </View>
 
-          {/* Account Section */}
-          <View style={[styles.settingsCard, { backgroundColor: theme.cardBackground }]}>
-            <Text style={[styles.settingsSectionTitle, { color: theme.textColor }]}>Account</Text>
-            <Text style={[styles.settingsLabel, { color: theme.secondaryTextColor, marginBottom: 8 }]}>
-              Log out of your account and return to the login screen.
-            </Text>
-            <TouchableOpacity
-              style={[styles.testButton, { backgroundColor: theme.accentColor }]}
-              onPress={confirmLogout}
-            >
-              <Text style={styles.testButtonText}>Log Out</Text>
-            </TouchableOpacity>
-          </View>
-
           {/* Data Management Section */}
           <View style={[styles.settingsCard, { backgroundColor: theme.cardBackground }]}>
             <Text style={[styles.settingsSectionTitle, { color: theme.textColor }]}>Data Management</Text>
@@ -357,13 +333,13 @@ export default function SettingsScreen({ settings, onSettingsChange, isDarkMode,
             </TouchableOpacity>
 
             <Text style={[styles.settingsLabel, { color: theme.secondaryTextColor, marginBottom: 8 }]}>
-              View RAG operations, chat queries, and system logs in the admin panel.
+              View RAG operations, chat queries, and system logs in analytics.
             </Text>
             <TouchableOpacity
               style={[styles.testButton, { backgroundColor: theme.accentColor, marginBottom: 12 }]}
               onPress={onNavigateToAdminPanel}
             >
-              <Text style={styles.testButtonText}>🔧 Admin Panel</Text>
+              <Text style={styles.testButtonText}>📊 Analytics</Text>
             </TouchableOpacity>
             <Text style={[styles.settingsLabel, { color: theme.secondaryTextColor, marginBottom: 8 }]}>
               Clear all app data including notes, settings, and cached files. This action cannot be undone.

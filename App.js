@@ -1095,9 +1095,8 @@ export default function App() {
     if (user && user.id) {
       await setOnboardingCompleted(user.id);
       // Update the current user state to reflect the change
-      if (currentUser) {
-        setCurrentUserState({ ...currentUser, hasCompletedOnboarding: true });
-      }
+      // Use 'user' instead of 'currentUser' to handle cases where currentUser was null
+      setCurrentUserState({ ...user, hasCompletedOnboarding: true });
     } else {
       console.error('Cannot save onboarding completion: user not found');
     }
@@ -1179,6 +1178,7 @@ export default function App() {
             onNavigateToVoiceRecord={handleNavigateToVoiceRecord}
             onNavigateToTextEditor={handleNavigateToTextEditor}
             onNavigateToGlobalChat={handleNavigateToGlobalChat}
+            onLogout={handleLogout}
           />
         ) : currentScreen === 'editor' ? (
           <NoteEditor
@@ -1210,7 +1210,6 @@ export default function App() {
             onClearAllData={handleClearAllData}
             onNavigateToAdminPanel={handleNavigateToAdminPanel}
             onImportTestNotes={handleImportTestNotes}
-            onLogout={handleLogout}
           />
         ) : currentScreen === 'recently-deleted' ? (
           <RecentlyDeletedScreen
