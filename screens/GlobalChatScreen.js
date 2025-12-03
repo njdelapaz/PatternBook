@@ -22,7 +22,7 @@ import { darkTheme, lightTheme, RETRIEVAL_CONFIG } from '../utils/constants';
 import { loadGlobalChatHistory, saveGlobalChatHistory } from '../utils/chatStorage';
 import { buildGlobalChatContext } from '../utils/contextBuilder';
 import retrievalService from '../services/noteRetrievalService';
-import { callLLM, getDefaultChatModel, getDefaultMaxTokens, getDefaultTemperature } from '../utils/chat';
+import { getDefaultChatModel, getDefaultMaxTokens, getDefaultTemperature } from '../utils/chat';
 import { callLLM as callLLMService } from '../services/llmService';
 import ragLogger from '../services/ragLogger';
 
@@ -119,30 +119,62 @@ export default function GlobalChatScreen({ isDarkMode, onBack, notes, onNotePres
       });
       
       console.log('[GlobalChat] Retrieved chunks:', retrievedChunks.length);
-      
+
       // Build context with retrieval
-      const contextResult = buildGlobalChatContext(
-        userMessage,
-        chatMessages, // Previous history (without current message)
-        retrievedChunks
-      );
-      
+      console.log('[GlobalChat] Building context...');
+      console.log('[GlobalChat] userMessage:', userMessage);
+      console.log('[GlobalChat] chatMessages length:', chatMessages.length);
+      console.log('[GlobalChat] retrievedChunks length:', retrievedChunks.length);
+
+      let contextResult;
+      try {
+        contextResult = buildGlobalChatContext(
+          userMessage,
+          chatMessages, // Previous history (without current message)
+          retrievedChunks
+        );
+        console.log('[GlobalChat] buildGlobalChatContext returned successfully');
+      } catch (buildError) {
+        console.error('[GlobalChat] Error in buildGlobalChatContext:', buildError);
+        console.error('[GlobalChat] buildError details:', {
+          name: buildError?.name,
+          message: buildError?.message,
+          stack: buildError?.stack
+        });
+        throw new Error(`Failed to build chat context: ${buildError?.message}`);
+      }
+
+      console.log('[GlobalChat] Context built. Result:', {
+        hasMessages: !!contextResult?.messages,
+        hasMetadata: !!contextResult?.metadata,
+        messagesLength: contextResult?.messages?.length,
+        messagesSample: contextResult?.messages?.slice(0, 2)
+      });
+
+      // Check if contextResult has the expected structure
+      if (!contextResult || !contextResult.messages) {
+        console.error('[GlobalChat] Invalid contextResult structure:', contextResult);
+        throw new Error('buildGlobalChatContext did not return expected structure');
+      }
+
       // Log context building
       await ragLogger.logContextBuild({
         chatType: 'global',
         ...contextResult.metadata,
       });
-      
+
       // Store referenced notes for UI
       setReferencedNotes(contextResult.metadata.retrievedNotes);
-      
+
       // Call LLM
+      console.log('[GlobalChat] Calling LLM with messages:', contextResult.messages);
       const result = await callLLMService({
         model: getDefaultChatModel(),
         messages: contextResult.messages,
         temperature: getDefaultTemperature(),
         maxTokens: getDefaultMaxTokens(),
       });
+      console.log('[GlobalChat] LLM call result:', { success: result.success });
       
       if (result.success) {
         const assistantMessage = {
@@ -174,16 +206,20 @@ export default function GlobalChatScreen({ isDarkMode, onBack, notes, onNotePres
       }
     } catch (error) {
       console.error('[GlobalChat] Error sending message:', error);
-      
+      console.error('[GlobalChat] Error name:', error?.name);
+      console.error('[GlobalChat] Error message:', error?.message);
+      console.error('[GlobalChat] Error stack:', error?.stack);
+      console.error('[GlobalChat] Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error)));
+
       // Log error
       await ragLogger.logError({
         operation: 'global_chat_send',
         error,
         context: { query: userMessage },
       });
-      
-      Alert.alert('Error', 'Failed to send message');
-      
+
+      Alert.alert('Error', `Failed to send message: ${error?.message || 'Unknown error'}`);
+
       // Remove user message on error
       setChatMessages(chatMessages);
     } finally {

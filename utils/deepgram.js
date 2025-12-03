@@ -1,6 +1,6 @@
 import axios from 'axios';
 import * as FileSystem from 'expo-file-system/legacy';
-import { DEEPGRAM_API_KEY } from '@env';
+import { getBackendUrl } from './backendConfig';
 
 /**
  * Transcribe audio file using Deepgram API
@@ -9,12 +9,9 @@ import { DEEPGRAM_API_KEY } from '@env';
  */
 export const transcribeAudioWithDeepgram = async (audioUri) => {
   try {
-    if (!DEEPGRAM_API_KEY) {
-      throw new Error('Deepgram API key is not configured. Please check your .env file.');
-    }
+    const backendBaseUrl = getBackendUrl();
+    console.log('Starting transcription via backend server:', backendBaseUrl);
 
-    console.log('Starting transcription with Deepgram API...');
-    
     // Get file info for proper content type
     const fileInfo = await FileSystem.getInfoAsync(audioUri);
     if (!fileInfo.exists) {
@@ -29,33 +26,32 @@ export const transcribeAudioWithDeepgram = async (audioUri) => {
       name: 'recording.m4a',
     });
 
-    // Deepgram API endpoint
-    const deepgramUrl = 'https://api.deepgram.com/v1/listen';
-    
+    // Backend API endpoint
+    const backendUrl = `${backendBaseUrl}/api/deepgram/transcribe`;
+
     // Configure request parameters for optimal transcription
     const params = {
       model: 'nova-2',           // Use Deepgram's Nova-2 model for best accuracy
       language: 'en-us',         // English (US)
-      punctuate: true,           // Add punctuation
-      smart_format: true,        // Smart formatting for better readability
-      diarize: false,           // No speaker diarization needed for single user
-      filler_words: false,      // Remove filler words like "um", "uh"
-      multichannel: false,      // Single channel audio
+      punctuate: 'true',         // Add punctuation
+      smart_format: 'true',      // Smart formatting for better readability
+      diarize: 'false',          // No speaker diarization needed for single user
+      filler_words: 'false',     // Remove filler words like "um", "uh"
+      multichannel: 'false',     // Single channel audio
     };
 
-    console.log('Sending request to Deepgram API...');
-    
-    // Make the API request
-    const response = await axios.post(deepgramUrl, formData, {
+    console.log('Sending request to backend server...');
+
+    // Make the API request to backend
+    const response = await axios.post(backendUrl, formData, {
       headers: {
-        'Authorization': `Token ${DEEPGRAM_API_KEY}`,
         'Content-Type': 'multipart/form-data',
       },
       params: params,
-      timeout: 30000, // 30 second timeout
+      timeout: 60000, // 60 second timeout (increased for backend relay)
     });
 
-    console.log('Deepgram API response received');
+    console.log('Backend server response received');
 
     // Extract transcription from response
     const results = response.data?.results;
@@ -77,29 +73,33 @@ export const transcribeAudioWithDeepgram = async (audioUri) => {
     return transcript.trim();
 
   } catch (error) {
-    console.error('Deepgram transcription error:', error);
-    
+    console.error('Transcription error:', error);
+
     // Handle specific error types
     if (error.response) {
-      // API returned an error response
+      // Backend/API returned an error response
       const status = error.response.status;
-      const message = error.response.data?.message || error.response.statusText;
-      
+      const message = error.response.data?.error || error.response.data?.message || error.response.statusText;
+
       switch (status) {
         case 401:
-          throw new Error('Invalid Deepgram API key. Please check your credentials.');
+          throw new Error('Authentication error. Please check server configuration.');
         case 402:
           throw new Error('Deepgram account has insufficient credits. Please top up your account.');
         case 413:
           throw new Error('Audio file is too large. Please record a shorter message.');
         case 429:
           throw new Error('Too many requests. Please wait a moment and try again.');
+        case 500:
+          throw new Error('Server error. Please try again later.');
+        case 504:
+          throw new Error('Request timed out. Please try again.');
         default:
-          throw new Error(`Deepgram API error (${status}): ${message}`);
+          throw new Error(`Transcription error (${status}): ${message}`);
       }
     } else if (error.request) {
       // Network error
-      throw new Error('Network error. Please check your internet connection and try again.');
+      throw new Error('Cannot connect to server. Please ensure the backend server is running.');
     } else if (error.code === 'ECONNABORTED') {
       // Timeout error
       throw new Error('Transcription timed out. Please try with a shorter recording.');
@@ -111,9 +111,10 @@ export const transcribeAudioWithDeepgram = async (audioUri) => {
 };
 
 /**
- * Check if Deepgram API key is configured
- * @returns {boolean} - True if API key is available
+ * Check if backend server is configured
+ * @returns {boolean} - True if backend URL is available
  */
 export const isDeepgramConfigured = () => {
-  return Boolean(DEEPGRAM_API_KEY && DEEPGRAM_API_KEY.trim().length > 0);
+  const url = getBackendUrl();
+  return Boolean(url && url.trim().length > 0);
 };
