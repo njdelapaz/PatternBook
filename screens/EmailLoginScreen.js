@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   StyleSheet,
   Text,
@@ -12,6 +12,18 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
+// Email validation regex
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Password requirement checkers
+const passwordRequirements = {
+  minLength: { label: 'At least 8 characters', check: (p) => p.length >= 8 },
+  hasUppercase: { label: 'One uppercase letter', check: (p) => /[A-Z]/.test(p) },
+  hasLowercase: { label: 'One lowercase letter', check: (p) => /[a-z]/.test(p) },
+  hasNumber: { label: 'One number', check: (p) => /[0-9]/.test(p) },
+  hasSpecial: { label: 'One special character (!@#$%^&*)', check: (p) => /[!@#$%^&*(),.?":{}|<>]/.test(p) },
+};
+
 export default function EmailLoginScreen({ onBack, onLogin }) {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
@@ -19,27 +31,80 @@ export default function EmailLoginScreen({ onBack, onLogin }) {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Validate email format
+  const isEmailValid = useMemo(() => EMAIL_REGEX.test(email), [email]);
+
+  // Check all password requirements
+  const passwordChecks = useMemo(() => {
+    return Object.entries(passwordRequirements).map(([key, req]) => ({
+      key,
+      label: req.label,
+      met: req.check(password),
+    }));
+  }, [password]);
+
+  // Check if all password requirements are met
+  const allPasswordRequirementsMet = useMemo(() => {
+    return passwordChecks.every((check) => check.met);
+  }, [passwordChecks]);
+
+  // Check if passwords match (for sign up)
+  const passwordsMatch = useMemo(() => {
+    return password === confirmPassword && confirmPassword.length > 0;
+  }, [password, confirmPassword]);
+
+  // Determine if form is valid
+  const isFormValid = useMemo(() => {
+    if (isSignUp) {
+      return isEmailValid && allPasswordRequirementsMet && passwordsMatch;
+    }
+    return isEmailValid && password.length > 0;
+  }, [isSignUp, isEmailValid, allPasswordRequirementsMet, passwordsMatch, password]);
 
   const handleSubmit = async () => {
     setError('');
-    
-    if (!email.trim() || !password.trim()) {
-      setError('Please fill in all required fields');
+
+    // Validate email
+    if (!email.trim()) {
+      setError('Please enter your email');
       return;
     }
 
-    if (isSignUp && password !== confirmPassword) {
-      setError('Passwords do not match');
+    if (!isEmailValid) {
+      setError('Please enter a valid email address');
       return;
+    }
+
+    // Validate password
+    if (!password.trim()) {
+      setError('Please enter your password');
+      return;
+    }
+
+    if (isSignUp) {
+      // Check password requirements for sign up
+      if (!allPasswordRequirementsMet) {
+        setError('Password does not meet all requirements');
+        return;
+      }
+
+      // Check passwords match
+      if (!passwordsMatch) {
+        setError('Passwords do not match');
+        return;
+      }
     }
 
     setIsLoading(true);
-    
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
+    // Simulate API call (no actual backend authentication)
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
     // For now, just call onLogin to proceed
-    // In a real app, you'd validate credentials and handle errors
+    // In a real app, you'd validate credentials against a backend
     setIsLoading(false);
     onLogin();
   };
@@ -79,14 +144,19 @@ export default function EmailLoginScreen({ onBack, onLogin }) {
 
           {/* Form */}
           <View style={styles.form}>
+            {/* Email Input */}
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Email</Text>
               <TextInput
-                style={styles.input}
+                style={[
+                  styles.input,
+                  email.length > 0 && !isEmailValid && styles.inputError,
+                  email.length > 0 && isEmailValid && styles.inputValid,
+                ]}
                 value={email}
                 onChangeText={(text) => {
                   setEmail(text);
-                  setError(''); // Clear error when user types
+                  setError('');
                 }}
                 placeholder="you@example.com"
                 placeholderTextColor="#666666"
@@ -95,61 +165,124 @@ export default function EmailLoginScreen({ onBack, onLogin }) {
                 autoCorrect={false}
                 editable={!isLoading}
               />
+              {email.length > 0 && !isEmailValid && (
+                <Text style={styles.fieldError}>Please enter a valid email</Text>
+              )}
             </View>
 
+            {/* Password Input */}
             <View style={styles.inputContainer}>
               <Text style={styles.label}>Password</Text>
-              <TextInput
-                style={styles.input}
-                value={password}
-                onChangeText={(text) => {
-                  setPassword(text);
-                  setError(''); // Clear error when user types
-                }}
-                placeholder="Enter your password"
-                placeholderTextColor="#666666"
-                secureTextEntry
-                autoCapitalize="none"
-                autoCorrect={false}
-                editable={!isLoading}
-              />
-            </View>
-
-            {isSignUp && (
-              <View style={styles.inputContainer}>
-                <Text style={styles.label}>Confirm Password</Text>
+              <View style={styles.passwordWrapper}>
                 <TextInput
-                  style={styles.input}
-                  value={confirmPassword}
+                  style={[
+                    styles.input,
+                    styles.passwordInput,
+                    isSignUp && password.length > 0 && !allPasswordRequirementsMet && styles.inputError,
+                    isSignUp && password.length > 0 && allPasswordRequirementsMet && styles.inputValid,
+                  ]}
+                  value={password}
                   onChangeText={(text) => {
-                    setConfirmPassword(text);
-                    setError(''); // Clear error when user types
+                    setPassword(text);
+                    setError('');
                   }}
-                  placeholder="Confirm your password"
+                  placeholder={isSignUp ? 'Create a strong password' : 'Enter your password'}
                   placeholderTextColor="#666666"
-                  secureTextEntry
+                  secureTextEntry={!showPassword}
                   autoCapitalize="none"
                   autoCorrect={false}
                   editable={!isLoading}
                 />
+                <TouchableOpacity
+                  style={styles.showPasswordButton}
+                  onPress={() => setShowPassword(!showPassword)}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.showPasswordText}>
+                    {showPassword ? 'Hide' : 'Show'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Password Requirements (only for sign up) */}
+              {isSignUp && password.length > 0 && (
+                <View style={styles.requirementsContainer}>
+                  {passwordChecks.map((req) => (
+                    <View key={req.key} style={styles.requirementRow}>
+                      <Text style={[styles.requirementIcon, req.met && styles.requirementMet]}>
+                        {req.met ? '✓' : '○'}
+                      </Text>
+                      <Text style={[styles.requirementText, req.met && styles.requirementTextMet]}>
+                        {req.label}
+                      </Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+            </View>
+
+            {/* Confirm Password (only for sign up) */}
+            {isSignUp && (
+              <View style={styles.inputContainer}>
+                <Text style={styles.label}>Confirm Password</Text>
+                <View style={styles.passwordWrapper}>
+                  <TextInput
+                    style={[
+                      styles.input,
+                      styles.passwordInput,
+                      confirmPassword.length > 0 && !passwordsMatch && styles.inputError,
+                      confirmPassword.length > 0 && passwordsMatch && styles.inputValid,
+                    ]}
+                    value={confirmPassword}
+                    onChangeText={(text) => {
+                      setConfirmPassword(text);
+                      setError('');
+                    }}
+                    placeholder="Confirm your password"
+                    placeholderTextColor="#666666"
+                    secureTextEntry={!showConfirmPassword}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                    editable={!isLoading}
+                  />
+                  <TouchableOpacity
+                    style={styles.showPasswordButton}
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.showPasswordText}>
+                      {showConfirmPassword ? 'Hide' : 'Show'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                {confirmPassword.length > 0 && !passwordsMatch && (
+                  <Text style={styles.fieldError}>Passwords do not match</Text>
+                )}
+                {confirmPassword.length > 0 && passwordsMatch && (
+                  <Text style={styles.fieldSuccess}>Passwords match ✓</Text>
+                )}
               </View>
             )}
 
+            {/* Error Message */}
             {error ? (
               <View style={styles.errorContainer}>
                 <Text style={styles.errorText}>{error}</Text>
               </View>
             ) : null}
 
+            {/* Submit Button */}
             <TouchableOpacity
+              testID="submit-button"
               style={[
                 styles.submitButton,
-                (!email.trim() || !password.trim() || (isSignUp && !confirmPassword.trim()) || isLoading) &&
-                styles.submitButtonDisabled
+                (!isFormValid || isLoading) && styles.submitButtonDisabled,
               ]}
               onPress={handleSubmit}
               activeOpacity={0.8}
-              disabled={!email.trim() || !password.trim() || (isSignUp && !confirmPassword.trim()) || isLoading}
+              disabled={!isFormValid || isLoading}
+              accessibilityState={{ disabled: !isFormValid || isLoading }}
+              accessibilityLabel={isSignUp ? 'Create account' : 'Sign in'}
             >
               <Text style={styles.submitButtonText}>
                 {isLoading
@@ -172,6 +305,8 @@ export default function EmailLoginScreen({ onBack, onLogin }) {
                 setPassword('');
                 setConfirmPassword('');
                 setError('');
+                setShowPassword(false);
+                setShowConfirmPassword(false);
               }}
               activeOpacity={0.7}
             >
@@ -244,6 +379,69 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#2a2a2a',
+  },
+  inputError: {
+    borderColor: '#ff3b30',
+  },
+  inputValid: {
+    borderColor: '#34c759',
+  },
+  passwordWrapper: {
+    position: 'relative',
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  passwordInput: {
+    flex: 1,
+    paddingRight: 70,
+  },
+  showPasswordButton: {
+    position: 'absolute',
+    right: 16,
+    paddingVertical: 8,
+    paddingHorizontal: 4,
+  },
+  showPasswordText: {
+    fontSize: 14,
+    color: '#999999',
+    fontWeight: '500',
+  },
+  requirementsContainer: {
+    marginTop: 12,
+    paddingHorizontal: 4,
+  },
+  requirementRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  requirementIcon: {
+    fontSize: 14,
+    color: '#666666',
+    marginRight: 8,
+    width: 18,
+  },
+  requirementMet: {
+    color: '#34c759',
+  },
+  requirementText: {
+    fontSize: 13,
+    color: '#666666',
+  },
+  requirementTextMet: {
+    color: '#34c759',
+  },
+  fieldError: {
+    fontSize: 12,
+    color: '#ff3b30',
+    marginTop: 6,
+    paddingHorizontal: 4,
+  },
+  fieldSuccess: {
+    fontSize: 12,
+    color: '#34c759',
+    marginTop: 6,
+    paddingHorizontal: 4,
   },
   errorContainer: {
     marginBottom: 16,

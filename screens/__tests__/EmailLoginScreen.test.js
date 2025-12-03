@@ -1,6 +1,6 @@
 /**
  * EmailLoginScreen UI Tests
- * Tests for rendering, user interactions, and form validation
+ * Tests for rendering, user interactions, form validation, and password requirements
  */
 
 import React from 'react';
@@ -59,6 +59,11 @@ describe('EmailLoginScreen', () => {
     it('should render toggle to sign up', () => {
       const { getByText } = render(<EmailLoginScreen {...defaultProps} />);
       expect(getByText(/Don't have an account|Already have an account/i)).toBeTruthy();
+    });
+
+    it('should render show/hide password button', () => {
+      const { getByText } = render(<EmailLoginScreen {...defaultProps} />);
+      expect(getByText('Show')).toBeTruthy();
     });
   });
 
@@ -120,10 +125,27 @@ describe('EmailLoginScreen', () => {
       expect(getByPlaceholderText('Confirm your password')).toBeTruthy();
     });
 
-    it('should call onLogin when form is submitted with valid data', async () => {
+    it('should toggle password visibility when Show/Hide is pressed', () => {
+      const { getByText, getByPlaceholderText } = render(<EmailLoginScreen {...defaultProps} />);
+      
+      const passwordInput = getByPlaceholderText('Enter your password');
+      
+      // Initially password is hidden (secureTextEntry = true)
+      expect(passwordInput.props.secureTextEntry).toBe(true);
+      
+      // Press Show button
+      const showButton = getByText('Show');
+      fireEvent.press(showButton);
+      
+      // Now should show Hide and password should be visible
+      expect(getByText('Hide')).toBeTruthy();
+      expect(passwordInput.props.secureTextEntry).toBe(false);
+    });
+
+    it('should call onLogin when form is submitted with valid data (sign in)', async () => {
       const { getByPlaceholderText, getAllByText } = render(<EmailLoginScreen {...defaultProps} />);
       
-      // Fill in form
+      // Fill in form with valid email and password
       const emailInput = getByPlaceholderText('you@example.com');
       const passwordInput = getByPlaceholderText('Enter your password');
       
@@ -142,64 +164,360 @@ describe('EmailLoginScreen', () => {
       });
     });
 
-    it('should show error when form is submitted with empty fields', () => {
-      const { getAllByText, getByText } = render(<EmailLoginScreen {...defaultProps} />);
+    it('should call onLogin when sign up form is valid', async () => {
+      const { getByPlaceholderText, getByText } = render(<EmailLoginScreen {...defaultProps} />);
       
-      // Submit without filling fields - get button (not title)
-      const submitButtons = getAllByText('Sign in');
-      const submitButton = submitButtons[submitButtons.length - 1];
-      fireEvent.press(submitButton);
+      // Toggle to sign up
+      fireEvent.press(getByText('Sign up'));
       
-      // Should show error
-      expect(getByText('Please fill in all required fields')).toBeTruthy();
-    });
-
-    it('should show error when passwords do not match in sign up mode', () => {
-      const { getByText, getByPlaceholderText } = render(<EmailLoginScreen {...defaultProps} />);
-      
-      // Toggle to sign up - click the "Sign up" link
-      const toggleLink = getByText('Sign up');
-      fireEvent.press(toggleLink);
-      
-      // Fill in mismatched passwords
+      // Fill in form with valid data meeting all requirements
       const emailInput = getByPlaceholderText('you@example.com');
-      const passwordInput = getByPlaceholderText('Enter your password');
+      const passwordInput = getByPlaceholderText('Create a strong password');
       const confirmPasswordInput = getByPlaceholderText('Confirm your password');
       
       fireEvent.changeText(emailInput, 'test@example.com');
-      fireEvent.changeText(passwordInput, 'password123');
-      fireEvent.changeText(confirmPasswordInput, 'password456');
+      fireEvent.changeText(passwordInput, 'Password1!');
+      fireEvent.changeText(confirmPasswordInput, 'Password1!');
       
-      // Submit - button text is "Create account" in sign up mode
+      // Submit
       const submitButton = getByText('Create account');
       fireEvent.press(submitButton);
       
-      // Should show error
-      expect(getByText('Passwords do not match')).toBeTruthy();
+      // Wait for async operation
+      jest.advanceTimersByTime(1000);
+      await waitFor(() => {
+        expect(defaultProps.onLogin).toHaveBeenCalled();
+      });
     });
   });
 
-  describe('Form Validation', () => {
-    it('should clear error when user starts typing', () => {
-      const { getAllByText, getByText, getByPlaceholderText, queryByText } = render(
+  describe('Email Validation', () => {
+    it('should show error for invalid email format', () => {
+      const { getByPlaceholderText, getByText } = render(<EmailLoginScreen {...defaultProps} />);
+      
+      const emailInput = getByPlaceholderText('you@example.com');
+      fireEvent.changeText(emailInput, 'invalidemail');
+      
+      // Should show inline validation error
+      expect(getByText('Please enter a valid email')).toBeTruthy();
+    });
+
+    it('should not show error for valid email format', () => {
+      const { getByPlaceholderText, queryByText } = render(<EmailLoginScreen {...defaultProps} />);
+      
+      const emailInput = getByPlaceholderText('you@example.com');
+      fireEvent.changeText(emailInput, 'valid@example.com');
+      
+      // Should not show validation error
+      expect(queryByText('Please enter a valid email')).toBeNull();
+    });
+
+    it('should accept various valid email formats', () => {
+      const { getByPlaceholderText, queryByText } = render(<EmailLoginScreen {...defaultProps} />);
+      
+      const emailInput = getByPlaceholderText('you@example.com');
+      
+      const validEmails = [
+        'test@example.com',
+        'user.name@domain.org',
+        'user+tag@example.co.uk',
+        'test123@test.io',
+      ];
+      
+      validEmails.forEach(email => {
+        fireEvent.changeText(emailInput, email);
+        expect(queryByText('Please enter a valid email')).toBeNull();
+      });
+    });
+
+    it('should reject various invalid email formats', () => {
+      const { getByPlaceholderText, getByText } = render(<EmailLoginScreen {...defaultProps} />);
+      
+      const emailInput = getByPlaceholderText('you@example.com');
+      
+      const invalidEmails = [
+        'notanemail',
+        '@nodomain.com',
+        'no@',
+        'spaces in@email.com',
+        'missing.domain@',
+      ];
+      
+      invalidEmails.forEach(email => {
+        fireEvent.changeText(emailInput, email);
+        expect(getByText('Please enter a valid email')).toBeTruthy();
+      });
+    });
+  });
+
+  describe('Password Requirements (Sign Up)', () => {
+    it('should show password requirements when typing password in sign up mode', () => {
+      const { getByText, getByPlaceholderText } = render(<EmailLoginScreen {...defaultProps} />);
+      
+      // Toggle to sign up
+      fireEvent.press(getByText('Sign up'));
+      
+      // Type in password field
+      const passwordInput = getByPlaceholderText('Create a strong password');
+      fireEvent.changeText(passwordInput, 'a');
+      
+      // Should show all requirements
+      expect(getByText('At least 8 characters')).toBeTruthy();
+      expect(getByText('One uppercase letter')).toBeTruthy();
+      expect(getByText('One lowercase letter')).toBeTruthy();
+      expect(getByText('One number')).toBeTruthy();
+      expect(getByText('One special character (!@#$%^&*)')).toBeTruthy();
+    });
+
+    it('should validate minimum length requirement', () => {
+      const { getByText, getByPlaceholderText, getAllByText } = render(<EmailLoginScreen {...defaultProps} />);
+      
+      fireEvent.press(getByText('Sign up'));
+      
+      const passwordInput = getByPlaceholderText('Create a strong password');
+      
+      // Short password - requirement not met
+      fireEvent.changeText(passwordInput, 'Short1!');
+      let checkmarks = getAllByText('✓');
+      let circles = getAllByText('○');
+      expect(circles.length).toBeGreaterThan(0); // Some requirements not met
+      
+      // Long enough password
+      fireEvent.changeText(passwordInput, 'LongEnough1!');
+      checkmarks = getAllByText('✓');
+      expect(checkmarks.length).toBeGreaterThan(0); // At least length requirement met
+    });
+
+    it('should validate uppercase requirement', () => {
+      const { getByText, getByPlaceholderText, getAllByText } = render(<EmailLoginScreen {...defaultProps} />);
+      
+      fireEvent.press(getByText('Sign up'));
+      
+      const passwordInput = getByPlaceholderText('Create a strong password');
+      
+      // No uppercase
+      fireEvent.changeText(passwordInput, 'lowercase1!');
+      let checkmarks = getAllByText('✓');
+      // Uppercase requirement should not have checkmark
+      
+      // With uppercase
+      fireEvent.changeText(passwordInput, 'Uppercase1!');
+      checkmarks = getAllByText('✓');
+      expect(checkmarks.length).toBeGreaterThan(0);
+    });
+
+    it('should validate lowercase requirement', () => {
+      const { getByText, getByPlaceholderText, getAllByText } = render(<EmailLoginScreen {...defaultProps} />);
+      
+      fireEvent.press(getByText('Sign up'));
+      
+      const passwordInput = getByPlaceholderText('Create a strong password');
+      
+      // With lowercase
+      fireEvent.changeText(passwordInput, 'hasLower1!');
+      const checkmarks = getAllByText('✓');
+      expect(checkmarks.length).toBeGreaterThan(0);
+    });
+
+    it('should validate number requirement', () => {
+      const { getByText, getByPlaceholderText, getAllByText } = render(<EmailLoginScreen {...defaultProps} />);
+      
+      fireEvent.press(getByText('Sign up'));
+      
+      const passwordInput = getByPlaceholderText('Create a strong password');
+      
+      // With number
+      fireEvent.changeText(passwordInput, 'Password1!');
+      const checkmarks = getAllByText('✓');
+      expect(checkmarks.length).toBeGreaterThan(0);
+    });
+
+    it('should validate special character requirement', () => {
+      const { getByText, getByPlaceholderText, getAllByText } = render(<EmailLoginScreen {...defaultProps} />);
+      
+      fireEvent.press(getByText('Sign up'));
+      
+      const passwordInput = getByPlaceholderText('Create a strong password');
+      
+      // With special character
+      fireEvent.changeText(passwordInput, 'Password1!');
+      const checkmarks = getAllByText('✓');
+      expect(checkmarks.length).toBe(5); // All 5 requirements met
+    });
+
+    it('should show all checkmarks when password meets all requirements', () => {
+      const { getByText, getByPlaceholderText, getAllByText, queryByText } = render(
         <EmailLoginScreen {...defaultProps} />
       );
       
-      // Submit empty form to trigger error - get button (not title)
+      fireEvent.press(getByText('Sign up'));
+      
+      const passwordInput = getByPlaceholderText('Create a strong password');
+      fireEvent.changeText(passwordInput, 'ValidPass1!');
+      
+      // All 5 requirements should show checkmarks
+      const checkmarks = getAllByText('✓');
+      expect(checkmarks.length).toBe(5);
+      
+      // No unfilled circles
+      expect(queryByText('○')).toBeNull();
+    });
+  });
+
+  describe('Confirm Password Validation', () => {
+    it('should show error when passwords do not match', () => {
+      const { getByText, getByPlaceholderText } = render(<EmailLoginScreen {...defaultProps} />);
+      
+      // Toggle to sign up
+      fireEvent.press(getByText('Sign up'));
+      
+      // Fill in mismatched passwords
+      const passwordInput = getByPlaceholderText('Create a strong password');
+      const confirmPasswordInput = getByPlaceholderText('Confirm your password');
+      
+      fireEvent.changeText(passwordInput, 'Password1!');
+      fireEvent.changeText(confirmPasswordInput, 'DifferentPass1!');
+      
+      // Should show mismatch error
+      expect(getByText('Passwords do not match')).toBeTruthy();
+    });
+
+    it('should show success message when passwords match', () => {
+      const { getByText, getByPlaceholderText } = render(<EmailLoginScreen {...defaultProps} />);
+      
+      // Toggle to sign up
+      fireEvent.press(getByText('Sign up'));
+      
+      // Fill in matching passwords
+      const passwordInput = getByPlaceholderText('Create a strong password');
+      const confirmPasswordInput = getByPlaceholderText('Confirm your password');
+      
+      fireEvent.changeText(passwordInput, 'Password1!');
+      fireEvent.changeText(confirmPasswordInput, 'Password1!');
+      
+      // Should show match success
+      expect(getByText('Passwords match ✓')).toBeTruthy();
+    });
+  });
+
+  describe('Form Submission Validation', () => {
+    it('should disable submit button when email is invalid', () => {
+      const { getByPlaceholderText, getByTestId } = render(<EmailLoginScreen {...defaultProps} />);
+      
+      const emailInput = getByPlaceholderText('you@example.com');
+      const passwordInput = getByPlaceholderText('Enter your password');
+      
+      fireEvent.changeText(emailInput, 'invalidemail');
+      fireEvent.changeText(passwordInput, 'somepassword');
+      
+      // Get submit button by testID
+      const submitButton = getByTestId('submit-button');
+      
+      // Button should have disabled accessibility state
+      expect(submitButton.props.accessibilityState.disabled).toBe(true);
+    });
+
+    it('should disable submit button when password requirements not met (sign up)', () => {
+      const { getByText, getByPlaceholderText, getByTestId } = render(<EmailLoginScreen {...defaultProps} />);
+      
+      // Toggle to sign up
+      fireEvent.press(getByText('Sign up'));
+      
+      const emailInput = getByPlaceholderText('you@example.com');
+      const passwordInput = getByPlaceholderText('Create a strong password');
+      const confirmPasswordInput = getByPlaceholderText('Confirm your password');
+      
+      fireEvent.changeText(emailInput, 'test@example.com');
+      fireEvent.changeText(passwordInput, 'weak'); // Doesn't meet requirements
+      fireEvent.changeText(confirmPasswordInput, 'weak');
+      
+      // Get submit button by testID
+      const submitButton = getByTestId('submit-button');
+      
+      // Button should have disabled accessibility state
+      expect(submitButton.props.accessibilityState.disabled).toBe(true);
+    });
+
+    it('should enable submit button when all requirements are met (sign up)', () => {
+      const { getByText, getByPlaceholderText, getByTestId } = render(<EmailLoginScreen {...defaultProps} />);
+      
+      // Toggle to sign up
+      fireEvent.press(getByText('Sign up'));
+      
+      const emailInput = getByPlaceholderText('you@example.com');
+      const passwordInput = getByPlaceholderText('Create a strong password');
+      const confirmPasswordInput = getByPlaceholderText('Confirm your password');
+      
+      fireEvent.changeText(emailInput, 'test@example.com');
+      fireEvent.changeText(passwordInput, 'ValidPass1!');
+      fireEvent.changeText(confirmPasswordInput, 'ValidPass1!');
+      
+      // Get submit button by testID
+      const submitButton = getByTestId('submit-button');
+      
+      // Button should be enabled
+      expect(submitButton.props.accessibilityState.disabled).toBe(false);
+    });
+  });
+
+  describe('State Reset on Mode Toggle', () => {
+    it('should clear password fields when switching between sign in and sign up', () => {
+      const { getByText, getByPlaceholderText } = render(<EmailLoginScreen {...defaultProps} />);
+      
+      // Fill in password in sign in mode
+      const passwordInput = getByPlaceholderText('Enter your password');
+      fireEvent.changeText(passwordInput, 'somepassword');
+      
+      // Toggle to sign up
+      fireEvent.press(getByText('Sign up'));
+      
+      // Password should be cleared, find the new password input
+      const newPasswordInput = getByPlaceholderText('Create a strong password');
+      expect(newPasswordInput.props.value).toBe('');
+    });
+
+    it('should reset show password state when switching modes', () => {
+      const { getByText, getByPlaceholderText, getAllByText } = render(<EmailLoginScreen {...defaultProps} />);
+      
+      // Show password in sign in mode
+      fireEvent.press(getByText('Show'));
+      expect(getByText('Hide')).toBeTruthy();
+      
+      // Toggle to sign up
+      fireEvent.press(getByText('Sign up'));
+      
+      // Should reset to "Show" (password hidden)
+      const showButtons = getAllByText('Show');
+      expect(showButtons.length).toBeGreaterThan(0);
+    });
+  });
+
+  describe('Loading State', () => {
+    it('should show Loading text when submitting', async () => {
+      const { getByPlaceholderText, getAllByText, getByText } = render(
+        <EmailLoginScreen {...defaultProps} />
+      );
+      
+      // Fill in valid form
+      const emailInput = getByPlaceholderText('you@example.com');
+      const passwordInput = getByPlaceholderText('Enter your password');
+      
+      fireEvent.changeText(emailInput, 'test@example.com');
+      fireEvent.changeText(passwordInput, 'password123');
+      
+      // Submit
       const submitButtons = getAllByText('Sign in');
       const submitButton = submitButtons[submitButtons.length - 1];
       fireEvent.press(submitButton);
       
-      // Error should be shown
-      expect(getByText('Please fill in all required fields')).toBeTruthy();
+      // Should show loading
+      expect(getByText('Loading...')).toBeTruthy();
       
-      // Start typing
-      const emailInput = getByPlaceholderText('you@example.com');
-      fireEvent.changeText(emailInput, 'test');
-      
-      // Error should be cleared
-      expect(queryByText('Please fill in all required fields')).toBeNull();
+      // Complete the timeout
+      jest.advanceTimersByTime(1000);
+      await waitFor(() => {
+        expect(defaultProps.onLogin).toHaveBeenCalled();
+      });
     });
   });
 });
-
