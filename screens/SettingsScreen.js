@@ -29,6 +29,7 @@ export default function SettingsScreen({ settings, onSettingsChange, isDarkMode,
   const [importProgress, setImportProgress] = useState({ current: 0, total: 0 });
   const [showImportInput, setShowImportInput] = useState(false);
   const [importCount, setImportCount] = useState('10');
+  const [importType, setImportType] = useState('test'); // 'test' or 'benchmark'
 
   const handleNameChange = (name) => {
     onSettingsChange({
@@ -172,27 +173,55 @@ export default function SettingsScreen({ settings, onSettingsChange, isDarkMode,
       return;
     }
 
-    setShowImportInput(true);
+    // Ask which dataset to import
+    Alert.alert(
+      'Choose Dataset',
+      'Which notes would you like to import?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Benchmark Notes (25)',
+          onPress: () => {
+            setImportType('benchmark');
+            setShowImportInput(true);
+          }
+        },
+        {
+          text: 'Test Notes (100)',
+          onPress: () => {
+            setImportType('test');
+            setShowImportInput(true);
+          }
+        }
+      ]
+    );
   };
 
   const confirmImport = async () => {
     const count = parseInt(importCount, 10);
+    const maxCount = importType === 'benchmark' ? 25 : 100;
+    const datasetName = importType === 'benchmark' ? 'benchmark_for_patternbook.json' : 'test_data_notes_only.json';
+    const noteDescriptor = importType === 'benchmark' ? 'benchmark note' : 'test note';
     
     if (isNaN(count) || count <= 0) {
       Alert.alert('Invalid Number', 'Please enter a valid number greater than 0');
       return;
     }
 
-    if (count > 100) {
-      Alert.alert('Too Many', 'Maximum 100 notes can be imported at once');
+    if (count > maxCount) {
+      Alert.alert('Too Many', `Maximum ${maxCount} notes can be imported from this dataset`);
       return;
     }
 
     setShowImportInput(false);
 
+    const processingMessage = importType === 'benchmark' 
+      ? `${count} ${noteDescriptor}${count === 1 ? '' : 's'} from ${datasetName}. These notes already have titles and will import quickly.`
+      : `${count} ${noteDescriptor}${count === 1 ? '' : 's'} from ${datasetName}. Each note will be processed with title generation. This may take a few minutes.`;
+
     Alert.alert(
-      'Import Test Notes',
-      `This will import ${count} test note${count === 1 ? '' : 's'} from test_data_notes_only.json. Each note will be processed with title generation. This may take a few minutes.`,
+      `Import ${importType === 'benchmark' ? 'Benchmark' : 'Test'} Notes`,
+      `This will import ${processingMessage}`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -202,14 +231,15 @@ export default function SettingsScreen({ settings, onSettingsChange, isDarkMode,
             setImportProgress({ current: 0, total: 0 });
 
             try {
+              const useBenchmark = importType === 'benchmark';
               const result = await onImportTestNotes(count, (current, total) => {
                 setImportProgress({ current, total });
-              });
+              }, useBenchmark);
 
               if (result.success) {
                 Alert.alert(
                   'Success',
-                  `Successfully imported ${result.count} test note${result.count === 1 ? '' : 's'}!`,
+                  `Successfully imported ${result.count} ${noteDescriptor}${result.count === 1 ? '' : 's'}!`,
                   [{ text: 'OK' }]
                 );
               } else {
@@ -217,7 +247,7 @@ export default function SettingsScreen({ settings, onSettingsChange, isDarkMode,
               }
             } catch (error) {
               console.error('[SettingsScreen] Import error:', error);
-              Alert.alert('Error', 'Failed to import test notes');
+              Alert.alert('Error', `Failed to import ${noteDescriptor}s`);
             } finally {
               setIsImporting(false);
               setImportProgress({ current: 0, total: 0 });
@@ -390,9 +420,11 @@ export default function SettingsScreen({ settings, onSettingsChange, isDarkMode,
           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
           <View style={[styles.modalContent, { backgroundColor: theme.cardBackground }]}>
-            <Text style={[styles.modalTitle, { color: theme.textColor }]}>Import Test Notes</Text>
+            <Text style={[styles.modalTitle, { color: theme.textColor }]}>
+              Import {importType === 'benchmark' ? 'Benchmark' : 'Test'} Notes
+            </Text>
             <Text style={[styles.modalDescription, { color: theme.secondaryTextColor }]}>
-              How many notes would you like to import? (Max: 100)
+              How many notes would you like to import? (Max: {importType === 'benchmark' ? '25' : '100'})
             </Text>
             
             <TextInput
