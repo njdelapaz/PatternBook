@@ -635,13 +635,6 @@ export default function MainScreen({
 
           {/* Bottom navigation */}
           <View style={styles.suggestionModalNav}>
-            <TouchableOpacity style={styles.suggestionModalNavButton}>
-              <Text style={styles.suggestionModalNavIcon}>💬</Text>
-              <Text style={styles.suggestionModalNavText}>Chat</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.suggestionModalNavButton}>
-              <Text style={styles.suggestionModalNavIcon}>⋯</Text>
-            </TouchableOpacity>
             <TouchableOpacity
               style={[styles.suggestionModalNavButton, currentSuggestionIndex === 0 && styles.suggestionModalNavButtonDisabled]}
               onPress={handleNavigateLeft}
@@ -1246,9 +1239,5 @@ const styles = StyleSheet.create({
   },
   suggestionModalNavIconDisabled: {
     opacity: 0.3,
-  },
-  suggestionModalNavText: {
-    fontSize: 12,
-    color: '#FFFFFF',
   },
 });
