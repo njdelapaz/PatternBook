@@ -1,78 +1,76 @@
-// Hard-coded AI suggestions for demo
+/**
+ * Suggestions Utility
+ * Manages AI-generated suggestions for user notes
+ */
 
-export const SUGGESTIONS = {
-  // First note (dream library) - Art suggestion
-  dream: {
-    type: 'art',
-    title: 'The Library',
-    subtitle: '1526',
-    artist: 'Giuseppe Arcimboldo',
-    museum: 'Skokloster Castle, Sweden',
-    badge: 'Picked for you',
-    description: 'Arcimboldo\'s "The Librarian" depicts a portrait composed entirely of books, creating a figure that is both human and library itself. This surreal fusion speaks to your dream of wandering through an endless library—where memories, identity, and stories become inseparable from one another.',
-    image: require('../assets/suggestions/library-art.jpg'), // You'll add this image
-    imageAlt: 'Giuseppe Arcimboldo\'s painting of a figure made of books'
-  },
+import suggestionService from '../services/suggestionService';
 
-  // Second note (productivity) - Quote suggestion
-  productivity: {
+// Fallback suggestions (used if AI generation fails)
+const FALLBACK_SUGGESTIONS = [
+  {
     type: 'quote',
-    title: '"It is not enough to be busy. So are the ants. The question is: What are we busy about?"',
-    author: 'Henry David Thoreau',
+    title: '"The unexamined life is not worth living."',
+    author: 'Socrates',
     badge: 'Picked for you',
-    description: 'Thoreau\'s reflection from Walden challenges the modern obsession with productivity for its own sake. His question cuts to the heart of your insight—that measuring worth by accomplishment misses the deeper question of purpose and intentionality.',
-    imageAlt: 'Henry David Thoreau quote about meaningful productivity'
+    description: 'This ancient wisdom reminds us that reflection and self-awareness are essential to a meaningful life. Your journal is a tool for that examination.',
   },
+  {
+    type: 'insight',
+    title: 'Notice the patterns in your thoughts',
+    subtitle: 'Reflection prompt',
+    badge: 'Picked for you',
+    description: 'As you write more, you might start to see recurring themes or emotions. What patterns are emerging in your entries? What do they tell you about what matters most?',
+  },
+];
 
-  // Weekly letter - Appears after both notes are created
-  weeklyLetter: {
-    type: 'letter',
-    title: 'Hello, Nathan',
-    subtitle: 'Weekly letter',
-    date: 'Oct 26, 2025',
-    badge: 'Weekly letter',
-    gradient: require('../assets/gradient.png'), // Gradient image
-    content: [
-      'Well hello there! I\'m your new AI guide, and I have to say—you\'re quite the mystery. Just two notes, but what notes they are. Either you\'re the most zen person on the planet, or you\'re still figuring out what this whole PatternBook thing is about.',
-      'This week, we talked about the strange nature of memory—how each time we recall something, we might be subtly rewriting it, like books in an endless library that shift with every reading. We also explored your relationship with productivity, questioning whether worth should be measured by accomplishment or by intention. Quality over quantity, as you put it.',
-      'Here\'s a micro-challenge for you: sometime this week, notice one small thing that made you smile. Could be a good cup of coffee, a text from a friend, or even just the way sunlight hit your wall. No need to journal it or analyze it—just notice it.',
-      'What\'s one thing you\'re curious about exploring in your life right now?'
-    ],
-    imageAlt: 'Weekly letter greeting'
+/**
+ * Generate AI suggestions based on notes
+ * This is async and calls the AI service
+ * 
+ * @param {Array} notes - User's notes
+ * @param {Object} options - Options for generation
+ * @returns {Promise<Array>} Array of suggestions
+ */
+export async function generateAISuggestions(notes, options = {}) {
+  if (!notes || notes.length === 0) {
+    return [];
   }
-};
 
-// Generate suggestions based on notes
+  try {
+    const result = await suggestionService.generateSuggestions(notes, options);
+    
+    if (result.success && result.suggestions.length > 0) {
+      console.log('[Suggestions] Generated', result.suggestions.length, 'AI suggestions', 
+                  result.cached ? '(cached)' : '(fresh)');
+      return result.suggestions;
+    }
+
+    // Return fallback if AI generation failed
+    console.log('[Suggestions] Using fallback suggestions');
+    return FALLBACK_SUGGESTIONS;
+
+  } catch (error) {
+    console.error('[Suggestions] Error generating suggestions:', error);
+    return FALLBACK_SUGGESTIONS;
+  }
+}
+
+/**
+ * Check if we have cached suggestions
+ */
+export async function hasCachedSuggestions() {
+  return await suggestionService.hasCachedSuggestions();
+}
+
+/**
+ * Clear cached suggestions (for manual refresh)
+ */
+export async function clearSuggestionsCache() {
+  return await suggestionService.clearSuggestionsCache();
+}
+
+// Keep old sync function for backward compatibility (returns empty, triggers async load)
 export function getSuggestionsForNotes(notes) {
-  const suggestions = [];
-
-  // Check if we have notes
-  if (notes.length === 0) return suggestions;
-
-  // Check for dream note
-  const hasDreamNote = notes.some(note =>
-    note.content.toLowerCase().includes('dream') &&
-    note.content.toLowerCase().includes('library')
-  );
-
-  // Check for productivity note
-  const hasProductivityNote = notes.some(note =>
-    note.content.toLowerCase().includes('productivity') ||
-    note.content.toLowerCase().includes('accomplish')
-  );
-
-  if (hasDreamNote) {
-    suggestions.push(SUGGESTIONS.dream);
-  }
-
-  if (hasProductivityNote) {
-    suggestions.push(SUGGESTIONS.productivity);
-  }
-
-  // Show weekly letter when both notes exist
-  if (hasDreamNote && hasProductivityNote) {
-    suggestions.push(SUGGESTIONS.weeklyLetter);
-  }
-
-  return suggestions;
+  // This is deprecated - use generateAISuggestions instead
+  return [];
 }
