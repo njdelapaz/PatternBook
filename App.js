@@ -12,6 +12,7 @@ import { useDeviceType } from './hooks/useDeviceType';
 import LoginScreen from './screens/LoginScreen';
 import EmailLoginScreen from './screens/EmailLoginScreen';
 import OnboardingScreen from './screens/OnboardingScreen';
+import PersonaSelectionScreen from './screens/PersonaSelectionScreen';
 import MainScreen from './screens/MainScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import RecentlyDeletedScreen from './screens/RecentlyDeletedScreen';
@@ -22,7 +23,7 @@ import AdminPanelScreen from './screens/AdminPanelScreen';
 
 // Import Utilities
 import { loadNotes, saveNotes } from './utils/storage';
-import { darkTheme, lightTheme, RETRIEVAL_CONFIG } from './utils/constants';
+import { darkTheme, lightTheme, RETRIEVAL_CONFIG, PERSONA_SELECTED_KEY } from './utils/constants';
 import { transcribeAudioWithDeepgram, isDeepgramConfigured } from './utils/deepgram';
 import { MarkdownText, formatTimestamp } from './utils/components';
 import { buildChatMessages, getDefaultChatModel, getDefaultMaxTokens, getDefaultTemperature } from './utils/chat';
@@ -34,6 +35,7 @@ import { getCurrentUser, setCurrentUser, clearCurrentUser } from './utils/userSt
 import { callLLM } from './services/llmService';
 import retrievalService from './services/noteRetrievalService';
 import ragLogger from './services/ragLogger';
+import { loadPersonaSnapshot } from './services/personaService';
 
 // Import Carbon icons (for remaining components)
 import KeyboardIcon from './assets/carbon-icons/carbon--keyboard.svg';
@@ -766,6 +768,8 @@ export default function App() {
       reminderTime: '09:00'
     }
   });
+  const [hasSelectedPersona, setHasSelectedPersona] = useState(false);
+  const [isLoadingPersona, setIsLoadingPersona] = useState(false);
 
   // Check for existing user session on app start
   useEffect(() => {
@@ -775,10 +779,20 @@ export default function App() {
         setCurrentUserState(user);
         setIsLoggedIn(true);
         setHasCompletedOnboarding(true);
-        
+
+        // Check if user has selected persona
+        const personaSelected = await AsyncStorage.getItem(`${PERSONA_SELECTED_KEY}_${user.id}`);
+        setHasSelectedPersona(personaSelected === 'true');
+
         // Load user's notes
         const userNotes = await loadNotes(user.id);
         setNotes(userNotes);
+
+        // Migration: If user has existing notes but no persona flag, set it
+        if (userNotes.length > 0 && personaSelected !== 'true') {
+          await AsyncStorage.setItem(`${PERSONA_SELECTED_KEY}_${user.id}`, 'true');
+          setHasSelectedPersona(true);
+        }
       }
     }
     checkUserSession();
@@ -1071,15 +1085,53 @@ export default function App() {
     setHasCompletedOnboarding(true);
   };
 
+  const handleSelectPersona = async (personaType) => {
+    if (!currentUser) {
+      console.error('[App] No current user when selecting persona');
+      return;
+    }
+
+    console.log('[App] Loading persona:', personaType);
+    setIsLoadingPersona(true);
+
+    try {
+      // Load persona notes
+      const personaNotes = await loadPersonaSnapshot(personaType);
+      console.log('[App] Loaded', personaNotes.length, 'notes for persona:', personaType);
+
+      // Save notes to user's storage
+      setNotes(personaNotes);
+      await saveNotes(personaNotes, currentUser.id);
+
+      // Pre-index notes for RAG (if not blank slate)
+      if (personaNotes.length > 0) {
+        console.log('[App] Pre-indexing notes for RAG');
+        retrievalService.indexNotes(personaNotes);
+      }
+
+      // Mark persona as selected
+      await AsyncStorage.setItem(`${PERSONA_SELECTED_KEY}_${currentUser.id}`, 'true');
+      setHasSelectedPersona(true);
+
+      console.log('[App] Persona selection complete');
+    } catch (error) {
+      console.error('[App] Error loading persona:', error);
+      Alert.alert('Error', 'Failed to load persona notes. Please try again.');
+    } finally {
+      setIsLoadingPersona(false);
+    }
+  };
+
   const handleLogout = async () => {
     // Clear user session
     await clearCurrentUser();
     setCurrentUserState(null);
-    
+
     // Clear app state
     setIsLoggedIn(false);
     setShowEmailLogin(false);
     setHasCompletedOnboarding(false);
+    setHasSelectedPersona(false); // Reset persona selection
     setCurrentScreen('main');
     setSelectedNoteId(null);
     setNotes([]);
@@ -1117,6 +1169,21 @@ export default function App() {
       <SafeAreaProvider>
         <View style={[styles.appRoot, { backgroundColor: theme.backgroundColor }]}>
           <OnboardingScreen onComplete={handleCompleteOnboarding} />
+        </View>
+      </SafeAreaProvider>
+    );
+  }
+
+  // Show persona selection screen if not yet selected
+  if (!hasSelectedPersona) {
+    return (
+      <SafeAreaProvider>
+        <View style={[styles.appRoot, { backgroundColor: theme.backgroundColor }]}>
+          <PersonaSelectionScreen
+            onSelectPersona={handleSelectPersona}
+            isDarkMode={isDarkMode}
+            isLoading={isLoadingPersona}
+          />
         </View>
       </SafeAreaProvider>
     );

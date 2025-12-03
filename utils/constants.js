@@ -4,6 +4,7 @@ export const VOICE_API_CONSENT_KEY = '@patternbook_voice_api_consent';
 export const CHAT_HISTORY_KEY = '@patternbook_chat_history';
 export const USERS_STORAGE_KEY = '@patternbook_users';
 export const CURRENT_USER_KEY = '@patternbook_current_user';
+export const PERSONA_SELECTED_KEY = '@patternbook_persona_selected';
 
 // Themes
 export const darkTheme = {

@@ -1,0 +1,272 @@
+[
+  {
+    "id": "persona_se_1_1733270400000",
+    "title": "Planning React Native Architecture",
+    "content": "Started working on a new React Native project today. Thinking about the architecture and how to structure components for maximum reusability. Might go with a feature-based folder structure instead of type-based. Each feature would have its own components, hooks, and utils. This approach seems cleaner for scaling and makes it easier to understand the codebase at a glance.",
+    "createdAt": 1730678400000,
+    "updatedAt": 1730678400000,
+    "pinned": true,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_se_2_1733270400000",
+    "title": "Debugging Race Conditions",
+    "content": "Debugging is like detective work. Spent three hours tracking down a race condition in our async state management. Turned out to be a missing await keyword in a critical function. The satisfaction when you finally find the bug is unmatched. Made a note to add better error boundaries and logging to catch these issues earlier next time.",
+    "createdAt": 1730764800000,
+    "updatedAt": 1730764800000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_se_3_1733270400000",
+    "title": "Microservices vs Monolith Considerations",
+    "content": "Attended a tech talk about microservices architecture today. The concepts make sense in theory, but I'm wondering about the operational overhead for our team size. Managing multiple services, deployment pipelines, and inter-service communication seems complex. For a team of our size, maybe a well-structured modular monolith is more practical. Sometimes simpler is better.",
+    "createdAt": 1730851200000,
+    "updatedAt": 1730851200000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_se_4_1733270400000",
+    "title": "Learning to Avoid Over-Engineering",
+    "content": "Code review today made me realize I have a habit of over-engineering solutions. I built this elaborate abstraction layer that honestly wasn't needed. Sometimes the simple, straightforward approach is better. Need to remember YAGNI - You Aren't Gonna Need It. Write code for today's problems, not imaginary future ones.",
+    "createdAt": 1730937600000,
+    "updatedAt": 1730937600000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_se_5_1733270400000",
+    "title": "Accessibility in Web Applications",
+    "content": "Learning about accessibility in web apps today. Never realized how much I took for granted as an able-bodied developer. Adding proper ARIA labels, keyboard navigation, and screen reader support should be standard practice, not an afterthought. It's not just about compliance, it's about making software usable for everyone. Planning to audit our current project this week.",
+    "createdAt": 1731024000000,
+    "updatedAt": 1731024000000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_se_6_1733270400000",
+    "title": "Refactoring Authentication Flow",
+    "content": "Refactored the authentication flow today. Reduced it from 200 lines to 80 by extracting reusable functions and removing duplicate code. Clean code really does feel good. Every function now has a single responsibility and the logic is much easier to follow. As Dijkstra said, simplicity is the ultimate sophistication.",
+    "createdAt": 1731110400000,
+    "updatedAt": 1731110400000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_se_7_1733270400000",
+    "title": "Dealing with Imposter Syndrome",
+    "content": "Imposter syndrome hitting hard today. Everyone on the team seems to know more than me about React performance optimization. Then I remembered - they've been doing this for 5+ years longer. Give yourself credit for how far you've come in just two years. Learning is a journey, not a destination. Focus on growth, not comparison.",
+    "createdAt": 1731196800000,
+    "updatedAt": 1731196800000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_se_8_1733270400000",
+    "title": "Benefits of Pair Programming",
+    "content": "Pair programming session with Sarah was really productive today. Two heads are better than one. We caught several bugs before they made it to production and I learned some VSCode shortcuts I didn't know existed. The real-time code review aspect is invaluable. It's also a great way to spread knowledge across the team and maintain code quality.",
+    "createdAt": 1731283200000,
+    "updatedAt": 1731283200000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_se_9_1733270400000",
+    "title": "Writing Unit Tests for New Features",
+    "content": "Testing is not optional. Spent the afternoon writing unit tests for the new feature. It's tedious work, but catching bugs early saves so much time later. Already found two edge cases I hadn't considered. Good tests are documentation, safety net, and design tool all in one. Aiming for 80% code coverage on this module.",
+    "createdAt": 1731369600000,
+    "updatedAt": 1731369600000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_se_10_1733270400000",
+    "title": "Weekend Project: Knowledge Management Tool",
+    "content": "Weekend project idea: build a personal knowledge management tool. Something like Notion but simpler and more focused. Maybe with AI integration for smart search and connections between notes. Could be a good learning experience for exploring vector embeddings and semantic search. Plus I'd actually use it for organizing all my dev notes and learnings.",
+    "createdAt": 1731456000000,
+    "updatedAt": 1731456000000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_se_11_1733270400000",
+    "title": "Understanding Docker Containers",
+    "content": "Finally taking time to properly learn Docker. Containers make so much more sense now that I've actually built a few images and understood the layering system. Development environment setup used to take hours, now it's reproducible with a single docker-compose up command. Game changer for onboarding new developers and ensuring consistency across environments.",
+    "createdAt": 1731542400000,
+    "updatedAt": 1731542400000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_se_12_1733270400000",
+    "title": "Git Rebase vs Merge Strategy",
+    "content": "Team discussion about git workflow today. Some prefer merge, others swear by rebase. I'm in the rebase camp for feature branches - keeps history clean and linear. But for merging to main, merge commits make sense to preserve the feature branch context. It's not about one being right, it's about consistency across the team.",
+    "createdAt": 1731628800000,
+    "updatedAt": 1731628800000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_se_13_1733270400000",
+    "title": "Performance Optimization Deep Dive",
+    "content": "Deep dive into React performance optimization today. Learned about useMemo, useCallback, and React.memo. The key is knowing when to use them. Premature optimization is the root of all evil, but ignoring performance until it's a problem is also bad. Profile first, optimize what matters. Most performance issues come from unnecessary re-renders and inefficient algorithms, not lack of memoization.",
+    "createdAt": 1731715200000,
+    "updatedAt": 1731715200000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_se_14_1733270400000",
+    "title": "Code Review Best Practices",
+    "content": "Thinking about what makes a good code review. It's not just about finding bugs - it's about knowledge sharing, maintaining code quality, and fostering team collaboration. I try to ask questions rather than make demands, explain the reasoning behind suggestions, and always find something positive to comment on. Code review is a conversation, not a criticism session.",
+    "createdAt": 1731801600000,
+    "updatedAt": 1731801600000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_se_15_1733270400000",
+    "title": "Exploring TypeScript Benefits",
+    "content": "Converted a JavaScript module to TypeScript today. The type safety is incredible. Caught three bugs that would have made it to production. The initial setup takes time, but the autocompletion and compile-time error catching are worth it. Refactoring is also much safer when the compiler tells you what you broke. Never going back to vanilla JS for large projects.",
+    "createdAt": 1731888000000,
+    "updatedAt": 1731888000000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_se_16_1733270400000",
+    "title": "API Design Principles",
+    "content": "Working on API design for our new service. REST vs GraphQL debate aside, the most important thing is consistency. Clear naming conventions, predictable error responses, proper status codes, and comprehensive documentation. An API is a contract with your users - make it reliable, intuitive, and well-documented. Version it properly from day one.",
+    "createdAt": 1731974400000,
+    "updatedAt": 1731974400000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_se_17_1733270400000",
+    "title": "Handling Technical Debt",
+    "content": "Technical debt is like financial debt - a little is okay, too much will crush you. We're dedicating 20% of each sprint to paying down tech debt. It's tempting to always work on new features, but maintaining code health is crucial for long-term velocity. Today fixed some old code that's been causing issues for months. Feels good.",
+    "createdAt": 1732060800000,
+    "updatedAt": 1732060800000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_se_18_1733270400000",
+    "title": "Learning System Design Patterns",
+    "content": "Reading through system design patterns. Load balancing, caching strategies, database sharding, CDNs - there's so much to learn. The scale issues companies like Netflix and Amazon face are fascinating. Even though we're not at that scale, understanding these concepts helps design better systems from the start. Scalability should be considered early, not bolted on later.",
+    "createdAt": 1732147200000,
+    "updatedAt": 1732147200000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_se_19_1733270400000",
+    "title": "The Importance of Documentation",
+    "content": "Spent time updating our documentation today. Future me (and the team) will thank present me. Good documentation is not about writing everything down, it's about capturing the why and the what, not just the how. Code comments explain why unusual decisions were made. README explains what the project does and how to get started. Architecture docs explain the big picture.",
+    "createdAt": 1732233600000,
+    "updatedAt": 1732233600000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_se_20_1733270400000",
+    "title": "Database Indexing Strategies",
+    "content": "Learning about database indexing today. Indexes speed up reads but slow down writes. It's all about trade-offs. Analyzed our slow queries and added indexes on frequently searched columns. Query time dropped from 2 seconds to 50ms. But over-indexing can hurt performance too. The key is understanding your access patterns and indexing accordingly.",
+    "createdAt": 1732320000000,
+    "updatedAt": 1732320000000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_se_21_1733270400000",
+    "title": "Work-Life Balance in Tech",
+    "content": "Reminder to myself: your worth is not determined by your productivity. It's easy to fall into the trap of working late and weekends in tech. But burnout is real and creativity requires rest. Setting boundaries - no code after 7pm on weekdays. The work will still be there tomorrow. Taking care of your mental health is not laziness, it's necessary.",
+    "createdAt": 1732406400000,
+    "updatedAt": 1732406400000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_se_22_1733270400000",
+    "title": "Exploring Functional Programming",
+    "content": "Diving into functional programming concepts. Pure functions, immutability, function composition - it's a different way of thinking. JavaScript's first-class functions make FP patterns natural. Already seeing benefits in testability and reasoning about code. Redux makes so much more sense now. Considering exploring Haskell or Elixir to deepen understanding.",
+    "createdAt": 1732492800000,
+    "updatedAt": 1732492800000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_se_23_1733270400000",
+    "title": "CI/CD Pipeline Setup",
+    "content": "Set up a proper CI/CD pipeline today. Every push triggers automated tests, linting, and type checking. Merges to main automatically deploy to staging. It's beautiful. Catches issues before they reach production and gives confidence to deploy frequently. The initial setup took time but it's already paying dividends. Automation is a developer's best friend.",
+    "createdAt": 1732579200000,
+    "updatedAt": 1732579200000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_se_24_1733270400000",
+    "title": "Security Best Practices",
+    "content": "Attended security training today. SQL injection, XSS, CSRF - so many attack vectors to consider. Security can't be an afterthought. Use parameterized queries, sanitize inputs, implement proper authentication and authorization, keep dependencies updated, follow principle of least privilege. Security is everyone's responsibility, not just the security team's.",
+    "createdAt": 1732665600000,
+    "updatedAt": 1732665600000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_se_25_1733270400000",
+    "title": "Mentoring Junior Developers",
+    "content": "Started mentoring a junior developer this week. It's rewarding to help someone grow. Remembering my own struggles early in my career helps me be patient and empathetic. The best way to solidify your own knowledge is to teach it to someone else. Plus, juniors often ask questions that make you reconsider assumptions. Everyone wins.",
+    "createdAt": 1732752000000,
+    "updatedAt": 1732752000000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_se_26_1733270400000",
+    "title": "Mobile App State Management",
+    "content": "Comparing state management solutions for our React Native app. Redux is powerful but has boilerplate. Context API is simpler but can cause performance issues. MobX is interesting. Zustand looks promising for simpler use cases. The right choice depends on the app's complexity and team familiarity. Sometimes the best tool is the one your team knows well.",
+    "createdAt": 1732838400000,
+    "updatedAt": 1732838400000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_se_27_1733270400000",
+    "title": "Reading Clean Code Principles",
+    "content": "Re-reading Clean Code by Robert Martin. Meaningful names, small functions, clear abstractions - these principles never get old. Code is read far more often than it's written. Make it easy to understand. Future you and your teammates will be grateful. Writing code is easy, writing good code is hard, writing maintainable code is an art.",
+    "createdAt": 1732924800000,
+    "updatedAt": 1732924800000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_se_28_1733270400000",
+    "title": "Exploring GraphQL Implementation",
+    "content": "Implementing a GraphQL server for the first time. The ability to request exactly the data you need is powerful. No more over-fetching or under-fetching. Resolvers, schemas, mutations - it's a different mental model from REST but makes sense once you understand it. Apollo Client on the frontend makes caching almost magical. Definitely has use cases where it shines.",
+    "createdAt": 1733011200000,
+    "updatedAt": 1733011200000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_se_29_1733270400000",
+    "title": "Version Control Best Practices",
+    "content": "Thinking about git commit message conventions. Good commits tell a story of how the code evolved. Use imperative mood, keep subject under 50 chars, explain why not what in the body. Atomic commits that do one thing make git history useful. Cherry-picking and reverting becomes easy. Git is not just backup, it's communication with future developers.",
+    "createdAt": 1733097600000,
+    "updatedAt": 1733097600000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_se_30_1733270400000",
+    "title": "Reflecting on Growth as a Developer",
+    "content": "Looking back at code I wrote a year ago. It's embarrassing but also encouraging - it means I've grown. The imposter syndrome never fully goes away, but I'm more confident now. I can architect systems, debug complex issues, mentor others, and ship features that users love. Still so much to learn, but that's what makes this field exciting. The learning never stops.",
+    "createdAt": 1733184000000,
+    "updatedAt": 1733184000000,
+    "pinned": false,
+    "titleGenerated": true
+  }
+]
