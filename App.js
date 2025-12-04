@@ -11,6 +11,7 @@ import { useDeviceType } from './hooks/useDeviceType';
 // Import Screen Components
 import LoginScreen from './screens/LoginScreen';
 import EmailLoginScreen from './screens/EmailLoginScreen';
+import OnboardingScreen from './screens/OnboardingScreen';
 import PersonaSelectionScreen from './screens/PersonaSelectionScreen';
 import MainScreen from './screens/MainScreen';
 import SettingsScreen from './screens/SettingsScreen';
@@ -1110,7 +1111,8 @@ export default function App() {
       await setOnboardingCompleted(user.id);
       // Update the current user state to reflect the change
       // Use 'user' instead of 'currentUser' to handle cases where currentUser was null
-      setCurrentUserState({ ...user, hasCompletedOnboarding: true });
+      const updatedUser = { ...user, hasCompletedOnboarding: true };
+      setCurrentUserState(updatedUser);
     } else {
       console.error('Cannot save onboarding completion: user not found');
     }
@@ -1172,6 +1174,9 @@ export default function App() {
 
   const theme = isDarkMode ? darkTheme : lightTheme;
 
+  // Derive onboarding completion status from current user
+  const hasCompletedOnboarding = currentUser?.hasCompletedOnboarding === true;
+
   // Show login screen if not logged in
   if (!isLoggedIn) {
     return (
@@ -1193,7 +1198,20 @@ export default function App() {
     );
   }
 
-  // Show persona selection screen if not yet selected (happens right after login)
+  // Show onboarding screen first if not completed (happens right after login for new users)
+  if (!hasCompletedOnboarding) {
+    return (
+      <SafeAreaProvider>
+        <View style={[styles.appRoot, { backgroundColor: theme.backgroundColor }]}>
+          <OnboardingScreen
+            onComplete={handleCompleteOnboarding}
+          />
+        </View>
+      </SafeAreaProvider>
+    );
+  }
+
+  // Show persona selection screen if onboarding is done but persona not yet selected
   if (!hasSelectedPersona) {
     return (
       <SafeAreaProvider>
