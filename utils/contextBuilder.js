@@ -23,7 +23,10 @@ function buildSystemPrompt(retrievedChunks, isGlobalChat, currentNoteTitle = nul
   } else {
     // Sanitize note title to prevent injection
     const sanitizedTitle = sanitizeForPrompt(currentNoteTitle || 'this note', { maxLength: 100 });
-    basePrompt = `You are a helpful assistant helping the user reflect on their note titled "${sanitizedTitle.sanitized}". You also have access to their other related notes for context.`;
+    
+    // Check validation status before using title (consistent with chunk handling)
+    const titleToUse = sanitizedTitle.isValid ? sanitizedTitle.sanitized : 'this note';
+    basePrompt = `You are a helpful assistant helping the user reflect on their note titled "${titleToUse}". You also have access to their other related notes for context.`;
   }
   
   // Add retrieved context if available

@@ -5,7 +5,8 @@
 
 import { callLLM } from './llmService';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { findArtworkImage } from './artworkImageService';
+import { findArtworkImage, validateImageUrl } from './artworkImageService';
+import { validateContentAppropriate } from '../utils/contentValidation';
 
 const SUGGESTIONS_CACHE_KEY = '@suggestions_cache';
 const CACHE_DURATION = 24 * 60 * 60 * 1000; // 24 hours
@@ -85,8 +86,9 @@ export async function generateSuggestions(notes, options = {}) {
       };
     }
 
-    // Fetch images for artwork suggestions (will convert to quotes if image fails)
-    // Pass notesSummary for relevance checking and fallback quote generation
+    // Fetch images for artwork suggestions
+    // Note: If image isn't found on Wikipedia, artwork will automatically convert to a quote
+    // This allows the AI to suggest relevant artworks without worrying about availability
     suggestions = await enrichSuggestionsWithImages(suggestions, notesSummary);
 
     // Final validation: ensure we have at least one suggestion
@@ -148,11 +150,12 @@ CRITICAL CONTENT GUIDELINES:
 - Focus on universally meaningful themes: growth, reflection, connection, beauty, wisdom
 
 ARTWORK REQUIREMENTS:
-- ONLY suggest artworks that are WELL-DOCUMENTED and FAMOUS (e.g., "Starry Night" by Vincent van Gogh, "The Scream" by Edvard Munch, "The Great Wave off Kanagawa" by Hokusai)
+- Suggest artworks that DEEPLY RESONATE with the user's journal themes and emotions
+- Prioritize relevance and meaningful connection over fame
 - Include the EXACT title and FULL artist name (first and last name)
-- Artworks MUST be findable on Wikipedia - if unsure, use a quote instead
-- Prefer artworks from major museums or art history canon
-- Avoid obscure or contemporary works that may not have documentation
+- Choose artworks from art history that have Wikipedia pages (classical to modern)
+- Focus on how the artwork's themes, mood, colors, or subject matter connect to their entries
+- Be thoughtful and specific about WHY this artwork resonates with their experience
 
 IMPORTANT: Return suggestions in JSON format. Each suggestion should have this exact structure:
 
@@ -166,9 +169,11 @@ IMPORTANT: Return suggestions in JSON format. Each suggestion should have this e
 }
 
 DISTRIBUTION GUIDELINES:
-- Prefer quotes and insights over artwork (they're more reliable)
-- Only suggest 1 artwork maximum per set of recommendations
-- If unsure whether an artwork is famous enough, use a quote instead
+- PRIORITIZE artwork suggestions - aim for at least 2 artworks per set of recommendations
+- Artworks create more engaging and visual experiences for users
+- Choose artworks based on RELEVANCE to the user's emotions and themes, not just fame
+- It's better to suggest a meaningful lesser-known artwork than a famous but irrelevant one
+- If the artwork image isn't found, we'll automatically convert it to a quote - so be bold with your suggestions
 
 For artworks, use full names (e.g., "Vincent van Gogh" not "Van Gogh", "Claude Monet" not "Monet")
 For quotes, include the full quote as the title and the author with their profession/context if relevant
@@ -198,26 +203,15 @@ function prepareNotesSummary(notes) {
 }
 
 /**
- * Content filter - check for inappropriate content
- */
-function containsInappropriateContent(text) {
-  const inappropriatePatterns = [
-    /\b(explicit|nsfw|nude|naked|sexual|violence|blood|gore|death|kill|murder|weapon|gun|bomb)\b/i,
-    /\b(hate|racist|sexist|offensive|disturbing|graphic|brutal)\b/i,
-    /\b(drug|alcohol|addiction|abuse)\b/i,
-  ];
-  
-  return inappropriatePatterns.some(pattern => pattern.test(text));
-}
-
-/**
  * Validate suggestion content for appropriateness
+ * Uses centralized content validation utility
  */
 function validateSuggestionContent(suggestion) {
   const textToCheck = `${suggestion.title} ${suggestion.description} ${suggestion.author || ''}`;
+  const validation = validateContentAppropriate(textToCheck);
   
-  if (containsInappropriateContent(textToCheck)) {
-    console.warn('[SuggestionService] Filtered inappropriate suggestion:', suggestion.title);
+  if (!validation.isValid) {
+    console.warn('[SuggestionService] Filtered inappropriate suggestion:', suggestion.title, validation.issues);
     return false;
   }
   
@@ -319,6 +313,27 @@ Return ONLY a JSON object with this structure:
       
       const parsed = JSON.parse(jsonStr);
       
+      // Validate that all required fields exist
+      if (!parsed || typeof parsed !== 'object') {
+        console.warn('[SuggestionService] Parsed result is not an object');
+        return createSimpleFallbackQuote(artworkSuggestion);
+      }
+      
+      if (!parsed.quote || typeof parsed.quote !== 'string') {
+        console.warn('[SuggestionService] Missing or invalid "quote" field in AI response');
+        return createSimpleFallbackQuote(artworkSuggestion);
+      }
+      
+      if (!parsed.author || typeof parsed.author !== 'string') {
+        console.warn('[SuggestionService] Missing or invalid "author" field in AI response');
+        return createSimpleFallbackQuote(artworkSuggestion);
+      }
+      
+      if (!parsed.description || typeof parsed.description !== 'string') {
+        console.warn('[SuggestionService] Missing or invalid "description" field in AI response');
+        return createSimpleFallbackQuote(artworkSuggestion);
+      }
+      
       return {
         type: 'quote',
         title: parsed.quote,
@@ -353,62 +368,26 @@ function createSimpleFallbackQuote(artworkSuggestion) {
   };
 }
 
-/**
- * Validate image URL to ensure it's actually an image
- */
-async function validateImageUrl(imageUrl) {
-  try {
-    // Basic check for image file extensions
-    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
-    const urlLower = imageUrl.toLowerCase();
-    
-    // Check if URL contains image extension or is from known image provider
-    const hasImageExtension = imageExtensions.some(ext => urlLower.includes(ext));
-    const isFromImageProvider = urlLower.includes('wikimedia') || urlLower.includes('wikipedia');
-    
-    if (!hasImageExtension && !isFromImageProvider) {
-      console.warn('[SuggestionService] Image URL appears invalid:', imageUrl);
-      return false;
-    }
-    
-    return true;
-  } catch (error) {
-    return false;
-  }
-}
 
 /**
  * Check if Wikipedia page description is relevant to user's notes
+ * Made more lenient to allow more artwork suggestions through
  */
 function isDescriptionRelevantToNotes(description, suggestionDescription) {
-  // Extract key themes from the suggestion description (what AI said resonated)
-  const suggestionLower = suggestionDescription.toLowerCase();
+  // If we have any substantial description from Wikipedia, trust the AI's suggestion
+  // The AI already matched the artwork to the user's themes
+  const hasSubstantialDescription = description.length > 50; // Very lenient threshold
+  
+  // Also check if it's clearly about an artwork (not a disambiguation page or random page)
+  const artworkIndicators = ['painting', 'artwork', 'artist', 'created', 'depicts', 'canvas', 'museum', 'portrait', 'sculpture', 'art'];
   const descriptionLower = description.toLowerCase();
+  const hasArtworkContext = artworkIndicators.some(term => descriptionLower.includes(term));
   
-  // Look for thematic overlap
-  const thematicWords = [
-    'solitude', 'isolation', 'loneliness', 'alone', 'contemplation', 'reflection',
-    'nature', 'landscape', 'peace', 'calm', 'tranquility', 'serenity',
-    'emotion', 'feeling', 'mood', 'expression', 'passion', 'intensity',
-    'struggle', 'conflict', 'tension', 'anxiety', 'stress', 'worry',
-    'joy', 'happiness', 'celebration', 'triumph', 'success', 'victory',
-    'change', 'transformation', 'growth', 'journey', 'progress', 'evolution',
-    'darkness', 'light', 'shadow', 'night', 'day', 'dawn', 'dusk',
-    'dream', 'imagination', 'fantasy', 'surreal', 'abstract', 'symbolism',
-  ];
+  console.log(`[SuggestionService] Relevance check: description length: ${description.length}, has artwork context: ${hasArtworkContext}`);
   
-  // Count thematic matches
-  const matches = thematicWords.filter(word => 
-    suggestionLower.includes(word) && descriptionLower.includes(word)
-  );
-  
-  // Consider relevant if we have at least 2 thematic matches or if description is substantial
-  const hasThematicMatch = matches.length >= 2;
-  const hasSubstantialDescription = description.length > 100; // Detailed pages are usually about the artwork
-  
-  console.log(`[SuggestionService] Relevance check: ${matches.length} thematic matches, description length: ${description.length}`);
-  
-  return hasThematicMatch || hasSubstantialDescription;
+  // Accept if it has artwork context OR if it has a substantial description
+  // This is much more lenient than before
+  return hasArtworkContext || hasSubstantialDescription;
 }
 
 /**
@@ -424,30 +403,30 @@ async function enrichSuggestionsWithImages(suggestions, notesSummary) {
       }
 
       try {
-        console.log(`[SuggestionService] Fetching and validating image for: ${suggestion.title}`);
+        console.log(`[SuggestionService] 🎨 Fetching image for: "${suggestion.title}" by ${suggestion.author}`);
         const imageResult = await findArtworkImage(suggestion.title, suggestion.author || '');
 
         if (imageResult.success && imageResult.imageUrl && imageResult.metadata) {
           // Validate image URL format
-          const isValidImage = await validateImageUrl(imageResult.imageUrl);
+          const isValidImage = validateImageUrl(imageResult.imageUrl);
           
           if (!isValidImage) {
-            console.log(`[SuggestionService] Invalid image URL format, generating fallback quote`);
+            console.log(`[SuggestionService] ⚠️ Invalid image URL format, converting to quote`);
             return await generateFallbackQuote(suggestion, notesSummary);
           }
           
-          // Check if Wikipedia page description is relevant to user's notes
+          // Check if Wikipedia page description is relevant
           const isRelevant = isDescriptionRelevantToNotes(
             imageResult.metadata.description,
             suggestion.description
           );
           
           if (!isRelevant) {
-            console.log(`[SuggestionService] Artwork not relevant to user's notes, generating fallback quote`);
+            console.log(`[SuggestionService] ⚠️ Wikipedia page not about artwork, converting to quote`);
             return await generateFallbackQuote(suggestion, notesSummary);
           }
           
-          console.log(`[SuggestionService] ✓ Found valid and relevant image for ${suggestion.title}`);
+          console.log(`[SuggestionService] ✅ Successfully found image for "${suggestion.title}"`);
           return {
             ...suggestion,
             imageUri: imageResult.imageUrl,
@@ -455,11 +434,11 @@ async function enrichSuggestionsWithImages(suggestions, notesSummary) {
             imageAttribution: imageResult.source,
           };
         } else {
-          console.log(`[SuggestionService] Image fetch failed, generating fallback quote`);
+          console.log(`[SuggestionService] ⚠️ No Wikipedia image found for "${suggestion.title}", converting to quote`);
           return await generateFallbackQuote(suggestion, notesSummary);
         }
       } catch (error) {
-        console.error(`[SuggestionService] Error processing artwork ${suggestion.title}:`, error);
+        console.error(`[SuggestionService] ❌ Error processing "${suggestion.title}":`, error.message);
         return await generateFallbackQuote(suggestion, notesSummary);
       }
     })

@@ -5,6 +5,42 @@
  */
 
 /**
+ * Validate image URL to ensure it's actually an image
+ * Made more lenient to allow more artwork images through
+ */
+export function validateImageUrl(imageUrl) {
+  try {
+    // Handle null/undefined
+    if (!imageUrl || typeof imageUrl !== 'string') {
+      return false;
+    }
+    
+    // Be very lenient - trust Wikipedia/Wikimedia sources
+    const urlLower = imageUrl.toLowerCase();
+    
+    // Accept if it's from Wikipedia/Wikimedia (our trusted source)
+    const isFromTrustedSource = urlLower.includes('wikimedia') || urlLower.includes('wikipedia');
+    
+    if (isFromTrustedSource) {
+      return true;
+    }
+    
+    // For other sources, check for image extensions
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
+    const hasImageExtension = imageExtensions.some(ext => urlLower.includes(ext));
+    
+    if (!hasImageExtension) {
+      console.warn('[ArtworkImageService] Image URL appears invalid:', imageUrl);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+/**
  * Validate if Wikipedia page is about the artwork (not the artist or something else)
  */
 function isRelevantArtworkPage(pageTitle, pageSnippet, artworkTitle, artistName) {
@@ -91,14 +127,29 @@ export async function fetchArtworkFromWikipedia(artworkTitle, artistName) {
     const imageResponse = await fetch(imageUrl);
     const imageData = await imageResponse.json();
 
+    // Validate API response structure
+    if (!imageData.query || !imageData.query.pages) {
+      console.log(`[ArtworkImageService] Malformed Wikipedia API response`);
+      return { success: false, error: 'Malformed Wikipedia API response' };
+    }
+
     const page = imageData.query.pages[pageId];
     
-    // Validate that we actually got an image
+    // Validate that page exists and has an image
+    if (!page) {
+      console.log(`[ArtworkImageService] Page data not found in API response`);
+      return { success: false, error: 'Page data not found' };
+    }
+    
     if (page.thumbnail && page.thumbnail.source) {
       const imageUrl = page.thumbnail.source;
       
-      // Additional validation: check if it's actually an image URL
-      if (!imageUrl.match(/\.(jpg|jpeg|png|gif|webp)/i) && !imageUrl.includes('wikimedia')) {
+      // Be lenient with Wikipedia/Wikimedia URLs - they're trusted sources
+      // Only reject if it's clearly not an image
+      const isWikimediaUrl = imageUrl.includes('wikimedia') || imageUrl.includes('wikipedia');
+      const hasImageExtension = imageUrl.match(/\.(jpg|jpeg|png|gif|webp|svg)/i);
+      
+      if (!isWikimediaUrl && !hasImageExtension) {
         console.log(`[ArtworkImageService] Invalid image URL format: ${imageUrl}`);
         return { success: false, error: 'Invalid image URL format' };
       }
@@ -131,7 +182,9 @@ export async function fetchArtworkFromWikipedia(artworkTitle, artistName) {
       };
     }
 
-    console.log(`[ArtworkImageService] No image on Wikipedia page: ${page.title}`);
+    // Safe logging with fallback
+    const pageTitle = page && page.title ? page.title : artworkTitle;
+    console.log(`[ArtworkImageService] No image on Wikipedia page: ${pageTitle}`);
     return { success: false, error: 'No image on Wikipedia page' };
 
   } catch (error) {
@@ -182,5 +235,6 @@ export async function findArtworkImage(artworkTitle, artistName) {
 export default {
   fetchArtworkFromWikipedia,
   findArtworkImage,
+  validateImageUrl,
 };
 
