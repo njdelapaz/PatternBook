@@ -4,12 +4,12 @@
  * Features: logging, retry logic, rate limiting, usage tracking
  */
 
-import { OPENAI_API_KEY } from '@env';
 import rateLimiter from './llmRateLimiter';
 import logger from './llmLogger';
+import { getBackendUrl } from '../utils/backendConfig';
 
-// OpenAI API Configuration
-const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
+// Backend API Configuration (dynamically resolved)
+const getBackendApiUrl = () => `${getBackendUrl()}/api/openai/chat`;
 
 // Supported models
 const SUPPORTED_MODELS = [
@@ -102,11 +102,13 @@ async function makeOpenAIRequest(model, messages, temperature, maxTokens, otherO
   const startTime = Date.now();
 
   try {
-    const response = await fetch(OPENAI_API_URL, {
+    const backendUrl = getBackendApiUrl();
+    console.log('[LLM] Calling backend at:', backendUrl);
+
+    const response = await fetch(backendUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
       },
       body: JSON.stringify({
         model,
@@ -296,17 +298,7 @@ async function makeRequestWithRetry(requestId, model, messages, temperature, max
  * }
  */
 async function callLLM({ model = 'gpt-5', messages, temperature, maxTokens, ...otherOptions }) {
-  // Validate API key
-  if (!OPENAI_API_KEY || !OPENAI_API_KEY.trim()) {
-    return {
-      success: false,
-      error: {
-        type: ErrorTypes.AUTH,
-        message: 'OpenAI API key is not configured. Please set OPENAI_API_KEY in your .env file.',
-        details: null,
-      },
-    };
-  }
+  // Note: Backend URL is auto-detected, no manual configuration needed
 
   // Validate model
   if (!SUPPORTED_MODELS.includes(model)) {

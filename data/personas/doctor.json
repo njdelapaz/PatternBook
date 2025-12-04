@@ -1,0 +1,272 @@
+[
+  {
+    "id": "persona_doctor_1_1733270400000",
+    "title": "Complex Diagnostic Case",
+    "content": "Interesting case today - patient presented with fatigue, unintentional weight loss, and night sweats over past two months. Classic B symptoms. Differential diagnosis: lymphoma, tuberculosis, or chronic infection. Ordered comprehensive workup including CBC, metabolic panel, chest X-ray, and inflammatory markers. Medicine is detective work - gathering clues, ruling out possibilities, narrowing down to the truth.",
+    "createdAt": 1730678400000,
+    "updatedAt": 1730678400000,
+    "pinned": true,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_doctor_2_1733270400000",
+    "title": "Antibiotic Stewardship Training",
+    "content": "Attended grand rounds on antibiotic stewardship today. Overprescribing is contributing to antimicrobial resistance - a global health crisis. Need to be more judicious with prescriptions. Not every viral upper respiratory infection needs antibiotics. Educating patients about why antibiotics won't help their cold is part of the job. Short-term patient satisfaction vs long-term public health.",
+    "createdAt": 1730764800000,
+    "updatedAt": 1730764800000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_doctor_3_1733270400000",
+    "title": "Early Cancer Detection Success",
+    "content": "Patient consultation reminded me why I became a doctor. Routine colonoscopy screening caught early-stage colorectal cancer in a 52-year-old with no symptoms. Completely treatable at this stage. Early detection saves lives. This is why we push preventive care even when patients feel fine. Prevention is truly the best medicine. Will monitor her closely through treatment.",
+    "createdAt": 1730851200000,
+    "updatedAt": 1730851200000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_doctor_4_1733270400000",
+    "title": "Morbidity and Mortality Conference",
+    "content": "Medical error discussion at M&M rounds was sobering. Even with the best intentions and training, mistakes happen. A delayed diagnosis that could have been caught earlier. The key is learning from errors, improving systems to prevent recurrence, and maintaining a culture where people feel safe reporting near-misses. Medicine is a practice, not a perfection.",
+    "createdAt": 1730937600000,
+    "updatedAt": 1730937600000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_doctor_5_1733270400000",
+    "title": "New Diabetes Treatment Options",
+    "content": "Reading recent studies on diabetes management. GLP-1 receptor agonists like semaglutide are game-changing. Significant weight loss plus improved glycemic control, and cardiovascular benefits. Hopeful for patients who have struggled with type 2 diabetes for years. Medicine evolves quickly - what we couldn't offer five years ago is now standard of care. Staying current is essential.",
+    "createdAt": 1731024000000,
+    "updatedAt": 1731024000000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_doctor_6_1733270400000",
+    "title": "Goals of Care Conversation",
+    "content": "End-of-life care is the hardest part of medicine. Had an honest conversation today about prognosis and goals of care with a patient with metastatic cancer. Do they want aggressive treatment or focus on quality of life? These conversations require courage, compassion, and cultural sensitivity. Palliative care should be integrated earlier. It's not about giving up - it's about living well with serious illness.",
+    "createdAt": 1731110400000,
+    "updatedAt": 1731110400000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_doctor_7_1733270400000",
+    "title": "Telemedicine Benefits and Limits",
+    "content": "Telemedicine has revolutionized access to care, especially for rural and mobility-limited patients. Patients can consult from home, reducing transportation barriers and time off work. But physical exams still matter. Can't palpate an abdomen or listen to heart sounds through a screen. Need to balance convenience with thoroughness. Some visits are perfect for telemedicine, others require in-person evaluation.",
+    "createdAt": 1731196800000,
+    "updatedAt": 1731196800000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_doctor_8_1733270400000",
+    "title": "Physician Burnout Reality",
+    "content": "Burnout is real in healthcare. Long hours, administrative burden, electronic health record documentation taking twice as long as patient care, moral injury from insurance denials and system failures. Need to prioritize self-care - exercise, sleep, time with family, hobbies outside medicine. Can't help others if running on empty. The system needs to change, but in the meantime, protecting my own wellbeing is not selfish.",
+    "createdAt": 1731283200000,
+    "updatedAt": 1731283200000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_doctor_9_1733270400000",
+    "title": "Patient Education Importance",
+    "content": "Patient education is crucial. Explaining diagnoses in plain language, not medical jargon. What is hypertension, why does it matter, how do medications work, what are side effects? When patients understand their condition and treatment rationale, they're more likely to adhere to recommendations. I'm not just treating disease, I'm partnering with patients in their health journey. Shared decision-making.",
+    "createdAt": 1731369600000,
+    "updatedAt": 1731369600000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_doctor_10_1733270400000",
+    "title": "Cardiovascular Disease Prevention",
+    "content": "Continuing medical education on cardiovascular disease prevention. Statins, lifestyle modifications, blood pressure control, smoking cessation - the fundamentals still work. Most heart attacks and strokes are preventable. An ounce of prevention is worth a pound of cure. Spending more time on preventive counseling in routine visits. Small changes compound over years into massive health impacts.",
+    "createdAt": 1731456000000,
+    "updatedAt": 1731456000000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_doctor_11_1733270400000",
+    "title": "Differential Diagnosis Practice",
+    "content": "Teaching medical students about differential diagnosis today. Start broad, then narrow. Patient with chest pain - is it cardiac, pulmonary, GI, musculoskeletal, or anxiety? Use history, physical exam, and targeted testing to rule out life-threatening causes first. Always consider the worst-case scenario but don't anchor on it. Common things are common, but rare things happen. Keep an open mind.",
+    "createdAt": 1731542400000,
+    "updatedAt": 1731542400000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_doctor_12_1733270400000",
+    "title": "Mental Health in Primary Care",
+    "content": "Screening for depression and anxiety in primary care is essential. Mental health and physical health are inseparable. Patient came in for back pain, but real issue is untreated depression manifesting as somatic symptoms. Had a conversation about therapy and medication options. Reducing stigma starts in the exam room. Mental illness is illness. Would treat diabetes without hesitation - should treat depression the same way.",
+    "createdAt": 1731628800000,
+    "updatedAt": 1731628800000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_doctor_13_1733270400000",
+    "title": "Interpreting Lab Results Context",
+    "content": "Lab values don't exist in a vacuum. A slightly elevated creatinine in a bodybuilder is different than in an elderly person. Always interpret results in clinical context. What's abnormal for one person might be normal for another. Treat the patient, not the number. Also, explain results to patients - empower them with understanding rather than just saying 'everything looks fine.'",
+    "createdAt": 1731715200000,
+    "updatedAt": 1731715200000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_doctor_14_1733270400000",
+    "title": "Pediatric Care Special Considerations",
+    "content": "Pediatric medicine requires a different approach. Kids aren't just small adults - different physiology, different drug dosing, different communication style. Building rapport with both child and parent. Making the exam room less scary. Explaining vaccinations and addressing parental concerns with empathy and evidence. The relationship with pediatric patients often spans years, watching them grow. It's rewarding work.",
+    "createdAt": 1731801600000,
+    "updatedAt": 1731801600000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_doctor_15_1733270400000",
+    "title": "Chronic Pain Management",
+    "content": "Chronic pain management is challenging. Balancing pain relief with opioid epidemic concerns. Not everyone seeking pain medication is drug-seeking, but diversion and addiction are real problems. Multimodal approach: physical therapy, NSAIDs, gabapentinoids, behavioral strategies, careful opioid use when appropriate. Pain contracts, monitoring prescription databases. It's a delicate balance requiring compassion and vigilance.",
+    "createdAt": 1731888000000,
+    "updatedAt": 1731888000000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_doctor_16_1733270400000",
+    "title": "Informed Consent Process",
+    "content": "Informed consent is not just signing a form - it's a conversation. Explaining the procedure, why it's needed, what are the risks and benefits, what are alternatives including doing nothing. Patient should understand enough to make an autonomous decision. Can't just go through motions. This is respect for patient autonomy, a fundamental medical ethics principle. Documentation is important, but real understanding matters more.",
+    "createdAt": 1731974400000,
+    "updatedAt": 1731974400000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_doctor_17_1733270400000",
+    "title": "Cultural Competence in Medicine",
+    "content": "Cultural competence affects health outcomes. Different cultures have different beliefs about health, illness, death, and medical authority. What's appropriate eye contact in one culture is disrespectful in another. Using interpreters for non-English speakers is not optional - it's required for informed consent and accurate history. Approaching each patient with cultural humility and curiosity improves care and trust.",
+    "createdAt": 1732060800000,
+    "updatedAt": 1732060800000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_doctor_18_1733270400000",
+    "title": "Evidence-Based Medicine Practice",
+    "content": "Evidence-based medicine means integrating clinical expertise, patient values, and best available research. Not every study is created equal - understanding levels of evidence is crucial. Randomized controlled trials carry more weight than case reports. But also, absence of evidence isn't evidence of absence. Sometimes we have to make decisions with imperfect information. The art and science of medicine.",
+    "createdAt": 1732147200000,
+    "updatedAt": 1732147200000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_doctor_19_1733270400000",
+    "title": "Geriatric Assessment Approach",
+    "content": "Geriatric medicine requires holistic assessment. Not just treating individual diseases, but considering functional status, cognitive function, fall risk, polypharmacy, social support. An elderly patient's ability to live independently matters as much as their lab values. Deprescribing can be as important as prescribing. Sometimes less medicine is better medicine, especially when risks outweigh benefits in frail elderly.",
+    "createdAt": 1732233600000,
+    "updatedAt": 1732233600000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_doctor_20_1733270400000",
+    "title": "Managing Medical Uncertainty",
+    "content": "One of the hardest things about medicine is uncertainty. Not every symptom has a clear diagnosis. Sometimes test results are equivocal. Sometimes we watch and wait rather than intervene. Patients want definitive answers, and it's uncomfortable to say 'I don't know yet.' But honesty builds trust. Uncertainty is inherent to medicine. The key is communicating it clearly and having a plan for follow-up.",
+    "createdAt": 1732320000000,
+    "updatedAt": 1732320000000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_doctor_21_1733270400000",
+    "title": "Vaccination Advocacy",
+    "content": "Vaccines are one of medicine's greatest achievements. Smallpox eradicated, polio nearly gone, measles preventable. Yet vaccine hesitancy is rising. Had a conversation with hesitant parent today. Listened to concerns, provided evidence, acknowledged past medical mistakes that bred distrust, explained how vaccines work and are tested. Most vaccine-hesitant parents aren't anti-science - they're scared and need information and empathy.",
+    "createdAt": 1732406400000,
+    "updatedAt": 1732406400000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_doctor_22_1733270400000",
+    "title": "Work-Life Balance Struggles",
+    "content": "Struggling with work-life balance. Medicine is demanding - patients don't stop being sick on evenings and weekends. But my family needs me too. Missing my kid's school play for the third time this year hurts. Need to set better boundaries. Patient care is important, but I can't be a good doctor if I'm a burnt-out, resentful one. Working on being present when I'm home, not just physically but mentally.",
+    "createdAt": 1732492800000,
+    "updatedAt": 1732492800000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_doctor_23_1733270400000",
+    "title": "Social Determinants of Health",
+    "content": "ZIP code is more predictive of health than genetic code. Social determinants - poverty, housing instability, food insecurity, lack of education, systemic racism - impact health more than most medical interventions. Can prescribe medications all day, but if patient can't afford them or doesn't have stable housing, outcomes won't improve. Medicine can't solve social problems, but we can advocate and connect patients with resources.",
+    "createdAt": 1732579200000,
+    "updatedAt": 1732579200000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_doctor_24_1733270400000",
+    "title": "Rapid Response Team Call",
+    "content": "Rapid response called for decompensating patient on medical floor today. Quick assessment, stabilization, decision to transfer to ICU. These high-pressure situations require clear thinking, effective communication, and teamwork. Every second counts. Afterward, adrenaline crash. It's emotionally exhausting. But the patient is stable now. This is why we train - for moments when it matters most.",
+    "createdAt": 1732665600000,
+    "updatedAt": 1732665600000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_doctor_25_1733270400000",
+    "title": "Breaking Bad News to Patients",
+    "content": "Breaking bad news is a skill that takes practice. SPIKES protocol helps - Setting, Perception, Invitation, Knowledge, Emotions, Strategy. Find private space, assess what patient already knows, ask if they want to hear results, deliver information clearly, acknowledge emotions, make a plan. The words matter, but so does tone, body language, silence. Sitting down shows you're not rushing. Sometimes the most powerful thing is just being present.",
+    "createdAt": 1732752000000,
+    "updatedAt": 1732752000000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_doctor_26_1733270400000",
+    "title": "Continuing Medical Education",
+    "content": "Attended CME conference on latest developments in cardiology. Medicine evolves constantly - new drugs, new procedures, new guidelines. What I learned in medical school 15 years ago is partially outdated. Lifelong learning is not optional. Staying current protects patients and keeps practice evidence-based. Reading journals, attending conferences, learning from colleagues. The day you think you know everything is the day you become dangerous.",
+    "createdAt": 1732838400000,
+    "updatedAt": 1732838400000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_doctor_27_1733270400000",
+    "title": "Electronic Health Records Burden",
+    "content": "EHR documentation is taking over medicine. Spending more time typing than talking to patients. Click boxes, required fields, billing codes - it's become about satisfying the computer instead of serving the patient. Understand the need for records and billing, but current system is broken. Leads to burnout and reduces face-to-face time. We need better systems that support rather than hinder patient care.",
+    "createdAt": 1732924800000,
+    "updatedAt": 1732924800000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_doctor_28_1733270400000",
+    "title": "Medical Team Collaboration",
+    "content": "Medicine is a team sport. Nurses, pharmacists, social workers, physical therapists, respiratory therapists - everyone brings expertise. The hierarchical model where doctor dictates and others obey is outdated and dangerous. Best patient care happens when the team communicates openly, respects each other's knowledge, and works collaboratively. Nurse caught a medication error I was about to make. Grateful for good teams.",
+    "createdAt": 1733011200000,
+    "updatedAt": 1733011200000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_doctor_29_1733270400000",
+    "title": "Health Disparities Awareness",
+    "content": "Reflecting on health disparities. Racial and ethnic minorities have worse health outcomes for most conditions. It's not biology - it's systemic racism in healthcare and society. Black women have higher maternal mortality. Black patients' pain is undertreated. Implicit bias affects all of us. Need to be aware of my own biases, advocate for equitable care, and work toward systemic change. Every patient deserves the same quality of care.",
+    "createdAt": 1733097600000,
+    "updatedAt": 1733097600000,
+    "pinned": false,
+    "titleGenerated": true
+  },
+  {
+    "id": "persona_doctor_30_1733270400000",
+    "title": "Why I Chose Medicine",
+    "content": "Reflecting on why I chose medicine. It's hard work - long training, long hours, emotional toll, administrative burden. But when a patient thanks you for helping them through a difficult diagnosis, when you catch something that saves a life, when you build a relationship over years - that's why. The privilege of being present during people's most vulnerable moments, the intellectual challenge, the opportunity to make a difference. Despite everything, I'd choose this path again.",
+    "createdAt": 1733184000000,
+    "updatedAt": 1733184000000,
+    "pinned": false,
+    "titleGenerated": true
+  }
+]

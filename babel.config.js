@@ -13,7 +13,7 @@ module.exports = function(api) {
           moduleName: '@env',
           path: '.env',
           blacklist: null,
-          whitelist: ['OPENAI_API_KEY', 'DEEPGRAM_API_KEY'],
+          whitelist: ['OPENAI_API_KEY', 'DEEPGRAM_API_KEY', 'BACKEND_URL'],
           safe: false,
           allowUndefined: true
         }]
@@ -29,7 +29,7 @@ module.exports = function(api) {
         moduleName: '@env',
         path: '.env',
         blacklist: null,
-        whitelist: ['OPENAI_API_KEY', 'DEEPGRAM_API_KEY'],
+        whitelist: ['OPENAI_API_KEY', 'DEEPGRAM_API_KEY', 'BACKEND_URL'],
         safe: false,
         allowUndefined: true
       }]

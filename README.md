@@ -10,23 +10,30 @@ A minimalist, AI-assisted journaling app built with Expo (React Native). Capture
    - **Option A**: Expo Go app on your phone (easiest - works for voice!)
    - **Option B**: iOS Simulator or Android emulator
 
-2. Install deps
+2. **Setup Backend Server** (Required for AI features)
+
+   The app now uses a secure backend server to handle API keys. See [Backend Setup](#backend-server-setup) below.
+
+3. Install frontend dependencies
    ```bash
    npm install
    ```
 
-3. Install native modules used for voice-to-text
+4. Install native modules used for voice-to-text
    ```bash
    npx expo install expo-audio expo-file-system
    ```
 
-4. Configure environment
-   - Copy `env-example.txt` to `.env` and set your key
-   ```
-   OPENAI_API_KEY=sk-...
+5. Configure frontend environment
+   - Create `.env` file in the root directory:
+   ```env
+   # Backend Server URL
+   BACKEND_URL=http://localhost:3000
+   # For Android emulator, use: http://10.0.2.2:3000
+   # For physical device, use your computer's IP: http://192.168.1.X:3000
    ```
 
-5. Run
+6. Run
 
    **Option A: Expo Go (recommended - fastest)**
    ```bash
@@ -46,6 +53,82 @@ A minimalist, AI-assisted journaling app built with Expo (React Native). Capture
    npm run web
    # Voice recording not supported on web
    ```
+
+## Backend Server Setup
+
+**IMPORTANT**: The app now requires a backend server to securely handle API keys and proxy AI API calls.
+
+### Quick Backend Setup
+
+1. Navigate to the backend directory:
+   ```bash
+   cd backend
+   ```
+
+2. Install backend dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Create `.env` file in the `backend/` directory:
+   ```env
+   OPENAI_API_KEY=sk-proj-your-key-here
+   DEEPGRAM_API_KEY=your-deepgram-key-here
+   PORT=3000
+   NODE_ENV=development
+   ```
+
+4. Start the backend server:
+   ```bash
+   npm start
+   # For development with auto-restart: npm run dev
+   ```
+
+5. Verify the server is running:
+   ```bash
+   curl http://localhost:3000/health
+   ```
+
+### Backend Architecture
+
+The backend server provides:
+- **Secure API Key Storage**: API keys are stored server-side only, never exposed to the client
+- **OpenAI Proxy** (`POST /api/openai/chat`): Handles chat completions for note conversations
+- **Deepgram Proxy** (`POST /api/deepgram/transcribe`): Handles voice-to-text transcription
+- **Rate Limiting**: Prevents API abuse (50 requests/minute, suitable for 5 concurrent users)
+- **Error Handling**: Comprehensive error messages and retry logic
+
+### Running Backend and Frontend Together
+
+You'll need **two terminal windows**:
+
+**Terminal 1 - Backend Server:**
+```bash
+cd backend
+npm start
+```
+
+**Terminal 2 - Expo App:**
+```bash
+# From project root
+npm start
+```
+
+### Backend URL Configuration
+
+The frontend needs to know where to find the backend server. Update the `BACKEND_URL` in your root `.env` file based on how you're testing:
+
+| Platform | BACKEND_URL |
+|----------|-------------|
+| iOS Simulator | `http://localhost:3000` |
+| Android Emulator | `http://10.0.2.2:3000` |
+| Physical Device (same WiFi) | `http://YOUR_COMPUTER_IP:3000` |
+
+**To find your computer's IP:**
+- Windows: `ipconfig` (look for IPv4 Address)
+- macOS/Linux: `ifconfig` or `ip addr` (look for inet)
+
+For complete backend documentation, see [backend/README.md](backend/README.md).
 
 ## Current capabilities
 
@@ -85,26 +168,38 @@ A minimalist, AI-assisted journaling app built with Expo (React Native). Capture
 
 ## Env and API
 
-- The app uses `OPENAI_API_KEY` from `.env` (see `babel.config.js` for dotenv config)
-- Summary model: `gpt-4o-mini` (tweak temperature/max tokens as needed)
- - Transcription: `whisper-1` via `/v1/audio/transcriptions`
+**Architecture Update**: The app now uses a backend server architecture for security.
 
-### Transcription providers and fallback
-
-You can choose a provider and a fallback in case of quota issues:
-
-```
-# Default is openai
-TRANSCRIBE_PROVIDER=openai
-
-# Keys (set what you use)
-OPENAI_API_KEY=sk-...
-DEEPGRAM_API_KEY=dg_...
+### Frontend Environment Variables (Root `.env`)
+```env
+# Backend Server URL - REQUIRED
+BACKEND_URL=http://localhost:3000
 ```
 
-Behavior:
-- If `TRANSCRIBE_PROVIDER=openai`: the app tries OpenAI first; on quota errors, it will try Deepgram if `DEEPGRAM_API_KEY` is set.
-- If `TRANSCRIBE_PROVIDER=deepgram`: the app tries Deepgram first; if it fails and `OPENAI_API_KEY` is set, it falls back to OpenAI.
+### Backend Environment Variables (`backend/.env`)
+```env
+# API Keys - stored securely on the server
+OPENAI_API_KEY=sk-proj-your-key-here
+DEEPGRAM_API_KEY=your-deepgram-key-here
+CLAUDE_API_KEY=your-claude-key-here  # Optional
+
+# Server Configuration
+PORT=3000
+NODE_ENV=development
+```
+
+### AI Models and Services
+
+The backend proxies requests to:
+- **OpenAI** (`gpt-4o-mini`): Chat completions, note summaries, conversations
+- **Deepgram** (Nova-2): Voice-to-text transcription
+
+### Security Benefits
+
+- **No API keys in client code**: All keys are stored in the backend `.env` file
+- **Rate limiting**: Prevents abuse of your API keys
+- **Centralized error handling**: Better error messages and retry logic
+- **Usage tracking**: Server-side logging of API usage
 
 ### Permissions
 
@@ -114,18 +209,29 @@ Behavior:
 ## Testing voice-to-text
 
 ### Setup
-1. Create `.env` file with your OpenAI key
-   ```
-   OPENAI_API_KEY=sk-proj-...
+
+1. **Start the backend server first** (see [Backend Server Setup](#backend-server-setup))
+   ```bash
+   cd backend
+   npm install
+   # Create backend/.env with your API keys
+   npm start
    ```
 
-2. Install dependencies
+2. **Configure frontend** - Create root `.env` file:
+   ```env
+   BACKEND_URL=http://localhost:3000
+   # Adjust based on your testing platform (see table above)
+   ```
+
+3. Install frontend dependencies
    ```bash
+   # From project root
    npm install
    npx expo install expo-audio expo-file-system
    ```
 
-3. Run on your device
+4. Run on your device
 
    **Easiest: Expo Go app** (no build required)
    ```bash
@@ -173,11 +279,11 @@ Behavior:
 3. ✅ Expect: Alert shows "Failed to transcribe recording"
 4. Disable airplane mode → retry should work
 
-**Missing API key**
-1. Remove `OPENAI_API_KEY` from `.env`
-2. Restart app (`r` in metro, or rebuild)
-3. Try recording
-4. ✅ Expect: Alert "Missing OPENAI_API_KEY. Set it in .env..."
+**Backend server not running**
+1. Stop the backend server (Ctrl+C in backend terminal)
+2. Try recording or using chat
+3. ✅ Expect: Alert shows "Cannot connect to server"
+4. Restart backend → retry should work
 
 **Recording state UI**
 1. Press and hold mic
@@ -192,6 +298,13 @@ Behavior:
 3. ✅ Expect: Transcription appends after existing content with a newline separator
 
 ### Troubleshooting
+
+**Backend connection issues**
+- Ensure backend server is running in a separate terminal: `cd backend && npm start`
+- Check backend health: `curl http://localhost:3000/health`
+- Verify `BACKEND_URL` in root `.env` matches your platform (see table in Backend Setup section)
+- For physical devices: Ensure phone and computer are on the same WiFi network
+- Try the backend URL in your phone's browser to test connectivity
 
 **"Microphone permission is required"**
 - iOS: Go to Settings → Privacy & Security → Microphone → Enable for Expo Go or your app
@@ -220,15 +333,25 @@ Behavior:
 ### Quick smoke test script
 
 ```bash
-# 1. Setup
-echo "OPENAI_API_KEY=sk-proj-YOUR_KEY_HERE" > .env
+# 1. Backend Setup
+cd backend
+npm install
+echo "OPENAI_API_KEY=sk-proj-YOUR_KEY_HERE
+DEEPGRAM_API_KEY=YOUR_DEEPGRAM_KEY
+PORT=3000
+NODE_ENV=development" > .env
+npm start &  # Start in background
+cd ..
+
+# 2. Frontend Setup
+echo "BACKEND_URL=http://localhost:3000" > .env
 npm install
 npx expo install expo-audio expo-file-system
 
-# 2. Run on iOS
+# 3. Run on iOS
 npm run ios
 
-# 3. In the app:
+# 4. In the app:
 # - Create a note
 # - Press/hold mic, say "Testing one two three"
 # - Release and verify text appears
