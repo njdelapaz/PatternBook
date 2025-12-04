@@ -6,6 +6,7 @@
 
 import { estimateTokens, estimateMessagesTokens, truncateToTokens, truncateMessages, TOKEN_BUDGETS } from './tokenEstimator';
 import { getChunkPreview } from './noteChunking';
+import { buildSafePrompt, sanitizeForPrompt } from './contentValidation';
 
 /**
  * Build system prompt for chat with retrieval context
@@ -15,28 +16,50 @@ import { getChunkPreview } from './noteChunking';
  * @returns {string} System prompt
  */
 function buildSystemPrompt(retrievedChunks, isGlobalChat, currentNoteTitle = null) {
-  let prompt = '';
+  let basePrompt = '';
   
   if (isGlobalChat) {
-    prompt = `You are a helpful assistant with access to the user's notes. Help them reflect on their thoughts, find connections, and explore ideas across their notes.`;
+    basePrompt = `You are a helpful assistant with access to the user's notes. Help them reflect on their thoughts, find connections, and explore ideas across their notes.`;
   } else {
-    prompt = `You are a helpful assistant helping the user reflect on their note titled "${currentNoteTitle}". You also have access to their other related notes for context.`;
+    // Sanitize note title to prevent injection
+    const sanitizedTitle = sanitizeForPrompt(currentNoteTitle || 'this note', { maxLength: 100 });
+    
+    // Check validation status before using title (consistent with chunk handling)
+    const titleToUse = sanitizedTitle.isValid ? sanitizedTitle.sanitized : 'this note';
+    basePrompt = `You are a helpful assistant helping the user reflect on their note titled "${titleToUse}". You also have access to their other related notes for context.`;
   }
   
   // Add retrieved context if available
   if (retrievedChunks && retrievedChunks.length > 0) {
-    prompt += `\n\nHere are some relevant notes for context:\n\n`;
+    basePrompt += `\n\nHere are some relevant notes for context:\n\n`;
     
     for (const chunk of retrievedChunks) {
-      prompt += `[Note: "${chunk.noteTitle}"]\n${chunk.text}\n\n`;
+      // Sanitize chunk content
+      const sanitizedTitle = sanitizeForPrompt(chunk.noteTitle || 'Untitled', { maxLength: 100 });
+      const sanitizedText = sanitizeForPrompt(chunk.text || '', { maxLength: 500 });
+      
+      if (sanitizedTitle.isValid && sanitizedText.isValid) {
+        basePrompt += `[Note: "${sanitizedTitle.sanitized}"]\n${sanitizedText.sanitized}\n\n`;
+      }
     }
     
-    prompt += `Use these notes to provide helpful insights and connections.`;
+    basePrompt += `Use these notes to provide helpful insights and connections.`;
   } else {
-    prompt += `\n\nHelp them explore their thoughts, ask thoughtful questions, and provide insights.`;
+    basePrompt += `\n\nHelp them explore their thoughts, ask thoughtful questions, and provide insights.`;
   }
   
-  return prompt;
+  // Apply safety guidelines
+  const safePrompt = buildSafePrompt(basePrompt, {
+    includeContentGuidelines: true,
+    includeToneGuidelines: true,
+    customGuidelines: [
+      'Be specific and reference actual content from the notes',
+      'Ask thoughtful questions to encourage reflection',
+      'Avoid making assumptions about the user\'s feelings or intentions',
+    ],
+  });
+  
+  return safePrompt;
 }
 
 /**

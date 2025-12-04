@@ -6,6 +6,7 @@
 import suggestionService from '../services/suggestionService';
 
 // Fallback suggestions (used if AI generation fails)
+// These are safe, universally appropriate, and meaningful
 const FALLBACK_SUGGESTIONS = [
   {
     type: 'quote',
@@ -20,6 +21,20 @@ const FALLBACK_SUGGESTIONS = [
     subtitle: 'Reflection prompt',
     badge: 'Picked for you',
     description: 'As you write more, you might start to see recurring themes or emotions. What patterns are emerging in your entries? What do they tell you about what matters most?',
+  },
+  {
+    type: 'quote',
+    title: '"Write what should not be forgotten."',
+    author: 'Isabel Allende',
+    badge: 'Picked for you',
+    description: 'Your journal is a keeper of memories, experiences, and insights. Each entry preserves something meaningful that might otherwise slip away.',
+  },
+  {
+    type: 'insight',
+    title: 'What would you tell your past self?',
+    subtitle: 'Reflection prompt',
+    badge: 'Picked for you',
+    description: 'Looking back on your recent entries, what wisdom or perspective have you gained? What advice would you offer to yourself from a week or month ago?',
   },
 ];
 
