@@ -9,7 +9,8 @@ import {
   Modal,
   Pressable,
   Image,
-  ActivityIndicator
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -52,7 +53,8 @@ export default function MainScreen({
   onNavigateToRecentlyDeleted, 
   onNavigateToVoiceRecord, 
   onNavigateToTextEditor,
-  onNavigateToGlobalChat 
+  onNavigateToGlobalChat,
+  onLogout
 }) {
   const insets = useSafeAreaInsets();
   const { isLandscape } = useDeviceType();
@@ -271,28 +273,6 @@ export default function MainScreen({
             </View>
           )}
 
-          {/* Sort Options - Only show when there are notes */}
-          {notes.length > 0 && (
-            <View style={styles.sortContainer}>
-              <TouchableOpacity
-                style={[styles.sortButton, sortBy === 'updated' && styles.sortButtonActive]}
-                onPress={() => onSortChange('updated')}
-              >
-                <Text style={[styles.sortText, { color: sortBy === 'updated' ? theme.accentColor : theme.secondaryTextColor }]}>
-                  Recently Updated
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.sortButton, sortBy === 'old-to-new' && styles.sortButtonActive]}
-                onPress={() => onSortChange('old-to-new')}
-              >
-                <Text style={[styles.sortText, { color: sortBy === 'old-to-new' ? theme.accentColor : theme.secondaryTextColor }]}>
-                  Oldest First
-                </Text>
-              </TouchableOpacity>
-            </View>
-          )}
-
           {/* AI Suggestions Bar */}
           {(suggestionsLoading || suggestions.length > 0) && (
             <View style={styles.suggestionsWrapper}>
@@ -371,6 +351,28 @@ export default function MainScreen({
             </View>
           )}
 
+          {/* Sort Options - Only show when there are notes */}
+          {notes.length > 0 && (
+            <View style={styles.sortContainer}>
+              <TouchableOpacity
+                style={[styles.sortButton, sortBy === 'updated' && styles.sortButtonActive]}
+                onPress={() => onSortChange('updated')}
+              >
+                <Text style={[styles.sortText, { color: sortBy === 'updated' ? theme.accentColor : theme.secondaryTextColor }]}>
+                  Recently Updated
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.sortButton, sortBy === 'old-to-new' && styles.sortButtonActive]}
+                onPress={() => onSortChange('old-to-new')}
+              >
+                <Text style={[styles.sortText, { color: sortBy === 'old-to-new' ? theme.accentColor : theme.secondaryTextColor }]}>
+                  Oldest First
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+
           {/* Empty State or Notes List */}
           {notes.length === 0 ? (
             <View style={styles.emptyState}>
@@ -415,8 +417,8 @@ export default function MainScreen({
                     <Text style={[styles.noteTime, { color: theme.secondaryTextColor }]}>
                       {sortBy === 'old-to-new' ? `Created ${formatDateOnly(note.createdAt)}` : `Updated ${formatDateOnly(note.updatedAt)}`}
                     </Text>
-                    <Text style={[styles.noteText, { color: theme.textColor }]}>{note.title}</Text>
-                    <Text style={[styles.notePreview, { color: theme.secondaryTextColor, fontFamily: 'Times New Roman' }]} numberOfLines={2}>
+                    <Text style={[styles.noteText, { color: theme.accentColor }]}>{note.title}</Text>
+                    <Text style={[styles.notePreview, { color: theme.textColor, fontFamily: 'Times New Roman' }]} numberOfLines={2}>
                       {getPreviewText(note.content)}
                     </Text>
                   </TouchableOpacity>
@@ -439,8 +441,8 @@ export default function MainScreen({
                     <Text style={[styles.noteTime, { color: theme.secondaryTextColor }]}>
                       {sortBy === 'old-to-new' ? `Created ${formatDateOnly(note.createdAt)}` : `Updated ${formatDateOnly(note.updatedAt)}`}
                     </Text>
-                    <Text style={[styles.noteText, { color: theme.textColor }]}>{note.title}</Text>
-                    <Text style={[styles.notePreview, { color: theme.secondaryTextColor, fontFamily: 'Times New Roman' }]} numberOfLines={2}>
+                    <Text style={[styles.noteText, { color: theme.accentColor }]}>{note.title}</Text>
+                    <Text style={[styles.notePreview, { color: theme.textColor, fontFamily: 'Times New Roman' }]} numberOfLines={2}>
                       {getPreviewText(note.content)}
                     </Text>
                   </TouchableOpacity>
@@ -463,8 +465,8 @@ export default function MainScreen({
                     <Text style={[styles.noteTime, { color: theme.secondaryTextColor }]}>
                       {sortBy === 'old-to-new' ? `Created ${formatDateOnly(note.createdAt)}` : `Updated ${formatDateOnly(note.updatedAt)}`}
                     </Text>
-                    <Text style={[styles.noteText, { color: theme.textColor }]}>{note.title}</Text>
-                    <Text style={[styles.notePreview, { color: theme.secondaryTextColor, fontFamily: 'Times New Roman' }]} numberOfLines={2}>
+                    <Text style={[styles.noteText, { color: theme.accentColor }]}>{note.title}</Text>
+                    <Text style={[styles.notePreview, { color: theme.textColor, fontFamily: 'Times New Roman' }]} numberOfLines={2}>
                       {getPreviewText(note.content)}
                     </Text>
                   </TouchableOpacity>
@@ -487,8 +489,8 @@ export default function MainScreen({
                     <Text style={[styles.noteTime, { color: theme.secondaryTextColor }]}>
                       {sortBy === 'old-to-new' ? `Created ${formatDateOnly(note.createdAt)}` : `Updated ${formatDateOnly(note.updatedAt)}`}
                     </Text>
-                    <Text style={[styles.noteText, { color: theme.textColor }]}>{note.title}</Text>
-                    <Text style={[styles.notePreview, { color: theme.secondaryTextColor, fontFamily: 'Times New Roman' }]} numberOfLines={2}>
+                    <Text style={[styles.noteText, { color: theme.accentColor }]}>{note.title}</Text>
+                    <Text style={[styles.notePreview, { color: theme.textColor, fontFamily: 'Times New Roman' }]} numberOfLines={2}>
                       {getPreviewText(note.content)}
                     </Text>
                   </TouchableOpacity>
@@ -547,6 +549,23 @@ export default function MainScreen({
                 }}
               >
                 <Text style={[styles.menuItemText, { color: theme.textColor }]}>Settings</Text>
+              </TouchableOpacity>
+              <View style={[styles.menuDivider, { backgroundColor: theme.borderColor }]} />
+              <TouchableOpacity
+                style={styles.menuItem}
+                onPress={() => {
+                  onToggleThreeDotsMenu();
+                  Alert.alert(
+                    'Log Out',
+                    'Are you sure you want to log out?',
+                    [
+                      { text: 'Cancel', style: 'cancel' },
+                      { text: 'Log Out', style: 'destructive', onPress: onLogout }
+                    ]
+                  );
+                }}
+              >
+                <Text style={[styles.menuItemText, { color: '#ff3b30' }]}>Log Out</Text>
               </TouchableOpacity>
             </View>
           </Pressable>
@@ -635,13 +654,6 @@ export default function MainScreen({
 
           {/* Bottom navigation */}
           <View style={styles.suggestionModalNav}>
-            <TouchableOpacity style={styles.suggestionModalNavButton}>
-              <Text style={styles.suggestionModalNavIcon}>💬</Text>
-              <Text style={styles.suggestionModalNavText}>Chat</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.suggestionModalNavButton}>
-              <Text style={styles.suggestionModalNavIcon}>⋯</Text>
-            </TouchableOpacity>
             <TouchableOpacity
               style={[styles.suggestionModalNavButton, currentSuggestionIndex === 0 && styles.suggestionModalNavButtonDisabled]}
               onPress={handleNavigateLeft}
@@ -755,7 +767,7 @@ const styles = StyleSheet.create({
   },
   sortContainer: {
     flexDirection: 'row',
-    marginBottom: 24,
+    marginBottom: 4,
     gap: 16,
   },
   sortButton: {
@@ -829,7 +841,7 @@ const styles = StyleSheet.create({
   },
 
   notesList: {
-    marginTop: 10,
+    marginTop: 3,
   },
   dateSection: {
     marginBottom: 24,
@@ -868,9 +880,8 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
   },
   notePreview: {
-    fontSize: 14,
-    lineHeight: 20,
-    opacity: 0.65,
+    fontSize: 15,
+    lineHeight: 21,
     fontWeight: '400',
   },
   bottomNav: {
@@ -918,6 +929,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
   },
+  menuDivider: {
+    height: 1,
+    marginVertical: 4,
+  },
   actionButton: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -954,7 +969,7 @@ const styles = StyleSheet.create({
 
   // Suggestions Bar
   suggestionsWrapper: {
-    marginBottom: 16,
+    marginBottom: 32,
   },
   suggestionsHeader: {
     flexDirection: 'row',
@@ -1224,8 +1239,9 @@ const styles = StyleSheet.create({
   },
   suggestionModalNav: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
+    justifyContent: 'center',
     alignItems: 'center',
+    gap: 32,
     paddingVertical: 20,
     paddingHorizontal: 24,
     borderTopWidth: 0.5,
@@ -1246,9 +1262,5 @@ const styles = StyleSheet.create({
   },
   suggestionModalNavIconDisabled: {
     opacity: 0.3,
-  },
-  suggestionModalNavText: {
-    fontSize: 12,
-    color: '#FFFFFF',
   },
 });

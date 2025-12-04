@@ -108,7 +108,7 @@ export async function verifyUser(email, password) {
       return { success: false, error: 'Invalid email or password' };
     }
     
-    // Return user without password hash
+    // Return user without password hash, but include all other properties (like hasCompletedOnboarding)
     const { passwordHash: _, ...userWithoutPassword } = user;
     return { success: true, user: userWithoutPassword };
   } catch (error) {
@@ -167,6 +167,58 @@ export async function getAllUsers() {
   } catch (error) {
     console.error('Error getting all users:', error);
     return [];
+  }
+}
+
+/**
+ * Mark onboarding as completed for a user
+ * @param {string} userId - User ID
+ * @returns {Promise<void>}
+ */
+export async function setOnboardingCompleted(userId) {
+  try {
+    const users = await loadUsers();
+    const userIndex = users.findIndex(u => u.id === userId);
+    if (userIndex !== -1) {
+      // Set the flag explicitly to true
+      users[userIndex].hasCompletedOnboarding = true;
+      await saveUsers(users);
+      
+      // Also update current user if it's the same user
+      const currentUser = await getCurrentUser();
+      if (currentUser && currentUser.id === userId) {
+        currentUser.hasCompletedOnboarding = true;
+        await setCurrentUser(currentUser);
+      }
+    } else {
+      console.warn(`User with id ${userId} not found when setting onboarding completed`);
+    }
+  } catch (error) {
+    console.error('Error setting onboarding completed:', error);
+  }
+}
+
+/**
+ * Check if user has completed onboarding
+ * @param {string} userId - User ID
+ * @returns {Promise<boolean>} True if onboarding is completed
+ */
+export async function hasCompletedOnboarding(userId) {
+  try {
+    if (!userId) {
+      console.warn('hasCompletedOnboarding called without userId');
+      return false;
+    }
+    const users = await loadUsers();
+    const user = users.find(u => u.id === userId);
+    if (!user) {
+      return false;
+    }
+    // Explicitly check if the flag is set to true
+    return user.hasCompletedOnboarding === true;
+  } catch (error) {
+    console.error('Error checking onboarding status:', error);
+    return false;
   }
 }
 

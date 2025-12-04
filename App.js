@@ -11,6 +11,7 @@ import { useDeviceType } from './hooks/useDeviceType';
 // Import Screen Components
 import LoginScreen from './screens/LoginScreen';
 import EmailLoginScreen from './screens/EmailLoginScreen';
+import OnboardingScreen from './screens/OnboardingScreen';
 import PersonaSelectionScreen from './screens/PersonaSelectionScreen';
 import MainScreen from './screens/MainScreen';
 import SettingsScreen from './screens/SettingsScreen';
@@ -28,7 +29,7 @@ import { MarkdownText, formatTimestamp } from './utils/components';
 import { buildChatMessages, getDefaultChatModel, getDefaultMaxTokens, getDefaultTemperature } from './utils/chat';
 import { loadChatHistory, saveChatHistory } from './utils/chatStorage';
 import { buildNoteChatContext } from './utils/contextBuilder';
-import { getCurrentUser, setCurrentUser, clearCurrentUser } from './utils/userStorage';
+import { getCurrentUser, setCurrentUser, clearCurrentUser, setOnboardingCompleted, hasCompletedOnboarding as checkOnboardingStatus } from './utils/userStorage';
 
 // Import LLM Service
 import { callLLM } from './services/llmService';
@@ -774,7 +775,13 @@ export default function App() {
     async function checkUserSession() {
       const user = await getCurrentUser();
       if (user) {
-        setCurrentUserState(user);
+        // Check if user has completed onboarding (persisted independently from note count)
+        const completed = await checkOnboardingStatus(user.id);
+        
+        // Ensure the user object includes the onboarding flag
+        const userWithOnboarding = { ...user, hasCompletedOnboarding: completed };
+        
+        setCurrentUserState(userWithOnboarding);
         setIsLoggedIn(true);
 
         // Check if user has selected persona
@@ -1052,30 +1059,41 @@ export default function App() {
   };
 
   const handleLogin = async (user) => {
-    // Save user session
-    await setCurrentUser(user);
-    setCurrentUserState(user);
-    setIsLoggedIn(true);
+    try {
+      // Check if user has completed onboarding first (before saving user session)
+      const completed = await checkOnboardingStatus(user.id);
+      
+      // Ensure the user object includes the onboarding flag
+      const userWithOnboarding = { ...user, hasCompletedOnboarding: completed };
+      
+      // Save user session with onboarding flag
+      await setCurrentUser(userWithOnboarding);
+      setCurrentUserState(userWithOnboarding);
+      setIsLoggedIn(true);
 
-    // Check if user has already selected persona
-    const personaSelected = await AsyncStorage.getItem(`${PERSONA_SELECTED_KEY}_${user.id}`);
-    setHasSelectedPersona(personaSelected === 'true');
+      // Check if user has already selected persona
+      const personaSelected = await AsyncStorage.getItem(`${PERSONA_SELECTED_KEY}_${user.id}`);
+      setHasSelectedPersona(personaSelected === 'true');
 
-    // Load user's notes
-    const userNotes = await loadNotes(user.id);
-    setNotes(userNotes);
+      // Load user's notes
+      const userNotes = await loadNotes(user.id);
+      setNotes(userNotes);
 
-    // If user has existing notes, mark persona as complete (migration)
-    if (userNotes.length > 0 && personaSelected !== 'true') {
-      await AsyncStorage.setItem(`${PERSONA_SELECTED_KEY}_${user.id}`, 'true');
-      setHasSelectedPersona(true);
+      // If user has existing notes, mark persona as complete (migration)
+      if (userNotes.length > 0 && personaSelected !== 'true') {
+        await AsyncStorage.setItem(`${PERSONA_SELECTED_KEY}_${user.id}`, 'true');
+        setHasSelectedPersona(true);
+      }
+
+      // Update settings with user's email
+      setSettings(prev => ({
+        ...prev,
+        profile: { name: user.email }
+      }));
+    } catch (error) {
+      console.error('Error in handleLogin:', error);
+      throw error; // Re-throw so EmailLoginScreen can handle it
     }
-
-    // Update settings with user's email
-    setSettings(prev => ({
-      ...prev,
-      profile: { name: user.email }
-    }));
   };
 
   const handleNavigateToEmail = () => {
@@ -1084,6 +1102,20 @@ export default function App() {
 
   const handleBackFromEmail = () => {
     setShowEmailLogin(false);
+  };
+
+  const handleCompleteOnboarding = async () => {
+    // Persist onboarding completion for the current user
+    const user = currentUser || await getCurrentUser();
+    if (user && user.id) {
+      await setOnboardingCompleted(user.id);
+      // Update the current user state to reflect the change
+      // Use 'user' instead of 'currentUser' to handle cases where currentUser was null
+      const updatedUser = { ...user, hasCompletedOnboarding: true };
+      setCurrentUserState(updatedUser);
+    } else {
+      console.error('Cannot save onboarding completion: user not found');
+    }
   };
 
   const handleSelectPersona = async (personaType) => {
@@ -1142,6 +1174,9 @@ export default function App() {
 
   const theme = isDarkMode ? darkTheme : lightTheme;
 
+  // Derive onboarding completion status from current user
+  const hasCompletedOnboarding = currentUser?.hasCompletedOnboarding === true;
+
   // Show login screen if not logged in
   if (!isLoggedIn) {
     return (
@@ -1163,7 +1198,20 @@ export default function App() {
     );
   }
 
-  // Show persona selection screen if not yet selected (happens right after login)
+  // Show onboarding screen first if not completed (happens right after login for new users)
+  if (!hasCompletedOnboarding) {
+    return (
+      <SafeAreaProvider>
+        <View style={[styles.appRoot, { backgroundColor: theme.backgroundColor }]}>
+          <OnboardingScreen
+            onComplete={handleCompleteOnboarding}
+          />
+        </View>
+      </SafeAreaProvider>
+    );
+  }
+
+  // Show persona selection screen if onboarding is done but persona not yet selected
   if (!hasSelectedPersona) {
     return (
       <SafeAreaProvider>
@@ -1203,6 +1251,7 @@ export default function App() {
             onNavigateToVoiceRecord={handleNavigateToVoiceRecord}
             onNavigateToTextEditor={handleNavigateToTextEditor}
             onNavigateToGlobalChat={handleNavigateToGlobalChat}
+            onLogout={handleLogout}
           />
         ) : currentScreen === 'editor' ? (
           <NoteEditor
@@ -1234,7 +1283,6 @@ export default function App() {
             onClearAllData={handleClearAllData}
             onNavigateToAdminPanel={handleNavigateToAdminPanel}
             onImportTestNotes={handleImportTestNotes}
-            onLogout={handleLogout}
           />
         ) : currentScreen === 'recently-deleted' ? (
           <RecentlyDeletedScreen

@@ -5,7 +5,6 @@ import {
   View,
   TouchableOpacity,
   Image,
-  ScrollView,
   SafeAreaView,
   Dimensions
 } from 'react-native';
@@ -65,19 +64,8 @@ export default function OnboardingScreen({ onComplete }) {
         recipient: "Nathan",
         text: "\nWhat a week!\nHere's what\nstood out...",
       },
-      hasToggle: true,
-      toggleLabel: "Notify me when my letter is ready",
       hasButton: true,
       buttonText: "Continue →",
-    },
-    {
-      title: "Want a daily reminder to make it a habit?",
-      subtitle: "Patternbook works best when you brain dump regularly",
-      timeSelector: "8:00 AM",
-      disclaimer: "You'll only get a daily reminder if you haven't created any notes or chats recently",
-      hasButtons: true,
-      primaryButtonText: "Turn on daily reminder",
-      secondaryButtonText: "Maybe later",
     }
   ];
 
@@ -88,6 +76,12 @@ export default function OnboardingScreen({ onComplete }) {
       setCurrentSlide(currentSlide + 1);
     } else {
       onComplete();
+    }
+  };
+
+  const handleBack = () => {
+    if (currentSlide > 0) {
+      setCurrentSlide(currentSlide - 1);
     }
   };
 
@@ -104,12 +98,9 @@ export default function OnboardingScreen({ onComplete }) {
   return (
     <SafeAreaView style={styles.container}>
       <StatusBar style="light" />
-      <ScrollView
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-      >
+      <View style={[styles.scrollContent, currentSlide === 3 && styles.scrollContentCompact]}>
         {/* Title */}
-        <Text style={styles.title}>{currentSlideData.title}</Text>
+        <Text style={[styles.title, currentSlide === 3 && styles.titleCompact]}>{currentSlideData.title}</Text>
 
         {/* Slide 1: Welcome with image */}
         {currentSlide === 0 && (
@@ -199,26 +190,6 @@ export default function OnboardingScreen({ onComplete }) {
                 </View>
               </View>
             </View>
-
-            <View style={styles.toggleContainer}>
-              <View style={styles.toggleSwitch}>
-                <View style={[styles.toggleTrack, styles.toggleOn]}>
-                  <View style={[styles.toggleThumb, styles.toggleThumbOn]} />
-                </View>
-              </View>
-              <Text style={styles.toggleText}>{currentSlideData.toggleLabel}</Text>
-            </View>
-          </View>
-        )}
-
-        {/* Slide 6: Daily reminder */}
-        {currentSlide === 5 && (
-          <View style={styles.contentContainer}>
-            <Text style={styles.subtitle}>{currentSlideData.subtitle}</Text>
-            <View style={styles.timeButton}>
-              <Text style={styles.timeText}>{currentSlideData.timeSelector}</Text>
-            </View>
-            <Text style={styles.disclaimer}>{currentSlideData.disclaimer}</Text>
           </View>
         )}
 
@@ -234,18 +205,29 @@ export default function OnboardingScreen({ onComplete }) {
             />
           ))}
         </View>
-      </ScrollView>
+      </View>
 
       {/* Action buttons */}
       <View style={styles.buttonContainer}>
         {currentSlideData.hasButton && (
-          <TouchableOpacity
-            style={styles.continueButton}
-            onPress={handleContinue}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.continueButtonText}>{currentSlideData.buttonText}</Text>
-          </TouchableOpacity>
+          <View style={styles.navigationButtons}>
+            {currentSlide > 0 && (
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={handleBack}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.backButtonText}>← Back</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity
+              style={[styles.continueButton, currentSlide === 0 && styles.continueButtonFullWidth]}
+              onPress={handleContinue}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.continueButtonText}>{currentSlideData.buttonText}</Text>
+            </TouchableOpacity>
+          </View>
         )}
 
         {currentSlideData.hasButtons && (
@@ -277,10 +259,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#000000',
   },
   scrollContent: {
-    flexGrow: 1,
+    flex: 1,
     paddingHorizontal: 24,
     paddingTop: 100,
     paddingBottom: 20,
+  },
+  scrollContentCompact: {
+    paddingTop: 60,
   },
   title: {
     fontSize: 28,
@@ -288,6 +273,9 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     marginBottom: 30,
     lineHeight: 36,
+  },
+  titleCompact: {
+    marginBottom: 20,
   },
   subtitle: {
     fontSize: 16,
@@ -382,7 +370,8 @@ const styles = StyleSheet.create({
 
   // Slide 4: Related content
   relatedContentContainer: {
-    gap: 16,
+    gap: 12,
+    marginBottom: 20,
   },
   relatedImage: {
     width: 160,
@@ -419,11 +408,11 @@ const styles = StyleSheet.create({
   // Slide 5: Letter
   letterContainer: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginTop: 40,
   },
   envelope: {
-    width: 200,
-    height: 240,
+    width: 280,
+    height: 336,
     backgroundColor: '#E8E4D9',
     borderRadius: 8,
     position: 'relative',
@@ -431,10 +420,10 @@ const styles = StyleSheet.create({
   },
   envelopeFlap: {
     position: 'absolute',
-    top: -40,
+    top: -56,
     left: 0,
     right: 0,
-    height: 80,
+    height: 112,
     backgroundColor: '#D4CFC0',
     borderTopLeftRadius: 8,
     borderTopRightRadius: 8,
@@ -442,24 +431,24 @@ const styles = StyleSheet.create({
   },
   letter: {
     position: 'absolute',
-    top: 20,
-    left: 20,
-    right: 20,
+    top: 28,
+    left: 28,
+    right: 28,
     backgroundColor: '#FFFFFF',
-    padding: 16,
+    padding: 22,
     borderRadius: 4,
   },
   letterText: {
-    fontSize: 13,
+    fontSize: 15,
     color: '#333333',
-    lineHeight: 20,
+    lineHeight: 22,
   },
   stamp: {
     position: 'absolute',
-    top: 20,
-    right: 20,
-    width: 40,
-    height: 40,
+    top: 28,
+    right: 28,
+    width: 56,
+    height: 56,
     backgroundColor: '#8B6B47',
     borderRadius: 4,
     borderWidth: 2,
@@ -469,61 +458,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   stampIcon: {
-    fontSize: 20,
-  },
-  toggleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  toggleSwitch: {
-    width: 50,
-    height: 28,
-  },
-  toggleTrack: {
-    width: '100%',
-    height: '100%',
-    borderRadius: 14,
-    backgroundColor: '#3a3a3a',
-    justifyContent: 'center',
-    paddingHorizontal: 2,
-  },
-  toggleOn: {
-    backgroundColor: '#7FB069',
-  },
-  toggleThumb: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
-  },
-  toggleThumbOn: {
-    alignSelf: 'flex-end',
-  },
-  toggleText: {
-    fontSize: 15,
-    color: '#FFFFFF',
-    flex: 1,
-  },
-
-  // Slide 6: Daily reminder
-  timeButton: {
-    backgroundColor: '#2a2a2a',
-    borderRadius: 8,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    alignSelf: 'flex-start',
-    marginBottom: 24,
-  },
-  timeText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  disclaimer: {
-    fontSize: 14,
-    color: '#999999',
-    lineHeight: 20,
+    fontSize: 28,
   },
 
   // Indicators
@@ -551,11 +486,33 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
     gap: 16,
   },
+  navigationButtons: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  backButton: {
+    backgroundColor: '#2a2a2a',
+    borderRadius: 12,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    alignItems: 'center',
+    flex: 1,
+  },
+  backButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#FFFFFF',
+  },
   continueButton: {
     backgroundColor: '#C8D5B9',
     borderRadius: 12,
     paddingVertical: 16,
+    paddingHorizontal: 24,
     alignItems: 'center',
+    flex: 1,
+  },
+  continueButtonFullWidth: {
+    flex: 1,
   },
   continueButtonText: {
     fontSize: 16,
