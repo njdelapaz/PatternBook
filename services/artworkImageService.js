@@ -4,6 +4,8 @@
  * No API key required - completely free!
  */
 
+import { scanForInappropriateKeywords } from '../utils/contentValidation';
+
 /**
  * Validate image URL to ensure it's actually an image
  * Made more lenient to allow more artwork images through
@@ -40,6 +42,7 @@ export function validateImageUrl(imageUrl) {
   }
 }
 
+
 /**
  * Validate if Wikipedia page is about the artwork (not the artist or something else)
  */
@@ -63,23 +66,40 @@ function isRelevantArtworkPage(pageTitle, pageSnippet, artworkTitle, artistName)
 }
 
 /**
- * Extract page description/extract from Wikipedia
+ * Extract page description/extract from Wikipedia with full content
  */
 async function fetchPageMetadata(pageId) {
   try {
+    // Get both intro extract and full page content
     const metadataUrl = `https://en.wikipedia.org/w/api.php?action=query&pageids=${pageId}&prop=extracts|categories&exintro=true&explaintext=true&format=json&origin=*`;
-    const response = await fetch(metadataUrl);
-    const data = await response.json();
+    const fullContentUrl = `https://en.wikipedia.org/w/api.php?action=query&pageids=${pageId}&prop=extracts&explaintext=true&format=json&origin=*`;
     
-    const page = data.query.pages[pageId];
+    const [metadataResponse, fullContentResponse] = await Promise.all([
+      fetch(metadataUrl),
+      fetch(fullContentUrl),
+    ]);
+    
+    const metadataData = await metadataResponse.json();
+    const fullContentData = await fullContentResponse.json();
+    
+    // Safely access pages - API may return empty/invalid response
+    const metadataPage = metadataData?.query?.pages?.[pageId];
+    const fullContentPage = fullContentData?.query?.pages?.[pageId];
+    
+    // Return early with empty data if pages are missing
+    if (!metadataPage || !fullContentPage) {
+      console.warn('[ArtworkImageService] Missing page data in API response for pageId:', pageId);
+      return { extract: '', fullContent: '', categories: [] };
+    }
     
     return {
-      extract: page.extract || '',
-      categories: (page.categories || []).map(cat => cat.title.toLowerCase()),
+      extract: metadataPage.extract || '',
+      fullContent: fullContentPage.extract || '',
+      categories: (metadataPage.categories || []).map(cat => cat.title.toLowerCase()),
     };
   } catch (error) {
     console.error('[ArtworkImageService] Error fetching metadata:', error);
-    return { extract: '', categories: [] };
+    return { extract: '', fullContent: '', categories: [] };
   }
 }
 
@@ -157,15 +177,35 @@ export async function fetchArtworkFromWikipedia(artworkTitle, artistName) {
       // Fetch page metadata (description and categories)
       const metadata = await fetchPageMetadata(pageId);
       
-      // Check categories for red flags
-      const inappropriateCategories = ['explicit', 'controversial', 'disputed', 'nsfw', 'adult'];
+      // Check categories for red flags (including artistic nudity)
+      const inappropriateCategories = ['explicit', 'controversial', 'disputed', 'nsfw', 'adult', 'nude', 'nudity', 'erotic'];
       const hasInappropriateCategory = metadata.categories.some(cat => 
         inappropriateCategories.some(flag => cat.includes(flag))
       );
       
       if (hasInappropriateCategory) {
-        console.log(`[ArtworkImageService] Page has inappropriate categories`);
+        console.log(`[ArtworkImageService] Page has inappropriate categories:`, metadata.categories.filter(cat => 
+          inappropriateCategories.some(flag => cat.includes(flag))
+        ));
         return { success: false, error: 'Inappropriate content category' };
+      }
+      
+      // Check description/extract for inappropriate content
+      const extractScan = scanForInappropriateKeywords(metadata.extract);
+      if (extractScan.hasIssues) {
+        console.log(`[ArtworkImageService] Page extract contains inappropriate content:`, extractScan.issues);
+        return { success: false, error: 'Artwork contains inappropriate content in description' };
+      }
+      
+      // Check FULL Wikipedia page content for inappropriate keywords
+      const fullContentScan = scanForInappropriateKeywords(metadata.fullContent);
+      if (fullContentScan.hasIssues) {
+        console.log(`[ArtworkImageService] Full page content contains inappropriate material:`, fullContentScan.issues.slice(0, 3));
+        return { 
+          success: false, 
+          error: 'Artwork contains inappropriate content',
+          details: fullContentScan.issues.map(i => i.keyword).slice(0, 3).join(', '),
+        };
       }
       
       console.log(`[ArtworkImageService] ✓ Found valid image for ${artworkTitle}`);

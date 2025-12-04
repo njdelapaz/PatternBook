@@ -5,13 +5,27 @@
  */
 
 /**
- * Patterns for detecting inappropriate content
+ * Centralized inappropriate keywords for content scanning
+ * Used across text validation and Wikipedia content scanning
+ */
+export const INAPPROPRIATE_KEYWORDS = {
+  nudity: ['nude', 'naked', 'nudity', 'unclothed', 'undressed', 'bare bodies', 'nudes', 'topless', 'unclad'],
+  sexual: ['erotic', 'sexual', 'sexuality', 'sensual', 'intimate scene', 'provocative', 'seductive'],
+  violence: ['violent', 'violence', 'battle scene', 'war scene', 'execution', 'killing', 'murder', 'blood', 'gore', 'crucifixion', 'martyrdom'],
+  disturbing: ['grotesque', 'macabre', 'disturbing', 'horror', 'nightmare', 'corpse', 'dead bodies', 'torture', 'skull', 'death'],
+  hate: ['hate', 'racist', 'racism', 'sexist', 'sexism', 'homophobic', 'xenophobic', 'bigot', 'slur'],
+  substances: ['drug', 'drugs', 'cocaine', 'heroin', 'meth', 'overdose', 'addiction'],
+};
+
+/**
+ * Patterns for detecting inappropriate content (regex-based)
+ * Built from INAPPROPRIATE_KEYWORDS for backward compatibility
  */
 const INAPPROPRIATE_PATTERNS = {
-  explicit: /\b(explicit|nsfw|nude|naked|sexual|pornographic|xxx)\b/i,
-  violence: /\b(violence|violent|blood|gore|death|kill|killing|murder|weapon|gun|guns|bomb|bombing|terrorist|massacre)\b/i,
+  explicit: /\b(explicit|nsfw|nude|naked|sexual|pornographic|xxx|nudity|unclothed|undressed|erotic)\b/i,
+  violence: /\b(violence|violent|blood|gore|death|kill|killing|murder|weapon|gun|guns|bomb|bombing|terrorist|massacre|brutal|execution|crucifixion|martyrdom)\b/i,
   hate: /\b(hate|racist|racism|sexist|sexism|homophobic|xenophobic|bigot|slur)\b/i,
-  disturbing: /\b(disturbing|graphic|brutal|torture|abuse|abusive)\b/i,
+  disturbing: /\b(disturbing|graphic|brutal|torture|abuse|abusive|mutilation|dismember|grotesque|macabre|horror|nightmare|corpse|skull)\b/i,
   substances: /\b(drug|drugs|cocaine|heroin|meth|overdose|addiction|addict)\b/i,
   offensive: /\b(offensive|vulgar|profanity|obscene)\b/i,
 };
@@ -23,6 +37,38 @@ const CONTROVERSIAL_PATTERNS = {
   politics: /\b(election|democrat|republican|liberal|conservative|political party|politician|congress|senate)\b/i,
   religion: /\b(religious war|holy war|religious conflict|religious extremism)\b/i,
 };
+
+/**
+ * Scan text for inappropriate keywords (used for deep content scanning)
+ * Returns detailed list of found issues
+ * @param {string} text - Text to scan
+ * @returns {Object} Scan result with issues array
+ */
+export function scanForInappropriateKeywords(text) {
+  if (!text || typeof text !== 'string') {
+    return { hasIssues: false, issues: [] };
+  }
+  
+  const textLower = text.toLowerCase();
+  const issues = [];
+  
+  for (const [category, keywords] of Object.entries(INAPPROPRIATE_KEYWORDS)) {
+    for (const keyword of keywords) {
+      if (textLower.includes(keyword)) {
+        issues.push({
+          category,
+          keyword,
+          message: `Contains ${category} content: "${keyword}"`,
+        });
+      }
+    }
+  }
+  
+  return {
+    hasIssues: issues.length > 0,
+    issues,
+  };
+}
 
 /**
  * Check if text contains inappropriate content
@@ -224,6 +270,45 @@ export function buildSafePrompt(basePrompt, options = {}) {
 }
 
 /**
+ * Validate artwork suggestions with stricter rules
+ * Uses centralized keyword scanning for consistency
+ * @param {Object} artwork - Artwork suggestion object
+ * @returns {Object} Validation result
+ */
+export function validateArtwork(artwork) {
+  const issues = [];
+  
+  // Check all text fields
+  const textToCheck = `${artwork.title || ''} ${artwork.description || ''} ${artwork.author || ''}`;
+  
+  // Run standard validation first
+  const baseValidation = validateContentAppropriate(textToCheck, { strictMode: true });
+  if (!baseValidation.isValid) {
+    issues.push(...baseValidation.issues);
+  }
+  
+  // Run deep keyword scan for artwork-specific issues
+  const keywordScan = scanForInappropriateKeywords(textToCheck);
+  if (keywordScan.hasIssues) {
+    // Convert keyword scan issues to validation format
+    for (const issue of keywordScan.issues) {
+      issues.push({
+        category: 'artwork_inappropriate',
+        type: issue.category,
+        severity: 'high',
+        message: issue.message,
+      });
+    }
+  }
+  
+  return {
+    isValid: issues.length === 0,
+    issues,
+    passed: issues.length === 0,
+  };
+}
+
+/**
  * Filter and validate a batch of suggestions
  * @param {Array} suggestions - Array of suggestion objects
  * @returns {Object} Filtered suggestions and validation stats
@@ -233,8 +318,15 @@ export function filterSuggestions(suggestions) {
   const filtered = [];
   
   for (const suggestion of suggestions) {
-    const textToCheck = `${suggestion.title || ''} ${suggestion.description || ''} ${suggestion.author || ''}`;
-    const validation = validateContentAppropriate(textToCheck);
+    let validation;
+    
+    // Use stricter validation for artwork
+    if (suggestion.type === 'art') {
+      validation = validateArtwork(suggestion);
+    } else {
+      const textToCheck = `${suggestion.title || ''} ${suggestion.description || ''} ${suggestion.author || ''}`;
+      validation = validateContentAppropriate(textToCheck);
+    }
     
     if (validation.isValid) {
       validated.push(suggestion);
@@ -313,8 +405,11 @@ export function sanitizeForPrompt(text, options = {}) {
 export default {
   validateContentAppropriate,
   validateAIResponse,
+  validateArtwork,
   buildSafePrompt,
   filterSuggestions,
   sanitizeForPrompt,
+  scanForInappropriateKeywords,
+  INAPPROPRIATE_KEYWORDS,
 };
 

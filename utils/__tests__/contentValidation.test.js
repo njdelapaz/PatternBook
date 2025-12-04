@@ -5,12 +5,87 @@
 import {
   validateContentAppropriate,
   validateAIResponse,
+  validateArtwork,
   buildSafePrompt,
   filterSuggestions,
   sanitizeForPrompt,
+  scanForInappropriateKeywords,
+  INAPPROPRIATE_KEYWORDS,
 } from '../contentValidation';
 
 describe('Content Validation', () => {
+  describe('INAPPROPRIATE_KEYWORDS', () => {
+    it('should export keyword categories', () => {
+      expect(INAPPROPRIATE_KEYWORDS).toBeDefined();
+      expect(INAPPROPRIATE_KEYWORDS.nudity).toBeInstanceOf(Array);
+      expect(INAPPROPRIATE_KEYWORDS.sexual).toBeInstanceOf(Array);
+      expect(INAPPROPRIATE_KEYWORDS.violence).toBeInstanceOf(Array);
+      expect(INAPPROPRIATE_KEYWORDS.disturbing).toBeInstanceOf(Array);
+    });
+
+    it('should have comprehensive keyword coverage', () => {
+      expect(INAPPROPRIATE_KEYWORDS.nudity.length).toBeGreaterThan(5);
+      expect(INAPPROPRIATE_KEYWORDS.violence.length).toBeGreaterThan(5);
+    });
+  });
+
+  describe('scanForInappropriateKeywords', () => {
+    it('should return no issues for clean content', () => {
+      const result = scanForInappropriateKeywords('A beautiful landscape painting with mountains and trees');
+      expect(result.hasIssues).toBe(false);
+      expect(result.issues).toHaveLength(0);
+    });
+
+    it('should detect nudity keywords', () => {
+      const result = scanForInappropriateKeywords('This artwork depicts nude figures');
+      expect(result.hasIssues).toBe(true);
+      expect(result.issues.some(i => i.category === 'nudity')).toBe(true);
+      expect(result.issues[0].keyword).toBe('nude');
+    });
+
+    it('should detect violence keywords', () => {
+      const result = scanForInappropriateKeywords('A battle scene with blood and violence');
+      expect(result.hasIssues).toBe(true);
+      expect(result.issues.some(i => i.category === 'violence')).toBe(true);
+    });
+
+    it('should detect multiple issues', () => {
+      const result = scanForInappropriateKeywords('A violent scene with naked figures');
+      expect(result.hasIssues).toBe(true);
+      expect(result.issues.length).toBeGreaterThanOrEqual(2);
+    });
+
+    it('should be case insensitive', () => {
+      const result = scanForInappropriateKeywords('NUDE PORTRAIT');
+      expect(result.hasIssues).toBe(true);
+    });
+
+    it('should handle null/undefined gracefully', () => {
+      expect(scanForInappropriateKeywords(null).hasIssues).toBe(false);
+      expect(scanForInappropriateKeywords(undefined).hasIssues).toBe(false);
+      expect(scanForInappropriateKeywords('').hasIssues).toBe(false);
+    });
+
+    it('should detect sexual content keywords', () => {
+      const result = scanForInappropriateKeywords('An erotic and sensual composition');
+      expect(result.hasIssues).toBe(true);
+      expect(result.issues.some(i => i.category === 'sexual')).toBe(true);
+    });
+
+    it('should detect disturbing content keywords', () => {
+      const result = scanForInappropriateKeywords('A grotesque horror nightmare');
+      expect(result.hasIssues).toBe(true);
+      expect(result.issues.some(i => i.category === 'disturbing')).toBe(true);
+    });
+
+    it('should provide detailed issue information', () => {
+      const result = scanForInappropriateKeywords('nude artwork');
+      expect(result.issues[0]).toHaveProperty('category');
+      expect(result.issues[0]).toHaveProperty('keyword');
+      expect(result.issues[0]).toHaveProperty('message');
+    });
+  });
+
   describe('validateContentAppropriate', () => {
     it('should pass appropriate content', () => {
       const result = validateContentAppropriate('A beautiful painting of a landscape at sunset');
@@ -118,6 +193,105 @@ describe('Content Validation', () => {
     });
   });
 
+  describe('validateArtwork', () => {
+    it('should pass appropriate artwork', () => {
+      const artwork = {
+        type: 'art',
+        title: 'Starry Night',
+        description: 'A beautiful swirling night sky over a village',
+        author: 'Vincent van Gogh',
+      };
+      const result = validateArtwork(artwork);
+      expect(result.isValid).toBe(true);
+      expect(result.issues).toHaveLength(0);
+    });
+
+    it('should detect nudity in artwork title', () => {
+      const artwork = {
+        type: 'art',
+        title: 'The Nude Descending',
+        description: 'An abstract painting',
+        author: 'Artist Name',
+      };
+      const result = validateArtwork(artwork);
+      expect(result.isValid).toBe(false);
+      expect(result.issues.some(i => i.type === 'nudity')).toBe(true);
+    });
+
+    it('should detect nudity in artwork description', () => {
+      const artwork = {
+        type: 'art',
+        title: 'Classical Dance',
+        description: 'Depicts naked figures dancing on a hill',
+        author: 'Artist Name',
+      };
+      const result = validateArtwork(artwork);
+      expect(result.isValid).toBe(false);
+      expect(result.issues.some(i => i.type === 'nudity')).toBe(true);
+    });
+
+    it('should detect violent imagery', () => {
+      const artwork = {
+        type: 'art',
+        title: 'Battle Scene',
+        description: 'A war scene with soldiers fighting',
+        author: 'Artist Name',
+      };
+      const result = validateArtwork(artwork);
+      expect(result.isValid).toBe(false);
+      expect(result.issues.some(i => i.type === 'violence')).toBe(true);
+    });
+
+    it('should detect disturbing imagery', () => {
+      const artwork = {
+        type: 'art',
+        title: 'The Nightmare',
+        description: 'A grotesque and macabre scene',
+        author: 'Artist Name',
+      };
+      const result = validateArtwork(artwork);
+      expect(result.isValid).toBe(false);
+      expect(result.issues.some(i => i.type === 'disturbing')).toBe(true);
+    });
+
+    it('should detect erotic/sexual content', () => {
+      const artwork = {
+        type: 'art',
+        title: 'Intimate Moment',
+        description: 'An erotic and sensual composition',
+        author: 'Artist Name',
+      };
+      const result = validateArtwork(artwork);
+      expect(result.isValid).toBe(false);
+      expect(result.issues.some(i => i.type === 'sexual')).toBe(true);
+    });
+
+    it('should detect multiple issues', () => {
+      const artwork = {
+        type: 'art',
+        title: 'Nude Battle',
+        description: 'Naked soldiers in violent combat',
+        author: 'Artist Name',
+      };
+      const result = validateArtwork(artwork);
+      expect(result.isValid).toBe(false);
+      expect(result.issues.length).toBeGreaterThanOrEqual(2);
+      expect(result.issues.some(i => i.type === 'nudity')).toBe(true);
+      expect(result.issues.some(i => i.type === 'violence')).toBe(true);
+    });
+
+    it('should be case insensitive', () => {
+      const artwork = {
+        type: 'art',
+        title: 'NUDE PORTRAIT',
+        description: 'NAKED FIGURE',
+        author: 'Artist',
+      };
+      const result = validateArtwork(artwork);
+      expect(result.isValid).toBe(false);
+    });
+  });
+
   describe('buildSafePrompt', () => {
     it('should add content guidelines', () => {
       const prompt = buildSafePrompt('Base prompt', {
@@ -161,8 +335,8 @@ describe('Content Validation', () => {
   describe('filterSuggestions', () => {
     it('should pass appropriate suggestions', () => {
       const suggestions = [
-        { title: 'Starry Night', description: 'A beautiful painting', author: 'Van Gogh' },
-        { title: 'Peaceful quote', description: 'About reflection', author: 'Socrates' },
+        { type: 'art', title: 'Starry Night', description: 'A beautiful painting', author: 'Van Gogh' },
+        { type: 'quote', title: 'Peaceful quote', description: 'About reflection', author: 'Socrates' },
       ];
 
       const result = filterSuggestions(suggestions);
@@ -173,8 +347,8 @@ describe('Content Validation', () => {
 
     it('should filter inappropriate suggestions', () => {
       const suggestions = [
-        { title: 'Good painting', description: 'Beautiful art', author: 'Artist' },
-        { title: 'Bad painting', description: 'Contains explicit violence', author: 'Artist' },
+        { type: 'art', title: 'Good painting', description: 'Beautiful art', author: 'Artist' },
+        { type: 'art', title: 'Bad painting', description: 'Contains explicit violence', author: 'Artist' },
       ];
 
       const result = filterSuggestions(suggestions);
@@ -182,6 +356,30 @@ describe('Content Validation', () => {
       expect(result.filtered).toHaveLength(1);
       expect(result.stats.filterRate).toBe(50);
       expect(result.validated[0].title).toBe('Good painting');
+    });
+
+    it('should use stricter validation for artwork', () => {
+      const suggestions = [
+        { type: 'art', title: 'Dance', description: 'Depicts nude figures', author: 'Artist' },
+        { type: 'quote', title: 'About reflection', description: 'A thoughtful quote', author: 'Author' },
+      ];
+
+      const result = filterSuggestions(suggestions);
+      expect(result.validated).toHaveLength(1);
+      expect(result.filtered).toHaveLength(1);
+      expect(result.validated[0].type).toBe('quote');
+      expect(result.filtered[0].suggestion.type).toBe('art');
+    });
+
+    it('should filter artwork with nudity but allow other types with standard validation', () => {
+      const suggestions = [
+        { type: 'art', title: 'Naked Portrait', description: 'Classical nude', author: 'Artist' },
+        { type: 'insight', title: 'Reflection', description: 'A thoughtful observation', author: null },
+      ];
+
+      const result = filterSuggestions(suggestions);
+      expect(result.validated).toHaveLength(1);
+      expect(result.validated[0].type).toBe('insight');
     });
 
     it('should handle empty array', () => {
@@ -193,7 +391,7 @@ describe('Content Validation', () => {
 
     it('should check all text fields', () => {
       const suggestions = [
-        { title: 'Clean title', description: 'Clean desc', author: 'violence in author' },
+        { type: 'quote', title: 'Clean title', description: 'Clean desc', author: 'violence in author' },
       ];
 
       const result = filterSuggestions(suggestions);
