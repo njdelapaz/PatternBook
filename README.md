@@ -1,6 +1,22 @@
-# Lightpage (PatternBook) — MVP
+# PatternBook
 
-A minimalist, AI-assisted journaling app built with Expo (React Native). Capture thoughts with text (and soon voice), keep them locally, and get quick AI summaries.
+<img width="609.6" height="406.4" alt="image" src="https://github.com/user-attachments/assets/1cdbaa1d-bc69-484c-9072-850256acdcf6" />
+
+Many people recommend journaling if you want to write down your thoughts and sort out your mind. But weeks or months later, those notes are just there, and you’re still going in circles with no clarity about your life. Each day a blank page looks at you, and it starts to look like work. You lose the motivation to continue...
+
+Without feedback, it’s hard to build a habit. And with thoughts fragmented across various apps, it gets even worse! We are fixing thought fragmentation through **PatternBook, a minimalist AI-powered digital journal that keeps all of your thoughts in one place and speaks back to you!** 
+
+We took our inspiration from an app called [Lightpage](https://lightpage.com/), and our three core features include: 
+1. Frictionless voice inputs
+2. Instant AI insights
+3. Personal AI mentor
+
+Whenever you have a thought, you can simply click on the microphone button and brain dump whatever’s on your mind. For each note, PatternBook’s AI engine hunts down highly relevant quotes and images that relate to your state of mind. You can also chat with PatternBook as a thought partner, who has full access to all of your notes and is designed to find fresh insights and perspectives. 
+
+## Useful Links
+- [Pitch Slideshow](https://docs.google.com/presentation/d/1G8jLezFiXI1SqZROXp0PiE1R2qpIVIkM1rAPqDGEECM/edit?usp=sharing)
+- [Architecture Slideshow](https://docs.google.com/presentation/d/1m_ciL9oGpyf3aY6wZdQ_JFvJQTiRCEApG6FHUIDOLPM/edit?usp=sharing)
+- [Alpha Demo Slideshow](https://docs.google.com/presentation/d/1aO9phkGkuA73uGSmqE5iM7QQBTtv6DUyJA0Tn2P3RbU/edit?usp=sharing)
 
 ## Quick start
 
