@@ -911,7 +911,7 @@ export default function App() {
             const updated = prevNotes.map(n => 
               n.id === newNote.id ? { ...n, title: generatedTitle, titleGenerated: true } : n
             );
-            saveNotes(updated);
+            saveNotes(updated, currentUser.id);
             return updated;
           });
         } catch (error) {
@@ -922,7 +922,7 @@ export default function App() {
             const updated = prevNotes.map(n => 
               n.id === newNote.id ? { ...n, title: `Note ${i + 1}` } : n
             );
-            saveNotes(updated);
+            saveNotes(updated, currentUser.id);
             return updated;
           });
         }
