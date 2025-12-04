@@ -20,10 +20,10 @@ app.use(cors({
 app.use(express.json({ limit: '50mb' })); // For large audio files in base64
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Global rate limiter - suitable for 5 concurrent users doing demos
+// Global rate limiter - generous limit for demo purposes
 const limiter = rateLimit({
   windowMs: 1 * 60 * 1000, // 1 minute
-  max: 50, // Allow 50 requests per minute (10 per user for 5 users)
+  max: 100, // Allow 100 requests per minute
   message: 'Too many requests from this IP, please try again later.',
   standardHeaders: true,
   legacyHeaders: false,

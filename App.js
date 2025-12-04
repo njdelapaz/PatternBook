@@ -11,7 +11,6 @@ import { useDeviceType } from './hooks/useDeviceType';
 // Import Screen Components
 import LoginScreen from './screens/LoginScreen';
 import EmailLoginScreen from './screens/EmailLoginScreen';
-import OnboardingScreen from './screens/OnboardingScreen';
 import PersonaSelectionScreen from './screens/PersonaSelectionScreen';
 import MainScreen from './screens/MainScreen';
 import SettingsScreen from './screens/SettingsScreen';
@@ -749,7 +748,6 @@ function NoteEditor({ note, notes, onBack, onSave, isDarkMode, userId }) {
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showEmailLogin, setShowEmailLogin] = useState(false);
-  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false);
   const [currentUser, setCurrentUserState] = useState(null); // Store current logged-in user
   const [notes, setNotes] = useState([]);
   const [deletedNotes, setDeletedNotes] = useState([]);
@@ -778,7 +776,6 @@ export default function App() {
       if (user) {
         setCurrentUserState(user);
         setIsLoggedIn(true);
-        setHasCompletedOnboarding(true);
 
         // Check if user has selected persona
         const personaSelected = await AsyncStorage.getItem(`${PERSONA_SELECTED_KEY}_${user.id}`);
@@ -1060,7 +1057,7 @@ export default function App() {
     setCurrentUserState(user);
     setIsLoggedIn(true);
 
-    // Check if user has already selected persona and completed onboarding
+    // Check if user has already selected persona
     const personaSelected = await AsyncStorage.getItem(`${PERSONA_SELECTED_KEY}_${user.id}`);
     setHasSelectedPersona(personaSelected === 'true');
 
@@ -1068,13 +1065,10 @@ export default function App() {
     const userNotes = await loadNotes(user.id);
     setNotes(userNotes);
 
-    // If user has existing notes, mark both persona and onboarding as complete (migration)
-    if (userNotes.length > 0) {
-      if (personaSelected !== 'true') {
-        await AsyncStorage.setItem(`${PERSONA_SELECTED_KEY}_${user.id}`, 'true');
-        setHasSelectedPersona(true);
-      }
-      setHasCompletedOnboarding(true);
+    // If user has existing notes, mark persona as complete (migration)
+    if (userNotes.length > 0 && personaSelected !== 'true') {
+      await AsyncStorage.setItem(`${PERSONA_SELECTED_KEY}_${user.id}`, 'true');
+      setHasSelectedPersona(true);
     }
 
     // Update settings with user's email
@@ -1090,10 +1084,6 @@ export default function App() {
 
   const handleBackFromEmail = () => {
     setShowEmailLogin(false);
-  };
-
-  const handleCompleteOnboarding = () => {
-    setHasCompletedOnboarding(true);
   };
 
   const handleSelectPersona = async (personaType) => {
@@ -1141,7 +1131,6 @@ export default function App() {
     // Clear app state
     setIsLoggedIn(false);
     setShowEmailLogin(false);
-    setHasCompletedOnboarding(false);
     setHasSelectedPersona(false); // Reset persona selection
     setCurrentScreen('main');
     setSelectedNoteId(null);
@@ -1174,7 +1163,7 @@ export default function App() {
     );
   }
 
-  // Show persona selection screen if not yet selected (happens first, right after login)
+  // Show persona selection screen if not yet selected (happens right after login)
   if (!hasSelectedPersona) {
     return (
       <SafeAreaProvider>
@@ -1184,17 +1173,6 @@ export default function App() {
             isDarkMode={isDarkMode}
             isLoading={isLoadingPersona}
           />
-        </View>
-      </SafeAreaProvider>
-    );
-  }
-
-  // Show onboarding screen if not completed (happens after persona selection)
-  if (!hasCompletedOnboarding) {
-    return (
-      <SafeAreaProvider>
-        <View style={[styles.appRoot, { backgroundColor: theme.backgroundColor }]}>
-          <OnboardingScreen onComplete={handleCompleteOnboarding} />
         </View>
       </SafeAreaProvider>
     );
