@@ -246,8 +246,14 @@ export default function GlobalChatScreen({ isDarkMode, onBack, notes, onNotePres
   };
   
   const handleNotePress = (noteId) => {
-    if (onNotePress) {
-      onNotePress(noteId);
+    if (onNotePress && notes) {
+      // Find the actual note object from the notes array
+      const note = notes.find(n => n.id === noteId);
+      if (note) {
+        onNotePress(note);
+      } else {
+        console.warn('[GlobalChat] Note not found:', noteId);
+      }
     }
   };
   
