@@ -75,8 +75,36 @@ export async function generateSuggestions(notes, options = {}) {
     // Parse suggestions from LLM response
     let suggestions = parseSuggestions(result.data.content);
 
-    // Fetch images for artwork suggestions
-    suggestions = await enrichSuggestionsWithImages(suggestions);
+    // Validate we got suggestions
+    if (suggestions.length === 0) {
+      console.warn('[SuggestionService] No valid suggestions parsed from LLM response');
+      return {
+        success: false,
+        error: { type: 'PARSE_ERROR', message: 'No valid suggestions generated' },
+        suggestions: [],
+      };
+    }
+
+    // Fetch images for artwork suggestions (will convert to quotes if image fails)
+    // Pass notesSummary for relevance checking and fallback quote generation
+    suggestions = await enrichSuggestionsWithImages(suggestions, notesSummary);
+
+    // Final validation: ensure we have at least one suggestion
+    if (suggestions.length === 0) {
+      console.warn('[SuggestionService] No suggestions after enrichment');
+      return {
+        success: false,
+        error: { type: 'ENRICHMENT_ERROR', message: 'All suggestions filtered out' },
+        suggestions: [],
+      };
+    }
+
+    // Log final suggestion types
+    const typeCounts = suggestions.reduce((acc, s) => {
+      acc[s.type] = (acc[s.type] || 0) + 1;
+      return acc;
+    }, {});
+    console.log('[SuggestionService] Final suggestions:', typeCounts);
 
     // Cache suggestions
     await cacheSuggestions(suggestions);
@@ -112,6 +140,20 @@ Your role is to analyze journal entries and suggest:
 2. **Quotes** - meaningful quotes from literature, philosophy, or notable figures
 3. **Insights** - Gentle reflective prompts or observations about patterns in their thinking
 
+CRITICAL CONTENT GUIDELINES:
+- NO inappropriate, offensive, or explicit content
+- NO violence, hate speech, or disturbing themes
+- NO controversial political or religious content
+- Keep suggestions uplifting, thoughtful, and appropriate for all audiences
+- Focus on universally meaningful themes: growth, reflection, connection, beauty, wisdom
+
+ARTWORK REQUIREMENTS:
+- ONLY suggest artworks that are WELL-DOCUMENTED and FAMOUS (e.g., "Starry Night" by Vincent van Gogh, "The Scream" by Edvard Munch, "The Great Wave off Kanagawa" by Hokusai)
+- Include the EXACT title and FULL artist name (first and last name)
+- Artworks MUST be findable on Wikipedia - if unsure, use a quote instead
+- Prefer artworks from major museums or art history canon
+- Avoid obscure or contemporary works that may not have documentation
+
 IMPORTANT: Return suggestions in JSON format. Each suggestion should have this exact structure:
 
 {
@@ -123,9 +165,14 @@ IMPORTANT: Return suggestions in JSON format. Each suggestion should have this e
   "description": "2-3 sentences explaining why this resonates with their journal entries. Be specific about which themes or emotions you're connecting to."
 }
 
-For artworks, you MUST suggest REAL, FAMOUS paintings that exist (e.g., "Starry Night" by Van Gogh, "The Scream" by Munch, "Wanderer above the Sea of Fog" by Friedrich). Include the exact title and artist name.
-For quotes, include the full quote as the title and the author.
-For insights, create an original reflective observation or question.
+DISTRIBUTION GUIDELINES:
+- Prefer quotes and insights over artwork (they're more reliable)
+- Only suggest 1 artwork maximum per set of recommendations
+- If unsure whether an artwork is famous enough, use a quote instead
+
+For artworks, use full names (e.g., "Vincent van Gogh" not "Van Gogh", "Claude Monet" not "Monet")
+For quotes, include the full quote as the title and the author with their profession/context if relevant
+For insights, create an original reflective observation or question
 
 Be thoughtful, specific, and avoid generic suggestions. Reference actual themes, emotions, or ideas from their entries.
 
@@ -148,6 +195,33 @@ function prepareNotesSummary(notes) {
     const title = note.title || `Note ${idx + 1}`;
     return `[${title}]\n${preview}`;
   }).join('\n\n---\n\n');
+}
+
+/**
+ * Content filter - check for inappropriate content
+ */
+function containsInappropriateContent(text) {
+  const inappropriatePatterns = [
+    /\b(explicit|nsfw|nude|naked|sexual|violence|blood|gore|death|kill|murder|weapon|gun|bomb)\b/i,
+    /\b(hate|racist|sexist|offensive|disturbing|graphic|brutal)\b/i,
+    /\b(drug|alcohol|addiction|abuse)\b/i,
+  ];
+  
+  return inappropriatePatterns.some(pattern => pattern.test(text));
+}
+
+/**
+ * Validate suggestion content for appropriateness
+ */
+function validateSuggestionContent(suggestion) {
+  const textToCheck = `${suggestion.title} ${suggestion.description} ${suggestion.author || ''}`;
+  
+  if (containsInappropriateContent(textToCheck)) {
+    console.warn('[SuggestionService] Filtered inappropriate suggestion:', suggestion.title);
+    return false;
+  }
+  
+  return true;
 }
 
 /**
@@ -174,6 +248,7 @@ function parseSuggestions(responseContent) {
     // Validate and clean suggestions
     return suggestions
       .filter(s => s.type && s.title && s.description)
+      .filter(s => validateSuggestionContent(s)) // Content filter
       .map(s => ({
         type: s.type,
         title: s.title,
@@ -193,34 +268,199 @@ function parseSuggestions(responseContent) {
 }
 
 /**
- * Fetch images for artwork suggestions
+ * Generate a personalized fallback quote when artwork fails
+ * Uses AI to create a quote based on user's note themes
  */
-async function enrichSuggestionsWithImages(suggestions) {
+async function generateFallbackQuote(artworkSuggestion, notesSummary) {
+  try {
+    console.log('[SuggestionService] Generating AI fallback quote for failed artwork');
+    
+    const prompt = `The user's journal entries show themes around: ${artworkSuggestion.description}
+
+Generate a single meaningful quote that resonates with these themes. The quote should be:
+- From a real author, philosopher, or notable figure
+- Relevant to the themes mentioned above
+- Inspirational and thought-provoking
+- NOT about art or creativity (focus on life, growth, reflection, emotions, etc.)
+
+Return ONLY a JSON object with this structure:
+{
+  "quote": "The full quote text",
+  "author": "Author name",
+  "description": "2-3 sentences explaining why this quote resonates with their journal themes"
+}`;
+
+    const result = await callLLM({
+      model: 'gpt-4o-mini',
+      messages: [
+        {
+          role: 'system',
+          content: 'You are a thoughtful curator who suggests meaningful quotes. Always return valid JSON only.',
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+      temperature: 0.8,
+      maxTokens: 300,
+    });
+
+    if (result.success && result.data && result.data.content) {
+      // Parse the AI response
+      let jsonStr = result.data.content.trim();
+      
+      // Handle markdown code blocks
+      if (jsonStr.includes('```json')) {
+        jsonStr = jsonStr.split('```json')[1].split('```')[0].trim();
+      } else if (jsonStr.includes('```')) {
+        jsonStr = jsonStr.split('```')[1].split('```')[0].trim();
+      }
+      
+      const parsed = JSON.parse(jsonStr);
+      
+      return {
+        type: 'quote',
+        title: parsed.quote,
+        author: parsed.author,
+        badge: artworkSuggestion.badge || 'Picked for you',
+        description: parsed.description,
+        subtitle: null,
+      };
+    }
+    
+    // If AI generation fails, use a simple fallback
+    console.warn('[SuggestionService] AI quote generation failed, using simple fallback');
+    return createSimpleFallbackQuote(artworkSuggestion);
+    
+  } catch (error) {
+    console.error('[SuggestionService] Error generating fallback quote:', error);
+    return createSimpleFallbackQuote(artworkSuggestion);
+  }
+}
+
+/**
+ * Create a simple fallback quote (last resort)
+ */
+function createSimpleFallbackQuote(artworkSuggestion) {
+  return {
+    type: 'quote',
+    title: '"The unexamined life is not worth living."',
+    author: 'Socrates',
+    badge: artworkSuggestion.badge || 'Picked for you',
+    description: 'Reflection and self-awareness are essential to a meaningful life. Your journal is a tool for that examination.',
+    subtitle: null,
+  };
+}
+
+/**
+ * Validate image URL to ensure it's actually an image
+ */
+async function validateImageUrl(imageUrl) {
+  try {
+    // Basic check for image file extensions
+    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.svg'];
+    const urlLower = imageUrl.toLowerCase();
+    
+    // Check if URL contains image extension or is from known image provider
+    const hasImageExtension = imageExtensions.some(ext => urlLower.includes(ext));
+    const isFromImageProvider = urlLower.includes('wikimedia') || urlLower.includes('wikipedia');
+    
+    if (!hasImageExtension && !isFromImageProvider) {
+      console.warn('[SuggestionService] Image URL appears invalid:', imageUrl);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    return false;
+  }
+}
+
+/**
+ * Check if Wikipedia page description is relevant to user's notes
+ */
+function isDescriptionRelevantToNotes(description, suggestionDescription) {
+  // Extract key themes from the suggestion description (what AI said resonated)
+  const suggestionLower = suggestionDescription.toLowerCase();
+  const descriptionLower = description.toLowerCase();
+  
+  // Look for thematic overlap
+  const thematicWords = [
+    'solitude', 'isolation', 'loneliness', 'alone', 'contemplation', 'reflection',
+    'nature', 'landscape', 'peace', 'calm', 'tranquility', 'serenity',
+    'emotion', 'feeling', 'mood', 'expression', 'passion', 'intensity',
+    'struggle', 'conflict', 'tension', 'anxiety', 'stress', 'worry',
+    'joy', 'happiness', 'celebration', 'triumph', 'success', 'victory',
+    'change', 'transformation', 'growth', 'journey', 'progress', 'evolution',
+    'darkness', 'light', 'shadow', 'night', 'day', 'dawn', 'dusk',
+    'dream', 'imagination', 'fantasy', 'surreal', 'abstract', 'symbolism',
+  ];
+  
+  // Count thematic matches
+  const matches = thematicWords.filter(word => 
+    suggestionLower.includes(word) && descriptionLower.includes(word)
+  );
+  
+  // Consider relevant if we have at least 2 thematic matches or if description is substantial
+  const hasThematicMatch = matches.length >= 2;
+  const hasSubstantialDescription = description.length > 100; // Detailed pages are usually about the artwork
+  
+  console.log(`[SuggestionService] Relevance check: ${matches.length} thematic matches, description length: ${description.length}`);
+  
+  return hasThematicMatch || hasSubstantialDescription;
+}
+
+/**
+ * Enrich artwork suggestions with images and relevance validation
+ * Falls back to AI-generated quotes if validation fails
+ */
+async function enrichSuggestionsWithImages(suggestions, notesSummary) {
   const enriched = await Promise.all(
     suggestions.map(async (suggestion) => {
-      // Only fetch images for artwork suggestions
+      // Only process artwork suggestions
       if (suggestion.type !== 'art') {
         return suggestion;
       }
 
       try {
-        console.log(`[SuggestionService] Fetching image for: ${suggestion.title}`);
+        console.log(`[SuggestionService] Fetching and validating image for: ${suggestion.title}`);
         const imageResult = await findArtworkImage(suggestion.title, suggestion.author || '');
 
-        if (imageResult.success) {
+        if (imageResult.success && imageResult.imageUrl && imageResult.metadata) {
+          // Validate image URL format
+          const isValidImage = await validateImageUrl(imageResult.imageUrl);
+          
+          if (!isValidImage) {
+            console.log(`[SuggestionService] Invalid image URL format, generating fallback quote`);
+            return await generateFallbackQuote(suggestion, notesSummary);
+          }
+          
+          // Check if Wikipedia page description is relevant to user's notes
+          const isRelevant = isDescriptionRelevantToNotes(
+            imageResult.metadata.description,
+            suggestion.description
+          );
+          
+          if (!isRelevant) {
+            console.log(`[SuggestionService] Artwork not relevant to user's notes, generating fallback quote`);
+            return await generateFallbackQuote(suggestion, notesSummary);
+          }
+          
+          console.log(`[SuggestionService] ✓ Found valid and relevant image for ${suggestion.title}`);
           return {
             ...suggestion,
             imageUri: imageResult.imageUrl,
-            imageSource: imageResult.source || 'unsplash',
-            imageAttribution: imageResult.photographer || imageResult.source,
+            imageSource: imageResult.source || 'wikipedia',
+            imageAttribution: imageResult.source,
           };
         } else {
-          console.log(`[SuggestionService] No image found for ${suggestion.title}, keeping text-only`);
-          return suggestion;
+          console.log(`[SuggestionService] Image fetch failed, generating fallback quote`);
+          return await generateFallbackQuote(suggestion, notesSummary);
         }
       } catch (error) {
-        console.error(`[SuggestionService] Error fetching image for ${suggestion.title}:`, error);
-        return suggestion; // Return without image if fetch fails
+        console.error(`[SuggestionService] Error processing artwork ${suggestion.title}:`, error);
+        return await generateFallbackQuote(suggestion, notesSummary);
       }
     })
   );
