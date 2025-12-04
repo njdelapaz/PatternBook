@@ -113,6 +113,7 @@ export default function EmailLoginScreen({ onBack, onLogin }) {
         }
         
         // Successfully created account, now login
+        setIsLoading(false);
         onLogin(result.user);
       } else {
         // Verify existing user credentials
@@ -125,6 +126,7 @@ export default function EmailLoginScreen({ onBack, onLogin }) {
         }
         
         // Successfully logged in
+        setIsLoading(false);
         onLogin(result.user);
       }
     } catch (err) {
@@ -513,4 +515,3 @@ const styles = StyleSheet.create({
     textDecorationLine: 'underline',
   },
 });
-
