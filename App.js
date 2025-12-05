@@ -7,6 +7,7 @@ import { OPENAI_API_KEY } from '@env';
 import * as FileSystem from 'expo-file-system/legacy';
 import { Audio as AVAudio } from 'expo-av';
 import { useDeviceType } from './hooks/useDeviceType';
+import Markdown from 'react-native-markdown-display';
 
 // Import Screen Components
 import LoginScreen from './screens/LoginScreen';
@@ -695,12 +696,53 @@ function NoteEditor({ note, notes, onBack, onSave, isDarkMode, userId }) {
                         message.role === 'user' ? styles.userMessage : styles.aiMessage
                       ]}
                     >
-                      <Text style={[
-                        styles.chatMessageText,
-                        { color: message.role === 'user' ? '#000' : theme.textColor }
-                      ]}>
+                      <Markdown
+                        style={{
+                          body: {
+                            color: message.role === 'user' ? '#000' : theme.textColor,
+                            fontSize: 15,
+                            lineHeight: 20,
+                          },
+                          strong: {
+                            fontWeight: 'bold',
+                          },
+                          em: {
+                            fontStyle: 'italic',
+                          },
+                          code_inline: {
+                            backgroundColor: message.role === 'user' ? 'rgba(0,0,0,0.1)' : theme.inputBackground,
+                            paddingHorizontal: 4,
+                            paddingVertical: 2,
+                            borderRadius: 3,
+                            fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+                          },
+                          code_block: {
+                            backgroundColor: message.role === 'user' ? 'rgba(0,0,0,0.1)' : theme.inputBackground,
+                            padding: 8,
+                            borderRadius: 6,
+                            fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+                          },
+                          fence: {
+                            backgroundColor: message.role === 'user' ? 'rgba(0,0,0,0.1)' : theme.inputBackground,
+                            padding: 8,
+                            borderRadius: 6,
+                            fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+                          },
+                          link: {
+                            color: message.role === 'user' ? '#000' : theme.accentColor,
+                            textDecorationLine: 'underline',
+                          },
+                          blockquote: {
+                            backgroundColor: message.role === 'user' ? 'rgba(0,0,0,0.05)' : theme.inputBackground,
+                            borderLeftColor: message.role === 'user' ? '#000' : theme.accentColor,
+                            borderLeftWidth: 3,
+                            paddingLeft: 10,
+                            marginLeft: 0,
+                          },
+                        }}
+                      >
                         {message.content}
-                      </Text>
+                      </Markdown>
                     </View>
                     {message.role === 'assistant' && message.retrievedNotes && message.retrievedNotes.length > 0 && (
                       <View style={styles.referencedNotesContainer}>

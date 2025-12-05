@@ -57,15 +57,6 @@ export default function OnboardingScreen({ onComplete }) {
       ],
       hasButton: true,
       buttonText: "Continue →",
-    },
-    {
-      title: "On Sundays, it'll recap your week and offer insights in a personal letter",
-      letterPreview: {
-        recipient: "Nathan",
-        text: "\nWhat a week!\nHere's what\nstood out...",
-      },
-      hasButton: true,
-      buttonText: "Continue →",
     }
   ];
 
@@ -168,26 +159,6 @@ export default function OnboardingScreen({ onComplete }) {
               <View style={styles.articleCard}>
                 <Text style={styles.articleTitle}>{currentSlideData.contentCards[2].title}</Text>
                 <Text style={styles.articleAuthor}>📎 {currentSlideData.contentCards[2].author}</Text>
-              </View>
-            </View>
-          </View>
-        )}
-
-        {/* Slide 5: Letter preview */}
-        {currentSlide === 4 && (
-          <View style={styles.contentContainer}>
-            <View style={styles.letterContainer}>
-              <View style={styles.envelope}>
-                <View style={styles.envelopeFlap} />
-                <View style={styles.letter}>
-                  <Text style={styles.letterText}>
-                    Dear {currentSlideData.letterPreview.recipient},{'\n'}
-                    {currentSlideData.letterPreview.text}
-                  </Text>
-                </View>
-                <View style={styles.stamp}>
-                  <Text style={styles.stampIcon}>🌹</Text>
-                </View>
               </View>
             </View>
           </View>
@@ -403,62 +374,6 @@ const styles = StyleSheet.create({
   articleAuthor: {
     fontSize: 14,
     color: '#999999',
-  },
-
-  // Slide 5: Letter
-  letterContainer: {
-    alignItems: 'center',
-    marginTop: 40,
-  },
-  envelope: {
-    width: 280,
-    height: 336,
-    backgroundColor: '#E8E4D9',
-    borderRadius: 8,
-    position: 'relative',
-    overflow: 'visible',
-  },
-  envelopeFlap: {
-    position: 'absolute',
-    top: -56,
-    left: 0,
-    right: 0,
-    height: 112,
-    backgroundColor: '#D4CFC0',
-    borderTopLeftRadius: 8,
-    borderTopRightRadius: 8,
-    transform: [{ rotateX: '30deg' }],
-  },
-  letter: {
-    position: 'absolute',
-    top: 28,
-    left: 28,
-    right: 28,
-    backgroundColor: '#FFFFFF',
-    padding: 22,
-    borderRadius: 4,
-  },
-  letterText: {
-    fontSize: 15,
-    color: '#333333',
-    lineHeight: 22,
-  },
-  stamp: {
-    position: 'absolute',
-    top: 28,
-    right: 28,
-    width: 56,
-    height: 56,
-    backgroundColor: '#8B6B47',
-    borderRadius: 4,
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
-    borderStyle: 'dashed',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  stampIcon: {
-    fontSize: 28,
   },
 
   // Indicators

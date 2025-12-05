@@ -18,6 +18,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Markdown from 'react-native-markdown-display';
 import { darkTheme, lightTheme, RETRIEVAL_CONFIG } from '../utils/constants';
 import { loadGlobalChatHistory, saveGlobalChatHistory } from '../utils/chatStorage';
 import { buildGlobalChatContext } from '../utils/contextBuilder';
@@ -312,19 +313,53 @@ export default function GlobalChatScreen({ isDarkMode, onBack, notes, onNotePres
                         : [styles.assistantMessage, { backgroundColor: theme.cardBackground }],
                     ]}
                   >
-                    <Text
-                      style={[
-                        styles.messageText,
-                        {
-                          color:
-                            message.role === 'user'
-                              ? '#FFFFFF'
-                              : theme.textColor,
+                    <Markdown
+                      style={{
+                        body: {
+                          color: message.role === 'user' ? '#FFFFFF' : theme.textColor,
+                          fontSize: 15,
+                          lineHeight: 20,
                         },
-                      ]}
+                        strong: {
+                          fontWeight: 'bold',
+                        },
+                        em: {
+                          fontStyle: 'italic',
+                        },
+                        code_inline: {
+                          backgroundColor: message.role === 'user' ? 'rgba(0,0,0,0.2)' : theme.inputBackground,
+                          paddingHorizontal: 4,
+                          paddingVertical: 2,
+                          borderRadius: 3,
+                          fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+                        },
+                        code_block: {
+                          backgroundColor: message.role === 'user' ? 'rgba(0,0,0,0.2)' : theme.inputBackground,
+                          padding: 8,
+                          borderRadius: 6,
+                          fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+                        },
+                        fence: {
+                          backgroundColor: message.role === 'user' ? 'rgba(0,0,0,0.2)' : theme.inputBackground,
+                          padding: 8,
+                          borderRadius: 6,
+                          fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+                        },
+                        link: {
+                          color: message.role === 'user' ? '#FFFFFF' : theme.accentColor,
+                          textDecorationLine: 'underline',
+                        },
+                        blockquote: {
+                          backgroundColor: message.role === 'user' ? 'rgba(0,0,0,0.1)' : theme.inputBackground,
+                          borderLeftColor: message.role === 'user' ? '#FFFFFF' : theme.accentColor,
+                          borderLeftWidth: 3,
+                          paddingLeft: 10,
+                          marginLeft: 0,
+                        },
+                      }}
                     >
                       {message.content}
-                    </Text>
+                    </Markdown>
                   </View>
                   
                   {/* Show referenced notes for assistant messages */}
